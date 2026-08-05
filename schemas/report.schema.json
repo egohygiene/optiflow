@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/report.schema.json",
+  "title": "OptiFlow Report v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "run",
+    "summary",
+    "duplicate_groups",
+    "observations"
+  ],
+  "properties": {
+    "schema_version": { "const": "optiflow.report.v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "run": { "$ref": "run.schema.json" },
+    "summary": {
+      "type": "object",
+      "required": [
+        "file_count",
+        "total_bytes",
+        "media_files",
+        "unsupported_files",
+        "unreadable_files",
+        "exact_duplicate_groups",
+        "exact_duplicate_files",
+        "reclaimable_bytes",
+        "cache_hits"
+      ],
+      "properties": {
+        "file_count": { "type": "integer", "minimum": 0 },
+        "total_bytes": { "type": "integer", "minimum": 0 },
+        "media_files": { "type": "integer", "minimum": 0 },
+        "unsupported_files": { "type": "integer", "minimum": 0 },
+        "unreadable_files": { "type": "integer", "minimum": 0 },
+        "exact_duplicate_groups": { "type": "integer", "minimum": 0 },
+        "exact_duplicate_files": { "type": "integer", "minimum": 0 },
+        "reclaimable_bytes": { "type": "integer", "minimum": 0 },
+        "cache_hits": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "duplicate_groups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/duplicate_group" }
+    },
+    "observations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/observation" }
+    }
+  },
+  "$defs": {
+    "exact_evidence": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "complete_content_hash",
+        "identical_size_bytes",
+        "member_count"
+      ],
+      "properties": {
+        "algorithm": { "const": "blake3-256" },
+        "complete_content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "identical_size_bytes": { "type": "integer", "minimum": 0 },
+        "member_count": { "type": "integer", "minimum": 2 }
+      },
+      "additionalProperties": false
+    },
+    "duplicate_group": {
+      "type": "object",
+      "required": [
+        "group_id",
+        "classification",
+        "evidence",
+        "members",
+        "reclaimable_bytes"
+      ],
+      "properties": {
+        "group_id": { "type": "string" },
+        "classification": { "const": "exact" },
+        "evidence": { "$ref": "#/$defs/exact_evidence" },
+        "members": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["path", "observation_id"],
+            "properties": {
+              "path": { "type": "string" },
+              "observation_id": { "type": "string", "format": "uuid" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "reclaimable_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "stream": {
+      "type": "object",
+      "required": [
+        "index",
+        "codec_type",
+        "codec_name",
+        "width",
+        "height",
+        "sample_rate",
+        "channels"
+      ],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "codec_type": { "type": ["string", "null"] },
+        "codec_name": { "type": ["string", "null"] },
+        "width": { "type": ["integer", "null"], "minimum": 0 },
+        "height": { "type": ["integer", "null"], "minimum": 0 },
+        "sample_rate": { "type": ["integer", "null"], "minimum": 0 },
+        "channels": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "media": {
+      "type": "object",
+      "required": ["format_name", "duration_seconds", "bit_rate", "streams"],
+      "properties": {
+        "format_name": { "type": ["string", "null"] },
+        "duration_seconds": { "type": ["number", "null"], "minimum": 0 },
+        "bit_rate": { "type": ["integer", "null"], "minimum": 0 },
+        "streams": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stream" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "observation_id",
+        "run_id",
+        "path",
+        "size_bytes",
+        "modified_unix_ns",
+        "device_id",
+        "inode",
+        "content_type",
+        "media_kind",
+        "content_hash",
+        "hash_algorithm",
+        "media",
+        "status",
+        "cache_hit",
+        "warnings"
+      ],
+      "properties": {
+        "observation_id": { "type": "string", "format": "uuid" },
+        "run_id": { "type": "string", "format": "uuid" },
+        "path": { "type": "string" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "modified_unix_ns": { "type": ["integer", "null"] },
+        "device_id": { "type": ["integer", "null"], "minimum": 0 },
+        "inode": { "type": ["integer", "null"], "minimum": 0 },
+        "content_type": { "type": ["string", "null"] },
+        "media_kind": {
+          "enum": ["image", "video", "audio", "other", "unknown"]
+        },
+        "content_hash": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "hash_algorithm": {
+          "oneOf": [
+            { "type": "null" },
+            { "const": "blake3-256" }
+          ]
+        },
+        "media": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/media" }
+          ]
+        },
+        "status": { "enum": ["analyzed", "unsupported", "unreadable"] },
+        "cache_hit": { "type": "boolean" },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+

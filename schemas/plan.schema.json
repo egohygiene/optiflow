@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/plan.schema.json",
+  "title": "OptiFlow Plan v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plan_id",
+    "source_run_id",
+    "created_at",
+    "mode",
+    "safety",
+    "summary",
+    "actions"
+  ],
+  "properties": {
+    "schema_version": { "const": "optiflow.plan.v1" },
+    "plan_id": { "type": "string", "format": "uuid" },
+    "source_run_id": { "type": "string", "format": "uuid" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "mode": { "const": "exact_duplicates_review" },
+    "safety": {
+      "type": "object",
+      "required": ["mutates_files", "requires_explicit_apply", "description"],
+      "properties": {
+        "mutates_files": { "const": false },
+        "requires_explicit_apply": { "const": true },
+        "description": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "action_count",
+        "candidate_file_count",
+        "potential_reclaimable_bytes"
+      ],
+      "properties": {
+        "action_count": { "type": "integer", "minimum": 0 },
+        "candidate_file_count": { "type": "integer", "minimum": 0 },
+        "potential_reclaimable_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/action" }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "complete_content_hash",
+        "identical_size_bytes",
+        "member_count"
+      ],
+      "properties": {
+        "algorithm": { "const": "blake3-256" },
+        "complete_content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "identical_size_bytes": { "type": "integer", "minimum": 0 },
+        "member_count": { "type": "integer", "minimum": 2 }
+      },
+      "additionalProperties": false
+    },
+    "precondition": {
+      "type": "object",
+      "required": [
+        "path",
+        "expected_size_bytes",
+        "expected_modified_unix_ns",
+        "expected_complete_content_hash",
+        "required_apply_behavior"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "expected_size_bytes": { "type": "integer", "minimum": 0 },
+        "expected_modified_unix_ns": { "type": ["integer", "null"] },
+        "expected_complete_content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "required_apply_behavior": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "action_id",
+        "classification",
+        "proposed_operation",
+        "keep_path",
+        "candidate_paths",
+        "potential_reclaimable_bytes",
+        "reason",
+        "evidence",
+        "preconditions"
+      ],
+      "properties": {
+        "action_id": { "type": "string", "format": "uuid" },
+        "classification": { "const": "exact" },
+        "proposed_operation": { "const": "review_and_select" },
+        "keep_path": { "type": "string" },
+        "candidate_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "potential_reclaimable_bytes": { "type": "integer", "minimum": 0 },
+        "reason": { "type": "string" },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "preconditions": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/precondition" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+

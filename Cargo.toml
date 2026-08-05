@@ -1,0 +1,42 @@
+[package]
+name = "optiflow"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "A local-first, evidence-driven media inventory and exact-deduplication planner"
+license = "MIT"
+repository = "https://github.com/egohygiene/optiflow"
+readme = "README.md"
+keywords = ["deduplication", "media", "optimization", "pipeline", "storage"]
+categories = ["command-line-utilities", "filesystem", "multimedia"]
+
+[dependencies]
+anyhow = "1.0"
+blake3 = "1.8"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5", features = ["derive"] }
+directories = "6.0"
+infer = "0.19"
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.18", features = ["serde", "v7"] }
+walkdir = "2.5"
+which = "8.0"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.23"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+
