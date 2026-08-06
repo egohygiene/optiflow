@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::domain::{
-    DuplicateGroup, DuplicateMember, ExactDuplicateEvidence, ExtentSharingStatus, FileObservation,
-    PhysicalReclaimability, ReclaimabilityReasonCode, ReclaimabilityStatus,
+    DuplicateGroup, DuplicateMember, EvidenceValidity, ExactDuplicateEvidence, ExtentSharingStatus,
+    FileObservation, PhysicalReclaimability, ReclaimabilityReasonCode, ReclaimabilityStatus,
 };
 use crate::hashing::HASH_ALGORITHM;
 
@@ -55,10 +55,15 @@ pub fn exact_groups(observations: &[FileObservation]) -> Vec<DuplicateGroup> {
         .collect();
 
     // --- Step 3: group by (size, hash) over unique objects only ------------
+    // Only observations with current (stable) evidence may participate.
     let mut candidates: BTreeMap<(u64, String), Vec<&FileObservation>> = BTreeMap::new();
 
-    for (primary_id, _aliases) in &primary_to_aliases {
+    for primary_id in primary_to_aliases.keys() {
         if let Some(obs) = obs_by_id.get(primary_id.as_str()) {
+            if obs.evidence_validity != EvidenceValidity::Current {
+                // Unstable evidence must not form exact-duplicate groups.
+                continue;
+            }
             if let Some(content_hash) = &obs.content_hash {
                 candidates
                     .entry((obs.size_bytes, content_hash.clone()))
@@ -215,6 +220,9 @@ mod tests {
             warnings: Vec::new(),
             filesystem_identity: None,
             storage_allocation: None,
+            observation_stability: crate::domain::ObservationStability::Stable,
+            evidence_validity: crate::domain::EvidenceValidity::Current,
+            attempt_count: 1,
         }
     }
 
@@ -284,5 +292,27 @@ mod tests {
 
         let groups = exact_groups(&observations);
         assert_eq!(groups.len(), 0, "aliases alone must not form a duplicate group");
+    }
+
+    #[test]
+    fn unstable_observations_are_excluded_from_duplicate_groups() {
+        // /a has stale evidence (changed during hash); /b and /c are stable and
+        // identical.  Only /b and /c should form a group.
+        let mut unstable = observation("/a", "same");
+        unstable.evidence_validity = crate::domain::EvidenceValidity::Stale;
+        unstable.observation_stability = crate::domain::ObservationStability::ChangedDuringHash;
+
+        let stable_b = observation("/b", "same");
+        let stable_c = observation("/c", "same");
+
+        let groups = exact_groups(&[unstable, stable_b, stable_c]);
+        assert_eq!(groups.len(), 1, "one group from stable observations");
+        assert_eq!(
+            groups[0].evidence.member_count, 2,
+            "only stable observations counted"
+        );
+        // Ensure /a is not a member of the group.
+        let paths: Vec<&str> = groups[0].members.iter().map(|m| m.path.as_str()).collect();
+        assert!(!paths.contains(&"/a"), "/a must not appear in the group");
     }
 }

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::adapters::ffprobe;
-use crate::domain::{CachedAnalysis, MediaKind, ObservationStatus};
+use crate::domain::{CachedAnalysis, EvidenceValidity, MediaKind, ObservationStability, ObservationStatus};
 
 pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) -> CachedAnalysis {
     let mut warnings = Vec::new();
@@ -21,6 +21,9 @@ pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) 
                 }),
                 status: ObservationStatus::Unreadable,
                 warnings: vec![format!("content inspection failed: {error}")],
+                observation_stability: ObservationStability::Unreadable,
+                evidence_validity: EvidenceValidity::Unavailable,
+                attempt_count: 1,
             };
         }
     };
@@ -72,6 +75,9 @@ pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) 
         }),
         status,
         warnings,
+        observation_stability: ObservationStability::Stable,
+        evidence_validity: EvidenceValidity::Current,
+        attempt_count: 1,
     }
 }
 

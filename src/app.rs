@@ -11,14 +11,14 @@ use crate::adapters::ffprobe;
 use crate::cli::{CacheCommand, Cli, Command, PlanCommand, ScanArgs};
 use crate::discovery::discover;
 use crate::domain::{
-    CacheStatus, CachedAnalysis, DoctorReport, FileObservation, HardLinkGroup, MediaKind,
-    ObservationStatus, PhysicalReclaimability, REPORT_SCHEMA_VERSION, RUN_SCHEMA_VERSION,
+    CacheStatus, CachedAnalysis, DoctorReport, EvidenceValidity, FileObservation, HardLinkGroup,
+    MediaKind, ObservationStatus, PhysicalReclaimability, REPORT_SCHEMA_VERSION, RUN_SCHEMA_VERSION,
     ReclaimabilityReasonCode, ReclaimabilityStatus, ScanOptions, ScanReport, ScanRun, ScanSummary,
     StorageAllocation, StorageSummary,
 };
 use crate::duplicates::exact_groups;
 use crate::filesystem::metadata as fs_metadata;
-use crate::hashing::{HASH_ALGORITHM, complete_hash_stable};
+use crate::hashing::{HASH_ALGORITHM, hash_with_stability};
 use crate::planning::exact_duplicate_plan;
 use crate::reports;
 use crate::state::StateStore;
@@ -139,21 +139,30 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
             .is_some_and(|count| *count > 1);
         if is_exact_candidate && analysis.status != ObservationStatus::Unreadable {
             analysis.content_hash = None;
-            match complete_hash_stable(&file.path, file.size_bytes, file.modified_unix_ns) {
-                Ok(hash) => analysis.content_hash = Some(hash),
-                Err(error) => {
-                    analysis.status = ObservationStatus::Unreadable;
-                    analysis.warnings.push(error.to_string());
-                }
+            let hash_result = hash_with_stability(&file.path);
+            if let Some(w) = hash_result.warning.clone() {
+                analysis.warnings.push(w);
             }
+            if hash_result.evidence_validity == EvidenceValidity::Current {
+                analysis.content_hash = Some(hash_result.hash.clone());
+            } else {
+                analysis.status = ObservationStatus::Unreadable;
+            }
+            analysis.observation_stability = hash_result.stability;
+            analysis.evidence_validity = hash_result.evidence_validity;
+            analysis.attempt_count = hash_result.attempt_count;
         }
 
-        store.upsert_cache(
-            &file.path,
-            file.size_bytes,
-            file.modified_unix_ns,
-            &analysis,
-        )?;
+        // Only write to the cache when the observation is stable.  An unstable
+        // result must not pollute the cache and be returned on a future scan.
+        if analysis.evidence_validity == EvidenceValidity::Current {
+            store.upsert_cache(
+                &file.path,
+                file.size_bytes,
+                file.modified_unix_ns,
+                &analysis,
+            )?;
+        }
 
         // Collect filesystem identity and allocation metadata for this scan.
         // This is always refreshed (not cached) because link counts and
@@ -346,6 +355,13 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
                 .unwrap_or(u64::MAX),
         );
     let hard_link_alias_path_count = u64::try_from(alias_observation_ids.len()).unwrap_or(u64::MAX);
+    let unstable_observation_count = u64::try_from(
+        observations
+            .iter()
+            .filter(|o| o.evidence_validity != EvidenceValidity::Current)
+            .count(),
+    )
+    .unwrap_or(u64::MAX);
 
     let artifact_directory = state_directory.join("runs").join(&run_id);
     let completed_at = Utc::now().to_rfc3339();
@@ -380,6 +396,7 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
         cache_hits,
         unique_object_count,
         hard_link_alias_path_count,
+        unstable_observation_count,
     };
 
     let report = ScanReport {
@@ -459,6 +476,9 @@ fn observation_from_analysis(
         warnings: analysis.warnings,
         filesystem_identity: None,   // populated after construction
         storage_allocation: None,    // populated after construction
+        observation_stability: analysis.observation_stability,
+        evidence_validity: analysis.evidence_validity,
+        attempt_count: analysis.attempt_count,
     }
 }
 

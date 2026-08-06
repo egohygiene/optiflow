@@ -132,6 +132,9 @@ mod tests {
             warnings: Vec::new(),
             filesystem_identity: None,
             storage_allocation: None,
+            observation_stability: crate::domain::ObservationStability::Stable,
+            evidence_validity: crate::domain::EvidenceValidity::Current,
+            attempt_count: 1,
         }
     }
 
@@ -140,7 +143,7 @@ mod tests {
             schema_version: REPORT_SCHEMA_VERSION.to_owned(),
             generated_at: "now".to_owned(),
             run: ScanRun {
-                schema_version: "optiflow.run.v2".to_owned(),
+                schema_version: "optiflow.run.v3".to_owned(),
                 run_id: "run".to_owned(),
                 created_at: "now".to_owned(),
                 completed_at: "now".to_owned(),
@@ -170,6 +173,7 @@ mod tests {
                 cache_hits: 0,
                 unique_object_count: 2,
                 hard_link_alias_path_count: 0,
+                unstable_observation_count: 0,
             },
             duplicate_groups: groups,
             observations,
