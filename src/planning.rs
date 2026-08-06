@@ -17,20 +17,39 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
     let mut actions = Vec::new();
 
     for group in &report.duplicate_groups {
-        let mut member_paths: Vec<String> = group
+        // Collect all paths: primary + aliases for every member, sorted.
+        let mut all_member_paths: Vec<(String, Vec<String>)> = group
             .members
             .iter()
-            .map(|member| member.path.clone())
+            .map(|member| (member.path.clone(), member.alias_paths.clone()))
             .collect();
-        member_paths.sort();
-        let Some(keep_path) = member_paths.first().cloned() else {
+        all_member_paths.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+        let Some((keep_path, keep_aliases)) = all_member_paths.first().cloned() else {
             continue;
         };
-        let candidate_paths = member_paths.into_iter().skip(1).collect::<Vec<_>>();
+
+        // Candidate paths = all paths from non-keeper members.
+        let candidate_paths: Vec<String> = all_member_paths
+            .iter()
+            .skip(1)
+            .flat_map(|(primary, aliases)| {
+                let mut paths = vec![primary.clone()];
+                paths.extend_from_slice(aliases);
+                paths
+            })
+            .collect();
+
+        // Preconditions for all observed paths (primary + aliases of all members).
         let preconditions = group
             .members
             .iter()
-            .filter_map(|member| observations.get(member.path.as_str()))
+            .flat_map(|member| {
+                let mut paths = vec![member.path.clone()];
+                paths.extend_from_slice(&member.alias_paths);
+                paths
+            })
+            .filter_map(|path| observations.get(path.as_str()))
             .map(|observation| FilePrecondition {
                 path: observation.path.clone(),
                 expected_size_bytes: observation.size_bytes,
@@ -45,8 +64,10 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
             classification: "exact".to_owned(),
             proposed_operation: "review_and_select".to_owned(),
             keep_path,
+            keep_alias_paths: keep_aliases,
             candidate_paths,
             potential_reclaimable_bytes: group.reclaimable_bytes,
+            physical_reclaimability: group.physical_reclaimability.clone(),
             reason: "members have identical byte length and complete BLAKE3 content hashes; the lexicographically first path is only a deterministic review default, not a quality judgment".to_owned(),
             evidence: group.evidence.clone(),
             preconditions,
@@ -86,14 +107,14 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
 mod tests {
     use crate::domain::{
         DuplicateGroup, DuplicateMember, ExactDuplicateEvidence, MediaKind, ObservationStatus,
-        REPORT_SCHEMA_VERSION, ScanOptions, ScanRun, ScanSummary,
+        PhysicalReclaimability, REPORT_SCHEMA_VERSION, ReclaimabilityReasonCode,
+        ReclaimabilityStatus, ScanOptions, ScanRun, ScanSummary,
     };
 
     use super::*;
 
-    #[test]
-    fn plan_is_read_only_and_deterministic_about_default_keep_path() {
-        let observation = |path: &str| FileObservation {
+    fn observation(path: &str) -> FileObservation {
+        FileObservation {
             observation_id: path.to_owned(),
             run_id: "run".to_owned(),
             path: path.to_owned(),
@@ -109,13 +130,17 @@ mod tests {
             status: ObservationStatus::Unsupported,
             cache_hit: false,
             warnings: Vec::new(),
-        };
-        let observations = vec![observation("/z"), observation("/a")];
-        let report = ScanReport {
+            filesystem_identity: None,
+            storage_allocation: None,
+        }
+    }
+
+    fn make_report(observations: Vec<FileObservation>, groups: Vec<DuplicateGroup>) -> ScanReport {
+        ScanReport {
             schema_version: REPORT_SCHEMA_VERSION.to_owned(),
             generated_at: "now".to_owned(),
             run: ScanRun {
-                schema_version: "optiflow.run.v1".to_owned(),
+                schema_version: "optiflow.run.v2".to_owned(),
                 run_id: "run".to_owned(),
                 created_at: "now".to_owned(),
                 completed_at: "now".to_owned(),
@@ -143,8 +168,22 @@ mod tests {
                 exact_duplicate_files: 2,
                 reclaimable_bytes: 100,
                 cache_hits: 0,
+                unique_object_count: 2,
+                hard_link_alias_path_count: 0,
             },
-            duplicate_groups: vec![DuplicateGroup {
+            duplicate_groups: groups,
+            observations,
+            hard_link_groups: Vec::new(),
+            storage: None,
+        }
+    }
+
+    #[test]
+    fn plan_is_read_only_and_deterministic_about_default_keep_path() {
+        let observations = vec![observation("/z"), observation("/a")];
+        let report = make_report(
+            observations,
+            vec![DuplicateGroup {
                 group_id: "group".to_owned(),
                 classification: "exact".to_owned(),
                 evidence: ExactDuplicateEvidence {
@@ -152,21 +191,27 @@ mod tests {
                     complete_content_hash: "hash".to_owned(),
                     identical_size_bytes: 100,
                     member_count: 2,
+                    observed_path_count: 2,
                 },
                 members: vec![
                     DuplicateMember {
                         path: "/z".to_owned(),
                         observation_id: "/z".to_owned(),
+                        alias_paths: Vec::new(),
                     },
                     DuplicateMember {
                         path: "/a".to_owned(),
                         observation_id: "/a".to_owned(),
+                        alias_paths: Vec::new(),
                     },
                 ],
                 reclaimable_bytes: 100,
+                physical_reclaimability: PhysicalReclaimability {
+                    status: ReclaimabilityStatus::Unknown,
+                    reason_codes: vec![ReclaimabilityReasonCode::ExtentSharingUnknown],
+                },
             }],
-            observations,
-        };
+        );
 
         let plan = exact_duplicate_plan(&report);
         assert!(!plan.safety.mutates_files);

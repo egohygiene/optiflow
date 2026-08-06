@@ -2,6 +2,7 @@
 
 pub mod adapters;
 pub mod app;
+pub mod filesystem;
 pub mod cli;
 pub mod discovery;
 pub mod domain;
