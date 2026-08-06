@@ -5,7 +5,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::Serialize;
 
-use crate::domain::{CacheStatus, DoctorReport, Plan, ScanReport};
+use crate::domain::{CacheStatus, DoctorReport, Plan, ReclaimabilityStatus, ScanReport};
 
 pub fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     let parent = path
@@ -46,18 +46,97 @@ pub fn print_json<T: Serialize>(value: &T) -> Result<()> {
 
 pub fn print_scan_report(report: &ScanReport) {
     println!("OptiFlow scan {}", report.run.run_id);
-    println!("  Files: {}", report.summary.file_count);
-    println!("  Bytes: {}", report.summary.total_bytes);
+    println!("  Paths scanned:            {}", report.summary.file_count);
     println!(
-        "  Exact duplicate groups: {}",
+        "  Unique filesystem objects: {}",
+        report.summary.unique_object_count
+    );
+    println!(
+        "  Hard-link alias paths:    {}",
+        report.summary.hard_link_alias_path_count
+    );
+    println!("  Path logical bytes:       {}", report.summary.total_bytes);
+
+    if let Some(storage) = &report.storage {
+        println!(
+            "  Unique-object logical bytes: {}",
+            storage.unique_object_logical_bytes
+        );
+        println!(
+            "  Logical duplicate bytes:  {}",
+            storage.duplicate_logical_bytes
+        );
+
+        match storage.physical_reclaimability.status {
+            ReclaimabilityStatus::Estimated => {
+                println!(
+                    "  Est. reclaimable allocated bytes: {}",
+                    storage
+                        .estimated_reclaimable_allocated_bytes
+                        .map_or("unknown".to_owned(), |b| b.to_string())
+                );
+            }
+            ReclaimabilityStatus::Unknown => {
+                let codes: Vec<&str> = storage
+                    .physical_reclaimability
+                    .reason_codes
+                    .iter()
+                    .map(|c| reason_code_label(c))
+                    .collect();
+                println!(
+                    "  Est. reclaimable allocated bytes: unknown ({})",
+                    if codes.is_empty() {
+                        "reason unspecified".to_owned()
+                    } else {
+                        codes.join(", ")
+                    }
+                );
+            }
+        }
+    } else {
+        println!(
+            "  Reclaimable bytes (logical): {}",
+            report.summary.reclaimable_bytes
+        );
+    }
+
+    println!(
+        "  Exact duplicate groups:   {}",
         report.summary.exact_duplicate_groups
     );
-    println!(
-        "  Potentially reclaimable bytes: {}",
-        report.summary.reclaimable_bytes
-    );
-    println!("  Cache hits: {}", report.summary.cache_hits);
+    println!("  Cache hits:               {}", report.summary.cache_hits);
     println!("  Artifacts: {}", report.run.artifact_directory);
+
+    // Surface hard-link group warnings.
+    for group in &report.hard_link_groups {
+        if let Some(unobserved) = group.unobserved_link_count {
+            if unobserved > 0 {
+                println!(
+                    "  Warning: filesystem object {} has {unobserved} link(s) outside the scanned inputs",
+                    group.identity.file_id
+                );
+            }
+        }
+        for warning in &group.warnings {
+            println!("  Warning: {warning}");
+        }
+    }
+
+    for warning in &report.run.warnings {
+        println!("  Warning: {warning}");
+    }
+}
+
+fn reason_code_label(code: &crate::domain::ReclaimabilityReasonCode) -> &'static str {
+    use crate::domain::ReclaimabilityReasonCode::*;
+    match code {
+        FilesystemIdentityUnavailable => "filesystem_identity_unavailable",
+        AllocationMetadataUnavailable => "allocation_metadata_unavailable",
+        UnobservedHardLinks => "unobserved_hard_links",
+        ExtentSharingUnknown => "extent_sharing_unknown",
+        ArithmeticOverflow => "arithmetic_overflow",
+        PlatformMetadataUnsupported => "platform_metadata_unsupported",
+    }
 }
 
 pub fn print_plan(plan: &Plan, path: &Path) {

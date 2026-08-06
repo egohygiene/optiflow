@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use rusqlite::{Connection, OptionalExtension, params};
 
@@ -31,9 +31,14 @@ impl StateStore {
         connection
             .busy_timeout(Duration::from_secs(10))
             .context("failed to configure SQLite busy timeout")?;
+
+        // Apply migration 0001 (idempotent – uses CREATE TABLE IF NOT EXISTS).
         connection
             .execute_batch(include_str!("../migrations/0001_initial.sql"))
-            .context("failed to initialize the state database")?;
+            .context("failed to apply migration 0001")?;
+
+        // Apply migration 0002 exactly once.
+        apply_migration_0002(&connection).context("failed to apply migration 0002")?;
 
         Ok(Self {
             connection,
@@ -62,10 +67,16 @@ impl StateStore {
         let transaction = self.connection.transaction()?;
 
         for observation in observations {
+            let (filesystem_id, file_id, reported_link_count, allocated_size_bytes,
+                 identity_available, allocation_available) =
+                identity_columns(observation);
+
             transaction.execute(
                 "INSERT INTO observations (
-                    observation_id, run_id, path, size_bytes, content_hash, observation_json
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    observation_id, run_id, path, size_bytes, content_hash, observation_json,
+                    filesystem_id, file_id, reported_link_count, allocated_size_bytes,
+                    identity_available, allocation_available
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     observation.observation_id,
                     observation.run_id,
@@ -73,6 +84,12 @@ impl StateStore {
                     to_database_integer(observation.size_bytes, "file size")?,
                     observation.content_hash,
                     serde_json::to_string(observation)?,
+                    filesystem_id,
+                    file_id,
+                    reported_link_count,
+                    allocated_size_bytes,
+                    identity_available,
+                    allocation_available,
                 ],
             )?;
         }
@@ -231,6 +248,107 @@ impl StateStore {
             stored_run_count,
         })
     }
+}
+
+// ---------------------------------------------------------------------------
+// Migration helpers
+// ---------------------------------------------------------------------------
+
+/// Apply migration 0002 exactly once.
+///
+/// Checks `schema_migrations` for version 2.  If already present, the
+/// migration is skipped.  Otherwise the SQL statements are executed and the
+/// version row is inserted atomically.
+fn apply_migration_0002(connection: &Connection) -> Result<()> {
+    let already_applied: bool = connection
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
+            [],
+            |row| row.get::<_, u64>(0),
+        )
+        .context("failed to check schema_migrations for migration 0002")?
+        > 0;
+
+    if already_applied {
+        return Ok(());
+    }
+
+    // The migration SQL contains the INSERT OR IGNORE for version 2.
+    connection
+        .execute_batch(include_str!(
+            "../migrations/0002_filesystem_identity_and_storage.sql"
+        ))
+        .context("failed to execute migration 0002 SQL")?;
+
+    // Verify it was recorded.
+    let recorded: bool = connection
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
+            [],
+            |row| row.get::<_, u64>(0),
+        )
+        .context("failed to verify migration 0002 was recorded")?
+        > 0;
+
+    if !recorded {
+        bail!("migration 0002 executed but was not recorded in schema_migrations");
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Column helpers
+// ---------------------------------------------------------------------------
+
+/// Extract structured identity/allocation columns from an observation.
+///
+/// Returns `(filesystem_id, file_id, reported_link_count, allocated_size_bytes,
+///           identity_available, allocation_available)`.
+fn identity_columns(
+    observation: &FileObservation,
+) -> (
+    Option<String>,
+    Option<String>,
+    Option<i64>,
+    Option<i64>,
+    i64,
+    i64,
+) {
+    let (filesystem_id, file_id, reported_link_count, identity_available) =
+        match &observation.filesystem_identity {
+            Some(id) => {
+                let link_count = id
+                    .link_count
+                    .and_then(|lc| i64::try_from(lc).ok());
+                (
+                    Some(id.filesystem_id.clone()),
+                    Some(id.file_id.clone()),
+                    link_count,
+                    1_i64,
+                )
+            }
+            None => (None, None, None, 0_i64),
+        };
+
+    let (allocated_size_bytes, allocation_available) =
+        match observation
+            .storage_allocation
+            .as_ref()
+            .and_then(|a| a.allocated_size_bytes)
+        {
+            Some(bytes) => (i64::try_from(bytes).ok(), 1_i64),
+            None => (None, 0_i64),
+        };
+
+    (
+        filesystem_id,
+        file_id,
+        reported_link_count,
+        allocated_size_bytes,
+        identity_available,
+        allocation_available,
+    )
 }
 
 fn to_database_integer(value: u64, label: &str) -> Result<i64> {
