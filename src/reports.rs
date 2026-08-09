@@ -105,6 +105,12 @@ pub fn print_scan_report(report: &ScanReport) {
         report.summary.exact_duplicate_groups
     );
     println!("  Cache hits:               {}", report.summary.cache_hits);
+    if report.summary.unstable_observation_count > 0 {
+        println!(
+            "  Unstable observations:    {} (excluded from duplicate groups)",
+            report.summary.unstable_observation_count
+        );
+    }
     println!("  Artifacts: {}", report.run.artifact_directory);
 
     // Surface hard-link group warnings.

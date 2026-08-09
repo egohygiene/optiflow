@@ -9,10 +9,14 @@ pub const RUN_SCHEMA_VERSION_V1: &str = "optiflow.run.v1";
 pub const REPORT_SCHEMA_VERSION_V1: &str = "optiflow.report.v1";
 pub const PLAN_SCHEMA_VERSION_V1: &str = "optiflow.plan.v1";
 
-/// Current v2 constants emitted for newly created runs and plans.
-pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v2";
-pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v2";
-pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v2";
+/// Current v3 constants emitted for newly created runs and plans.
+pub const RUN_SCHEMA_VERSION_V2: &str = "optiflow.run.v2";
+pub const REPORT_SCHEMA_VERSION_V2: &str = "optiflow.report.v2";
+pub const PLAN_SCHEMA_VERSION_V2: &str = "optiflow.plan.v2";
+
+pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v3";
+pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v3";
+pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v3";
 
 // ---------------------------------------------------------------------------
 // Scan options and run metadata
@@ -40,6 +44,180 @@ pub struct ScanRun {
     pub cache_hits: u64,
     pub total_bytes: u64,
     pub warnings: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Path representation
+// ---------------------------------------------------------------------------
+
+/// A platform-native path serialised to a lossless JSON-safe encoding.
+///
+/// Paths that are valid UTF-8 are stored as plain strings.  Paths that
+/// contain non-UTF-8 bytes (possible on Unix) are stored as base64-encoded
+/// raw bytes.  The encoding is reversible on the platform that emitted it.
+///
+/// Display strings derived from `SerializedPath` must never be used for
+/// filesystem access or as unique keys; they are for human consumption only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "encoding", rename_all = "snake_case")]
+pub enum SerializedPath {
+    /// The path bytes are valid UTF-8.
+    Utf8 { value: String },
+    /// The path bytes are not valid UTF-8; raw bytes are base64-encoded.
+    #[serde(rename = "unix_bytes")]
+    UnixBytes { base64: String },
+}
+
+impl SerializedPath {
+    /// Encode a `Path` without forcing it through lossy UTF-8 conversion.
+    ///
+    /// On Unix, the raw `OsStr` bytes are inspected; non-UTF-8 sequences are
+    /// stored as base64.  On other platforms the path is converted losslessly
+    /// when possible and stored as UTF-8; otherwise a best-effort lossy
+    /// representation is used.
+    #[cfg(unix)]
+    pub fn from_path(path: &std::path::Path) -> Self {
+        use std::os::unix::ffi::OsStrExt;
+        let bytes = path.as_os_str().as_bytes();
+        match std::str::from_utf8(bytes) {
+            Ok(s) => SerializedPath::Utf8 {
+                value: s.to_owned(),
+            },
+            Err(_) => SerializedPath::UnixBytes {
+                base64: base64_encode(bytes),
+            },
+        }
+    }
+
+    /// Non-Unix fallback: convert to UTF-8 when possible; fall back to lossy.
+    #[cfg(not(unix))]
+    pub fn from_path(path: &std::path::Path) -> Self {
+        SerializedPath::Utf8 {
+            value: path.to_string_lossy().into_owned(),
+        }
+    }
+
+    /// Human-readable display string (lossy – may not round-trip to the exact
+    /// same bytes).
+    pub fn display(&self) -> std::borrow::Cow<'_, str> {
+        match self {
+            SerializedPath::Utf8 { value } => std::borrow::Cow::Borrowed(value.as_str()),
+            SerializedPath::UnixBytes { base64 } => {
+                std::borrow::Cow::Owned(format!("<non-utf8:{base64}>"))
+            }
+        }
+    }
+}
+
+/// Minimal base64 encoding (no external dependency – standard alphabet without
+/// padding, using the `std` alphabet).
+fn base64_encode(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut output = String::with_capacity((bytes.len() * 4).div_ceil(3));
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0] as usize;
+        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+        output.push(ALPHABET[(b0 >> 2) & 0x3f] as char);
+        output.push(ALPHABET[((b0 << 4) | (b1 >> 4)) & 0x3f] as char);
+        if chunk.len() > 1 {
+            output.push(ALPHABET[((b1 << 2) | (b2 >> 6)) & 0x3f] as char);
+        } else {
+            output.push('=');
+        }
+        if chunk.len() > 2 {
+            output.push(ALPHABET[b2 & 0x3f] as char);
+        } else {
+            output.push('=');
+        }
+    }
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base64_encode_produces_rfc4648_standard_output() {
+        // RFC 4648 §10 test vectors.
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        assert_eq!(base64_encode(b"foob"), "Zm9vYg==");
+        assert_eq!(base64_encode(b"fooba"), "Zm9vYmE=");
+        assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
+    }
+
+    #[test]
+    fn serialized_path_utf8_roundtrips() {
+        let path = std::path::Path::new("/tmp/example/file.txt");
+        let serialized = SerializedPath::from_path(path);
+        match &serialized {
+            SerializedPath::Utf8 { value } => assert_eq!(value, "/tmp/example/file.txt"),
+            SerializedPath::UnixBytes { .. } => panic!("expected Utf8 variant"),
+        }
+        assert_eq!(serialized.display(), "/tmp/example/file.txt");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Observation stability
+// ---------------------------------------------------------------------------
+
+/// Why an observation is considered unstable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservationStability {
+    /// All stability checks passed; evidence is from a single consistent state.
+    Stable,
+    /// The file changed (size or mtime) while being hashed.
+    ChangedDuringHash,
+    /// The file changed while being probed by an external tool.
+    ChangedDuringProbe,
+    /// The path now refers to a different filesystem object than was opened.
+    ReplacedDuringScan,
+    /// The path disappeared after discovery.
+    DisappearedDuringScan,
+    /// The path became a symbolic link after the initial metadata check.
+    BecameSymlink,
+    /// The file moved across a filesystem boundary during the scan.
+    FilesystemBoundaryChanged,
+    /// Required metadata was unavailable; stability could not be verified.
+    MetadataUnavailable,
+    /// The retry limit was exhausted; the observation remains unstable.
+    RetryExhausted,
+    /// The file could not be read.
+    Unreadable,
+}
+
+impl Default for ObservationStability {
+    /// Default to `Stable` so that older artifacts without the field behave as
+    /// if they were stable (best-effort backward compatibility).
+    fn default() -> Self {
+        ObservationStability::Stable
+    }
+}
+
+/// Whether the recorded evidence is current and trusted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EvidenceValidity {
+    /// Evidence was collected from a single stable observation window.
+    Current,
+    /// Evidence was collected but the observation became unstable afterwards;
+    /// the evidence must not be used for exact-duplicate decisions.
+    Stale,
+    /// Evidence could not be collected at all.
+    Unavailable,
+}
+
+impl Default for EvidenceValidity {
+    /// Default to `Current` for backward compatibility with older artifacts.
+    fn default() -> Self {
+        EvidenceValidity::Current
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +305,20 @@ pub struct FileObservation {
     pub filesystem_identity: Option<FilesystemIdentity>,
     /// Allocated-storage metadata collected during the current scan.
     pub storage_allocation: Option<StorageAllocation>,
+    // --- v3 additions ---
+    /// Whether the file appeared stable throughout the observation window.
+    #[serde(default)]
+    pub observation_stability: ObservationStability,
+    /// Whether the recorded hash and media evidence is trustworthy.
+    #[serde(default)]
+    pub evidence_validity: EvidenceValidity,
+    /// Number of observation attempts made (1 on first success; >1 on retry).
+    #[serde(default = "default_attempt_count")]
+    pub attempt_count: u32,
+}
+
+fn default_attempt_count() -> u32 {
+    1
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +445,11 @@ pub struct ScanSummary {
     /// Number of observed paths that are hard-link aliases.
     #[serde(default)]
     pub hard_link_alias_path_count: u64,
+    // --- v3 additions ---
+    /// Number of observations excluded from exact-duplicate decisions because
+    /// the file appeared to change during scanning.
+    #[serde(default)]
+    pub unstable_observation_count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -375,4 +572,11 @@ pub struct CachedAnalysis {
     pub probe_signature: Option<String>,
     pub status: ObservationStatus,
     pub warnings: Vec<String>,
+    /// Stability of the observation window (set by hashing stage; defaults to
+    /// `Stable` for cache hits and non-duplicate files).
+    pub observation_stability: ObservationStability,
+    /// Whether the content evidence should be trusted for exact-duplicate grouping.
+    pub evidence_validity: EvidenceValidity,
+    /// Number of hash attempts made.
+    pub attempt_count: u32,
 }

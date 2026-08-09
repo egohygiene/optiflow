@@ -40,6 +40,9 @@ impl StateStore {
         // Apply migration 0002 exactly once.
         apply_migration_0002(&connection).context("failed to apply migration 0002")?;
 
+        // Apply migration 0003 exactly once.
+        apply_migration_0003(&connection).context("failed to apply migration 0003")?;
+
         Ok(Self {
             connection,
             state_directory: state_directory.to_path_buf(),
@@ -75,8 +78,9 @@ impl StateStore {
                 "INSERT INTO observations (
                     observation_id, run_id, path, size_bytes, content_hash, observation_json,
                     filesystem_id, file_id, reported_link_count, allocated_size_bytes,
-                    identity_available, allocation_available
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                    identity_available, allocation_available,
+                    observation_stability, evidence_validity, attempt_count
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
                 params![
                     observation.observation_id,
                     observation.run_id,
@@ -90,6 +94,9 @@ impl StateStore {
                     allocated_size_bytes,
                     identity_available,
                     allocation_available,
+                    serde_json::to_string(&observation.observation_stability)?,
+                    serde_json::to_string(&observation.evidence_validity)?,
+                    i64::from(observation.attempt_count),
                 ],
             )?;
         }
@@ -160,6 +167,11 @@ impl StateStore {
                     probe_signature,
                     status: serde_json::from_str::<ObservationStatus>(&status)?,
                     warnings: serde_json::from_str::<Vec<String>>(&warnings)?,
+                    // Cache hits are treated as stable; stability is re-checked
+                    // at hash time when the entry is actually used.
+                    observation_stability: crate::domain::ObservationStability::Stable,
+                    evidence_validity: crate::domain::EvidenceValidity::Current,
+                    attempt_count: 1,
                 })
             },
         )
@@ -297,9 +309,44 @@ fn apply_migration_0002(connection: &Connection) -> Result<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Column helpers
-// ---------------------------------------------------------------------------
+/// Apply migration 0003 exactly once (observation stability columns).
+fn apply_migration_0003(connection: &Connection) -> Result<()> {
+    let already_applied: bool = connection
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 3",
+            [],
+            |row| row.get::<_, u64>(0),
+        )
+        .context("failed to check schema_migrations for migration 0003")?
+        > 0;
+
+    if already_applied {
+        return Ok(());
+    }
+
+    connection
+        .execute_batch(include_str!(
+            "../migrations/0003_observation_stability.sql"
+        ))
+        .context("failed to execute migration 0003 SQL")?;
+
+    let recorded: bool = connection
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 3",
+            [],
+            |row| row.get::<_, u64>(0),
+        )
+        .context("failed to verify migration 0003 was recorded")?
+        > 0;
+
+    if !recorded {
+        bail!("migration 0003 executed but was not recorded in schema_migrations");
+    }
+
+    Ok(())
+}
+
+
 
 /// Extract structured identity/allocation columns from an observation.
 ///

@@ -1,6 +1,78 @@
 use serde::{Deserialize, Serialize};
 
-/// Stable identity key for a filesystem object on a single platform.
+/// Immutable snapshot of filesystem-observable state for a single path.
+///
+/// Used to detect whether a file changed between the start and end of an
+/// observation window (before hashing, after hashing, etc.).  Two signatures
+/// that compare equal do not prove the file is unchanged, but a difference
+/// proves that at least one observable field changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileStateSignature {
+    /// Stable filesystem identity, when available.
+    pub identity: Option<FilesystemIdentity>,
+    /// Whether the path was a symbolic link at the time of inspection.
+    pub is_symlink: bool,
+    /// Logical (apparent) byte size.
+    pub logical_size_bytes: u64,
+    /// Modification time in nanoseconds since UNIX epoch, if available.
+    pub modified_unix_ns: Option<i64>,
+    /// Metadata-change time in nanoseconds since UNIX epoch, if available.
+    /// On Linux/macOS this is `ctime`; `None` on platforms without it.
+    pub changed_unix_ns: Option<i64>,
+}
+
+impl FileStateSignature {
+    /// Capture a signature from `std::fs::Metadata` obtained via
+    /// `symlink_metadata` (i.e., without following the link).
+    #[cfg(unix)]
+    pub fn from_symlink_metadata(metadata: &std::fs::Metadata) -> Self {
+        use std::os::unix::fs::MetadataExt;
+        let platform = if cfg!(target_os = "macos") { "macos" } else { "linux" };
+        let identity = if !metadata.file_type().is_symlink() {
+            Some(FilesystemIdentity {
+                platform: platform.to_owned(),
+                filesystem_id: metadata.dev().to_string(),
+                file_id: metadata.ino().to_string(),
+                link_count: Some(metadata.nlink()),
+            })
+        } else {
+            None // symlinks have their own inode; don't treat as the target
+        };
+
+        let modified_unix_ns = metadata
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .and_then(|d| i64::try_from(d.as_nanos()).ok());
+
+        // `ctime` in nanoseconds: seconds × 1_000_000_000 + subsecond ns.
+        let changed_unix_ns = metadata
+            .ctime()
+            .checked_mul(1_000_000_000)
+            .and_then(|sec_ns| sec_ns.checked_add(metadata.ctime_nsec()));
+
+        Self {
+            identity,
+            is_symlink: metadata.file_type().is_symlink(),
+            logical_size_bytes: metadata.len(),
+            modified_unix_ns,
+            changed_unix_ns,
+        }
+    }
+
+    /// Non-Unix stub: returns a signature with unavailable metadata.
+    #[cfg(not(unix))]
+    pub fn from_symlink_metadata(metadata: &std::fs::Metadata) -> Self {
+        Self {
+            identity: None,
+            is_symlink: metadata.file_type().is_symlink(),
+            logical_size_bytes: metadata.len(),
+            modified_unix_ns: None,
+            changed_unix_ns: None,
+        }
+    }
+}
+
 ///
 /// An object is uniquely identified only by the pair (filesystem_id, file_id).
 /// Inode numbers alone are not globally unique across mounted filesystems.
