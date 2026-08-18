@@ -7,7 +7,10 @@ on:
       - ".github/workflows/docs.yml"
       - "docs/**"
       - "pyproject.toml"
+      - "schemas/**"
+      - "scripts/site/**"
       - "uv.lock"
+      - "web/landing/**"
       - "zensical.toml"
   push:
     branches:
@@ -16,7 +19,10 @@ on:
       - ".github/workflows/docs.yml"
       - "docs/**"
       - "pyproject.toml"
+      - "schemas/**"
+      - "scripts/site/**"
       - "uv.lock"
+      - "web/landing/**"
       - "zensical.toml"
   workflow_dispatch:
 
@@ -29,7 +35,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Build documentation
+    name: Build static site
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -49,6 +55,5 @@ jobs:
       - name: Synchronize documentation dependencies
         run: uv sync --frozen --only-group docs
 
-      - name: Build documentation in strict mode
-        run: uv run --frozen --only-group docs zensical build --clean --strict
-
+      - name: Compose and verify static site
+        run: ./scripts/site/build.sh

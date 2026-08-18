@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="title">
+  <title id="title">OptiFlow mark</title>
+  <rect width="32" height="32" rx="9" fill="#121820"/>
+  <path d="M7 10.5h6.5l3 5.5-3 5.5H7l3-5.5-3-5.5Z" fill="none" stroke="#7CE7C5" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M18.5 10.5H25L22 16l3 5.5h-6.5" fill="none" stroke="#73A7FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="16" cy="16" r="2.25" fill="#F4F7F6"/>
+</svg>

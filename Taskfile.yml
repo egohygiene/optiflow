@@ -74,6 +74,25 @@ tasks:
     cmds:
       - uv run --frozen --only-group docs zensical build --clean --strict
 
+  site:build:
+    desc: Compose and verify the landing page and documentation artifact.
+    deps:
+      - docs:sync
+    cmds:
+      - ./scripts/site/build.sh
+
+  site:serve:
+    desc: Build and preview the complete static site locally.
+    deps:
+      - site:build
+    cmds:
+      - python3 -m http.server 8000 --directory dist
+
+  site:verify:
+    desc: Verify the composed static site contract.
+    cmds:
+      - uv run --frozen --only-group docs python scripts/site/verify.py dist
+
   validate:
     desc: Run all repository validation.
     cmds:
@@ -82,4 +101,4 @@ tasks:
       - task: test
       - task: contracts
       - task: smoke
-      - task: docs:build
+      - task: site:build

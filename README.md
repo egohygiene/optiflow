@@ -200,12 +200,15 @@ crate with `uv.lock`.
 ```bash
 task docs:serve
 task docs:build
+task site:serve
 ```
 
-The strict build validates internal links and anchors before publication. See
-[Site publication architecture](docs/site-publication.md) for the boundary
-between the Zensical documentation, future LaunchKit landing page, generated
-API reference, schemas, repository intelligence, and release guidance.
+The strict documentation build validates internal links and anchors. The site
+build then composes the LaunchKit-derived landing source, Zensical output, and
+canonical JSON Schemas into a collision-checked `dist/` artifact. See [Site publication
+architecture](docs/site-publication.md) for the boundary between the landing
+page, documentation, generated API reference, schemas, repository
+intelligence, and release guidance.
 
 ## Project documents
 

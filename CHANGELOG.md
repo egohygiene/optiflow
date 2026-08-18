@@ -7,6 +7,12 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a responsive, accessible, LaunchKit-derived product landing page that
+  presents OptiFlow's current evidence pipeline and read-only safety boundary
+  without implying unavailable distribution or mutation capabilities.
+- Added an isolated, collision-checked site composition build and structural
+  link verifier for the landing page, Zensical documentation, and canonical
+  schema downloads.
 - Added a pinned Zensical documentation environment, branded documentation
   home and navigation, strict link validation, and a build-only documentation
   workflow.
