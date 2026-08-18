@@ -522,11 +522,11 @@ fn default_state_directory() -> PathBuf {
 
     #[cfg(target_os = "macos")]
     {
-        return base_directories
+        base_directories
             .home_dir()
             .join("Library")
             .join("Application Support")
-            .join("optiflow");
+            .join("optiflow")
     }
 
     #[cfg(not(target_os = "macos"))]
