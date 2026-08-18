@@ -6,7 +6,7 @@ site_author = "Ego Hygiene"
 repo_url = "https://github.com/egohygiene/optiflow"
 edit_uri = "edit/main/docs/"
 docs_dir = "docs"
-site_dir = "dist/docs"
+site_dir = ".site/staging/docs"
 copyright = "Copyright &copy; 2026 Ego Hygiene"
 extra_css = ["stylesheets/extra.css"]
 nav = [
@@ -56,4 +56,3 @@ line_spans = "__span"
 pygments_lang_class = true
 [project.markdown_extensions.pymdownx.inlinehilite]
 [project.markdown_extensions.pymdownx.superfences]
-
