@@ -3,12 +3,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use chrono::Utc;
-use directories::BaseDirs;
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::adapters::ffprobe;
-use crate::cli::{CacheCommand, Cli, Command, PlanCommand, ScanArgs};
+use crate::cli::{CacheCommand, Cli, Command, ConfigCommand, OutputFormat, PlanCommand, ScanArgs};
+use crate::configuration::{ConfigurationResolution, EffectivePolicyV1};
 use crate::contracts::{self, Contract};
 use crate::discovery::{DiscoveryIssue, DiscoveryIssueKind, discover};
 use crate::domain::{
@@ -57,30 +57,69 @@ impl Execution {
     }
 }
 
-pub fn run(cli: Cli, signals: &SignalState) -> CommandResult {
+pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
     let command_name = cli.command_name();
-    let state_directory = cli.state_directory.unwrap_or_else(default_state_directory);
+    let fallback_output_format = cli.selected_output_format();
+    let resolution = match crate::configuration::resolve(&cli) {
+        Ok(resolution) => resolution,
+        Err(diagnostic) => {
+            return (
+                CommandResult::failure(command_name, *diagnostic),
+                fallback_output_format,
+            );
+        }
+    };
+    let output_format = resolution.runtime.output_format;
+    let state_directory = resolution.runtime.state_directory.clone();
+    let scan_options = resolution.runtime.scan.clone();
+    let effective_policy = resolution.policy.clone();
+    if signals.is_cancelled() {
+        let execution = interruption_execution(signals.current(), None);
+        return (
+            CommandResult::resolve(
+                command_name,
+                execution.coverage,
+                execution.artifacts,
+                execution.diagnostics,
+                execution.result,
+            ),
+            output_format,
+        );
+    }
     let execution = match cli.command {
         Command::Doctor => run_doctor(&state_directory),
-        Command::Scan(arguments) => run_scan(&state_directory, &arguments, signals),
-        Command::Report(arguments) => run_report(&state_directory, &arguments.run),
+        Command::Scan(arguments) => run_scan(
+            &state_directory,
+            &arguments,
+            &scan_options,
+            &effective_policy,
+            signals,
+        ),
+        Command::Report(arguments) => {
+            run_report(&state_directory, &arguments.run, &effective_policy)
+        }
         Command::Plan(arguments) => match arguments.command {
             PlanCommand::ExactDuplicates(arguments) => run_plan(
                 &state_directory,
                 &arguments.run,
                 arguments.output.as_deref(),
+                &effective_policy,
             ),
         },
         Command::Cache(arguments) => match arguments.command {
             CacheCommand::Status => run_cache_status(&state_directory),
         },
+        Command::Config(arguments) => run_config(&resolution, arguments.command),
     };
-    CommandResult::resolve(
-        command_name,
-        execution.coverage,
-        execution.artifacts,
-        execution.diagnostics,
-        execution.result,
+    (
+        CommandResult::resolve(
+            command_name,
+            execution.coverage,
+            execution.artifacts,
+            execution.diagnostics,
+            execution.result,
+        ),
+        output_format,
     )
 }
 
@@ -99,14 +138,14 @@ fn run_doctor(state_directory: &Path) -> Execution {
     Execution::success(&report)
 }
 
-fn run_scan(state_directory: &Path, arguments: &ScanArgs, signals: &SignalState) -> Execution {
-    let options = ScanOptions {
-        follow_symlinks: arguments.follow_symlinks,
-        include_hidden: arguments.include_hidden,
-        cross_filesystems: arguments.cross_filesystems,
-        probe_media: !arguments.no_probe,
-    };
-    let discovery = match discover(&arguments.inputs, &options, state_directory, signals) {
+fn run_scan(
+    state_directory: &Path,
+    arguments: &ScanArgs,
+    options: &ScanOptions,
+    effective_policy: &EffectivePolicyV1,
+    signals: &SignalState,
+) -> Execution {
+    let discovery = match discover(&arguments.inputs, options, state_directory, signals) {
         Ok(discovery) => discovery,
         Err(error) => return internal_failure("filesystem discovery failed", &error),
     };
@@ -524,6 +563,17 @@ fn run_scan(state_directory: &Path, arguments: &ScanArgs, signals: &SignalState)
 
     let run_path = artifact_directory.join("run.json");
     let report_path = artifact_directory.join("report.json");
+    let policy_path = artifact_directory.join("effective-policy.json");
+    if let Err(error) = reports::write_json_atomic(&policy_path, effective_policy) {
+        return fail_active_scan(
+            &store,
+            &run_id,
+            DiagnosticCode::ArtifactCommitFailed,
+            DiagnosticClassification::Artifact,
+            "failed to commit the effective-policy artifact",
+            &error,
+        );
+    }
     if let Err(error) = reports::write_json_atomic(&run_path, &run) {
         return fail_active_scan(
             &store,
@@ -546,6 +596,12 @@ fn run_scan(state_directory: &Path, arguments: &ScanArgs, signals: &SignalState)
     }
 
     let artifacts = vec![
+        artifact_reference(
+            "effective_policy",
+            &effective_policy.schema,
+            &run_id,
+            &policy_path,
+        ),
         artifact_reference("run", RUN_SCHEMA_VERSION, &run_id, &run_path),
         artifact_reference("report", REPORT_SCHEMA_VERSION, &run_id, &report_path),
     ];
@@ -668,7 +724,11 @@ struct LoadedReport {
     path: PathBuf,
 }
 
-fn run_report(state_directory: &Path, run_or_path: &str) -> Execution {
+fn run_report(
+    state_directory: &Path,
+    run_or_path: &str,
+    current_policy: &EffectivePolicyV1,
+) -> Execution {
     let store = match StateStore::open(state_directory) {
         Ok(store) => store,
         Err(error) => {
@@ -684,29 +744,41 @@ fn run_report(state_directory: &Path, run_or_path: &str) -> Execution {
         Err(diagnostic) => return Execution::failure(*diagnostic),
     };
     let partial = report_is_partial(&loaded.report);
-    let diagnostics = if partial {
+    let mut diagnostics = if partial {
         vec![source_run_partial_diagnostic(&loaded.report)]
     } else {
         Vec::new()
     };
+    let (policy_artifact, mut policy_diagnostics) =
+        load_source_policy(&loaded.report, current_policy);
+    diagnostics.append(&mut policy_diagnostics);
+    let mut artifacts = vec![artifact_reference(
+        "report",
+        &loaded.report.schema_version,
+        &loaded.report.run.run_id,
+        &loaded.path,
+    )];
+    if let Some(policy_artifact) = policy_artifact {
+        artifacts.push(policy_artifact);
+    }
     Execution {
         coverage: Some(if partial {
             CoverageStatus::Partial
         } else {
             CoverageStatus::Complete
         }),
-        artifacts: vec![artifact_reference(
-            "report",
-            &loaded.report.schema_version,
-            &loaded.report.run.run_id,
-            &loaded.path,
-        )],
+        artifacts,
         diagnostics,
         result: serde_json::to_value(&loaded.report).ok(),
     }
 }
 
-fn run_plan(state_directory: &Path, run_or_path: &str, output: Option<&Path>) -> Execution {
+fn run_plan(
+    state_directory: &Path,
+    run_or_path: &str,
+    output: Option<&Path>,
+    current_policy: &EffectivePolicyV1,
+) -> Execution {
     let store = match StateStore::open(state_directory) {
         Ok(store) => store,
         Err(error) => {
@@ -748,23 +820,27 @@ fn run_plan(state_directory: &Path, run_or_path: &str, output: Option<&Path>) ->
         diagnostic.retryable = Some(false);
         return Execution::failure(diagnostic);
     }
+    let (policy_artifact, mut diagnostics) = load_source_policy(&loaded.report, current_policy);
+    if partial {
+        diagnostics.push(source_run_partial_diagnostic(&loaded.report));
+    }
+    let mut artifacts = vec![artifact_reference(
+        "plan",
+        PLAN_SCHEMA_VERSION,
+        &loaded.report.run.run_id,
+        &output_path,
+    )];
+    if let Some(policy_artifact) = policy_artifact {
+        artifacts.push(policy_artifact);
+    }
     Execution {
         coverage: Some(if partial {
             CoverageStatus::Partial
         } else {
             CoverageStatus::Complete
         }),
-        artifacts: vec![artifact_reference(
-            "plan",
-            PLAN_SCHEMA_VERSION,
-            &loaded.report.run.run_id,
-            &output_path,
-        )],
-        diagnostics: if partial {
-            vec![source_run_partial_diagnostic(&loaded.report)]
-        } else {
-            Vec::new()
-        },
+        artifacts,
+        diagnostics,
         result: serde_json::to_value(&plan).ok(),
     }
 }
@@ -787,6 +863,34 @@ fn run_cache_status(state_directory: &Path) -> Execution {
             "failed to inspect cache state",
             &error,
         ),
+    }
+}
+
+fn run_config(resolution: &ConfigurationResolution, command: ConfigCommand) -> Execution {
+    match command {
+        ConfigCommand::Validate => Execution::success(&serde_json::json!({
+            "valid": true,
+            "configuration_schema": crate::configuration::CONFIG_SCHEMA,
+            "effective_policy_schema": resolution.policy.schema,
+            "effective_configuration_digest": resolution
+                .policy
+                .fingerprints
+                .effective_configuration,
+            "evidence_policy_fingerprint": resolution.policy.fingerprints.evidence_policy,
+            "loaded_source_count": resolution
+                .sources
+                .iter()
+                .filter(|source| matches!(
+                    source.status,
+                    crate::configuration::ConfigurationSourceStatus::Loaded
+                ))
+                .count(),
+        })),
+        ConfigCommand::Show => Execution::success(resolution),
+        ConfigCommand::Explain(arguments) => match resolution.explain(&arguments.setting) {
+            Ok(explanation) => Execution::success(&explanation),
+            Err(diagnostic) => Execution::failure(*diagnostic),
+        },
     }
 }
 
@@ -990,6 +1094,88 @@ fn report_is_partial(report: &ScanReport) -> bool {
         || !report.run.warnings.is_empty()
 }
 
+fn load_source_policy(
+    report: &ScanReport,
+    current_policy: &EffectivePolicyV1,
+) -> (Option<ArtifactReference>, Vec<Diagnostic>) {
+    let path = Path::new(&report.run.artifact_directory).join("effective-policy.json");
+    let bytes = match fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let diagnostic = Diagnostic::new(
+                DiagnosticCode::HistoricalPolicyUnknown,
+                DiagnosticSeverity::Information,
+                DiagnosticClassification::State,
+                DiagnosticImpact::None,
+                "the historical run predates persisted effective-policy evidence",
+            )
+            .with_run_id(report.run.run_id.clone());
+            return (None, vec![diagnostic]);
+        }
+        Err(error) => {
+            let diagnostic = Diagnostic::new(
+                DiagnosticCode::HistoricalPolicyUnknown,
+                DiagnosticSeverity::Warning,
+                DiagnosticClassification::State,
+                DiagnosticImpact::None,
+                format!("the historical effective policy could not be read: {error}"),
+            )
+            .with_run_id(report.run.run_id.clone());
+            return (None, vec![diagnostic]);
+        }
+    };
+    let source_policy: EffectivePolicyV1 = match serde_json::from_slice(&bytes) {
+        Ok(policy) => policy,
+        Err(error) => {
+            let diagnostic = Diagnostic::new(
+                DiagnosticCode::HistoricalPolicyUnknown,
+                DiagnosticSeverity::Warning,
+                DiagnosticClassification::State,
+                DiagnosticImpact::None,
+                format!("the historical effective policy is incompatible: {error}"),
+            )
+            .with_run_id(report.run.run_id.clone());
+            return (None, vec![diagnostic]);
+        }
+    };
+    if let Err(error) = contracts::validate(Contract::EffectivePolicy, &source_policy)
+        .and_then(|()| crate::configuration::validate_fingerprints(&source_policy))
+    {
+        let diagnostic = Diagnostic::new(
+            DiagnosticCode::EffectivePolicyFingerprintMismatch,
+            DiagnosticSeverity::Warning,
+            DiagnosticClassification::State,
+            DiagnosticImpact::None,
+            format!("the historical effective policy failed integrity validation: {error}"),
+        )
+        .with_run_id(report.run.run_id.clone());
+        return (None, vec![diagnostic]);
+    }
+
+    let mut diagnostics = Vec::new();
+    if source_policy.fingerprints.evidence_policy != current_policy.fingerprints.evidence_policy {
+        diagnostics.push(
+            Diagnostic::new(
+                DiagnosticCode::SourcePolicyDiffers,
+                DiagnosticSeverity::Information,
+                DiagnosticClassification::State,
+                DiagnosticImpact::None,
+                "the source run used a different evidence policy than the current command",
+            )
+            .with_run_id(report.run.run_id.clone()),
+        );
+    }
+    (
+        Some(artifact_reference(
+            "effective_policy",
+            &source_policy.schema,
+            &report.run.run_id,
+            &path,
+        )),
+        diagnostics,
+    )
+}
+
 fn source_run_partial_diagnostic(report: &ScanReport) -> Diagnostic {
     Diagnostic::new(
         DiagnosticCode::SourceRunPartial,
@@ -1081,31 +1267,4 @@ fn interruption_execution(interruption: Option<Interruption>, run_id: Option<&st
     );
     diagnostic.context.run_id = run_id.map(str::to_owned);
     Execution::failure(diagnostic)
-}
-
-fn default_state_directory() -> PathBuf {
-    if let Some(path) = std::env::var_os("OPTIFLOW_STATE_DIRECTORY") {
-        return PathBuf::from(path);
-    }
-
-    let Some(base_directories) = BaseDirs::new() else {
-        return PathBuf::from(".optiflow");
-    };
-
-    #[cfg(target_os = "macos")]
-    {
-        base_directories
-            .home_dir()
-            .join("Library")
-            .join("Application Support")
-            .join("optiflow")
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    {
-        std::env::var_os("XDG_STATE_HOME").map_or_else(
-            || base_directories.home_dir().join(".local/state/optiflow"),
-            |path| PathBuf::from(path).join("optiflow"),
-        )
-    }
 }

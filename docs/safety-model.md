@@ -13,6 +13,9 @@ artifacts in its configured state directory, but it cannot change source media.
   exact identity.
 - An exact group requires identical byte length and complete BLAKE3-256 hash.
 - A plan is immutable evidence, not permission to execute.
+- Configuration cannot enable mutation, apply behavior, shell execution,
+  validation bypasses, non-atomic artifact commits, or acceptance of unstable
+  evidence as exact.
 - The deterministic `keep_path` is not a quality score.
 - Perceptual or containment matches will default to review in future releases.
 - RAW files, paired assets, Live Photos, and generated pipeline masters may be
@@ -44,6 +47,7 @@ deliberate policy and never the universal default.
 - Unexpected mount traversal
 - Hash collision risk before destructive resolution
 - Interrupted report writes
+- Untrusted configuration, shell expansion, and policy-fingerprint mismatch
 - Optional adapter absence or malformed output
 - External-volume and network-filesystem SQLite behavior
 

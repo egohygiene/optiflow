@@ -7,6 +7,16 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added strict, typed `optiflow.config.v1` TOML with deterministic user,
+  project, explicit-file, environment, and CLI precedence.
+- Added `optiflow.effective-policy.v1`, per-leaf provenance and shadow traces,
+  BLAKE3 effective-configuration and evidence-policy identities, and locked
+  safety invariants.
+- Added read-only `config validate`, `config show`, and `config explain`
+  commands plus `--config`, `--no-config`, closed environment mappings, and
+  explicit positive/negative scan-policy overrides.
+- New scans persist a validated `effective-policy.json` sidecar; report and plan
+  expose historical policy without reconstructing it from current defaults.
 - Added the versioned `optiflow.command-result.v1` envelope and checked-in JSON
   Schema.
 - Added centralized typed outcomes, diagnostic classifications and impacts,

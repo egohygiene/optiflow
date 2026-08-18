@@ -28,8 +28,7 @@ fn main() -> ExitCode {
 
     match Cli::try_parse_from(&arguments) {
         Ok(cli) => {
-            let output_format = cli.selected_output_format();
-            let result = optiflow::run(cli, &signals);
+            let (result, output_format) = optiflow::run(cli, &signals);
             finish(&result, output_format)
         }
         Err(error) => {

@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/effective-policy-v1.schema.json",
+  "title": "optiflow effective policy v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "evidence_policy",
+    "operational_policy",
+    "presentation_policy",
+    "safety_invariants",
+    "fingerprints",
+    "provenance"
+  ],
+  "properties": {
+    "schema": { "const": "optiflow.effective-policy.v1" },
+    "evidence_policy": {
+      "type": "object",
+      "required": [
+        "follow_symlinks",
+        "include_hidden",
+        "cross_filesystems",
+        "probe_media",
+        "exact_grouping_profile",
+        "observation_stability",
+        "unstable_observations",
+        "maximum_observation_attempts"
+      ],
+      "properties": {
+        "follow_symlinks": { "type": "boolean" },
+        "include_hidden": { "type": "boolean" },
+        "cross_filesystems": { "type": "boolean" },
+        "probe_media": { "type": "boolean" },
+        "exact_grouping_profile": { "const": "size_and_blake3_256" },
+        "observation_stability": { "const": "required" },
+        "unstable_observations": { "const": "exclude" },
+        "maximum_observation_attempts": { "type": "integer", "const": 2 }
+      },
+      "additionalProperties": false
+    },
+    "operational_policy": {
+      "type": "object",
+      "required": ["state_directory"],
+      "properties": {
+        "state_directory": { "$ref": "#/$defs/serialized_path" }
+      },
+      "additionalProperties": false
+    },
+    "presentation_policy": {
+      "type": "object",
+      "required": ["output_format"],
+      "properties": {
+        "output_format": { "enum": ["human", "json"] }
+      },
+      "additionalProperties": false
+    },
+    "safety_invariants": {
+      "type": "object",
+      "required": [
+        "source_mutation",
+        "apply_enabled",
+        "shell_execution",
+        "artifact_validation_required",
+        "atomic_artifact_commit_required",
+        "current_stability_required_for_exact_groups"
+      ],
+      "properties": {
+        "source_mutation": { "const": false },
+        "apply_enabled": { "const": false },
+        "shell_execution": { "const": false },
+        "artifact_validation_required": { "const": true },
+        "atomic_artifact_commit_required": { "const": true },
+        "current_stability_required_for_exact_groups": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "fingerprints": {
+      "type": "object",
+      "required": ["effective_configuration", "evidence_policy"],
+      "properties": {
+        "effective_configuration": { "$ref": "#/$defs/digest" },
+        "evidence_policy": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "presentation_policy.output_format",
+        "operational_policy.state_directory",
+        "evidence_policy.follow_symlinks",
+        "evidence_policy.include_hidden",
+        "evidence_policy.cross_filesystems",
+        "evidence_policy.probe_media",
+        "evidence_policy.exact_grouping_profile",
+        "evidence_policy.observation_stability",
+        "evidence_policy.unstable_observations",
+        "evidence_policy.maximum_observation_attempts",
+        "safety_invariants.source_mutation",
+        "safety_invariants.apply_enabled",
+        "safety_invariants.shell_execution",
+        "safety_invariants.artifact_validation_required",
+        "safety_invariants.atomic_artifact_commit_required",
+        "safety_invariants.current_stability_required_for_exact_groups"
+      ],
+      "properties": {
+        "presentation_policy.output_format": { "$ref": "#/$defs/provenance" },
+        "operational_policy.state_directory": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.follow_symlinks": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.include_hidden": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.cross_filesystems": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.probe_media": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.exact_grouping_profile": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.observation_stability": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.unstable_observations": { "$ref": "#/$defs/provenance" },
+        "evidence_policy.maximum_observation_attempts": { "$ref": "#/$defs/provenance" },
+        "safety_invariants.source_mutation": { "$ref": "#/$defs/provenance" },
+        "safety_invariants.apply_enabled": { "$ref": "#/$defs/provenance" },
+        "safety_invariants.shell_execution": { "$ref": "#/$defs/provenance" },
+        "safety_invariants.artifact_validation_required": { "$ref": "#/$defs/provenance" },
+        "safety_invariants.atomic_artifact_commit_required": { "$ref": "#/$defs/provenance" },
+        "safety_invariants.current_stability_required_for_exact_groups": { "$ref": "#/$defs/provenance" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "serialized_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["encoding", "value"],
+          "properties": {
+            "encoding": { "const": "utf8" },
+            "value": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["encoding", "base64"],
+          "properties": {
+            "encoding": { "const": "unix_bytes" },
+            "base64": { "type": "string", "pattern": "^[A-Za-z0-9+/]*={0,2}$" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "digest": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "blake3-256" },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source", "detail"],
+      "properties": {
+        "source": {
+          "enum": [
+            "compiled_default",
+            "user_configuration",
+            "project_configuration",
+            "explicit_configuration",
+            "environment",
+            "command_line",
+            "locked_invariant"
+          ]
+        },
+        "detail": { "type": "string", "minLength": 1 },
+        "path": { "$ref": "#/$defs/serialized_path" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -44,6 +44,16 @@ fn render_human(result: &CommandResult) -> Result<()> {
             artifact.path.display()
         )?;
     }
+    if result.command.starts_with("config ") {
+        if let Some(value) = &result.result {
+            writeln!(
+                stdout,
+                "{}",
+                serde_json::to_string_pretty(value)
+                    .context("failed to render the configuration result")?
+            )?;
+        }
+    }
     stdout.flush()?;
 
     let mut stderr = io::stderr().lock();

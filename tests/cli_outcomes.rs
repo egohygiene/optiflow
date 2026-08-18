@@ -65,7 +65,7 @@ fn one_valid_and_one_missing_input_is_partial_success() {
     assert_eq!(document["outcome"]["class"], "partial_success");
     assert_eq!(document["coverage"]["status"], "partial");
     assert_eq!(document["diagnostics"][0]["code"], "partial_inventory");
-    assert_eq!(document["artifacts"].as_array().map(Vec::len), Some(2));
+    assert_eq!(document["artifacts"].as_array().map(Vec::len), Some(3));
     assert!(stderr.is_empty());
 }
 
@@ -194,9 +194,12 @@ fn report_and_plan_preserve_partial_source_coverage() {
     let (report_status, report_document, _) = json_output(report);
     assert_eq!(report_status.code(), Some(3));
     assert_eq!(report_document["coverage"]["status"], "partial");
-    assert_eq!(
-        report_document["diagnostics"][0]["code"],
-        "source_run_partial"
+    assert!(
+        report_document["diagnostics"]
+            .as_array()
+            .expect("report diagnostics")
+            .iter()
+            .any(|diagnostic| diagnostic["code"] == "source_run_partial")
     );
 
     let mut plan = command(&state);

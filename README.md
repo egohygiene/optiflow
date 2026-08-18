@@ -54,6 +54,7 @@ local state directory:
 
 ```text
 runs/<run-id>/
+├── effective-policy.json
 ├── run.json
 └── report.json
 ```
@@ -77,12 +78,17 @@ optiflow scan <inputs...>
 optiflow report <run-or-report-path>
 optiflow plan exact-duplicates --run <run-or-report-path>
 optiflow cache status
+optiflow config validate
+optiflow config show
+optiflow config explain <setting>
 ```
 
 Global options:
 
 ```text
 --state-directory <DIRECTORY>  Override persistent local state
+--config <FILE>                Select one explicit configuration file
+--no-config                    Disable configuration-file loading
 --output-format <FORMAT>       Select human or JSON command-result output
 --json                         Compatible alias for --output-format json
 ```
@@ -91,13 +97,23 @@ Scan policy options:
 
 ```text
 --follow-symlinks      Follow symbolic links
+--no-follow-symlinks   Explicitly keep link following disabled
 --include-hidden       Include hidden files and directories
+--exclude-hidden       Explicitly exclude hidden paths
 --cross-filesystems    Cross filesystem boundaries
+--stay-on-filesystem   Explicitly preserve filesystem boundaries
+--probe                Explicitly enable optional ffprobe inspection
 --no-probe             Skip optional ffprobe metadata extraction
 ```
 
 The defaults are intentionally conservative for external drives and large
 archives.
+
+Configuration follows compiled defaults < user file < nearest project
+`optiflow.toml` < recognized environment < explicit CLI. See
+[Configuration and effective policy](docs/configuration.md) for the strict
+`optiflow.config.v1` schema, exact locations and variables, supported settings,
+path rules, provenance, fingerprints, and locked invariants.
 
 ## JSON pipeline contract
 
@@ -111,6 +127,8 @@ Machine results and committed domain artifacts have independent identifiers:
 | Artifact | Identifier | Schema |
 | --- | --- | --- |
 | Command result | `optiflow.command-result.v1` | `schemas/command-result.schema.json` |
+| Configuration | `optiflow.config.v1` | `schemas/config-v1.schema.json` |
+| Effective policy | `optiflow.effective-policy.v1` | `schemas/effective-policy-v1.schema.json` |
 | Run | `optiflow.run.v3` | `schemas/run.schema.json` |
 | Report | `optiflow.report.v3` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
@@ -181,6 +199,7 @@ unchanged after scanning and planning.
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
 - [CLI outcome contract](docs/cli-contract.md)
+- [Configuration and effective policy](docs/configuration.md)
 - [Development model](docs/development-model.md)
 - [Roadmap](ROADMAP.md)
 

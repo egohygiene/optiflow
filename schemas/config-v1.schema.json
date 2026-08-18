@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/config-v1.schema.json",
+  "title": "optiflow configuration v1",
+  "type": "object",
+  "required": ["schema"],
+  "properties": {
+    "schema": { "const": "optiflow.config.v1" },
+    "output": {
+      "type": "object",
+      "properties": {
+        "format": { "enum": ["human", "json"] }
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "directory": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "scan": {
+      "type": "object",
+      "properties": {
+        "follow_symlinks": { "type": "boolean" },
+        "include_hidden": { "type": "boolean" },
+        "cross_filesystems": { "type": "boolean" },
+        "probe_media": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

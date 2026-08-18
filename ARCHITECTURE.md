@@ -7,6 +7,7 @@ It does not let detection imply deletion.
 
 ```text
 inputs
+  -> one deterministic effective policy
   -> conservative discovery
   -> content and media inventory
   -> persistent observations
@@ -49,6 +50,8 @@ system cleaner.
 | Component | Responsibility |
 | --- | --- |
 | `cli` | Parse explicit commands, global output mode, and traversal policies |
+| `configuration::resolver` | Capture selectors and recognized inputs once; discover, load, merge, validate, and explain typed configuration |
+| `configuration::policy` | Hold the fully materialized evidence, operational, presentation, safety, provenance, and fingerprint contract |
 | `app` | Coordinate command-level use cases and artifact boundaries |
 | `outcome` | Resolve typed diagnostics, coverage, artifacts, and results into one stable process outcome |
 | `contracts` | Compile and enforce checked-in JSON Schemas at runtime |
@@ -112,6 +115,13 @@ Command modules return domain results and typed diagnostics. A single outcome
 resolver applies semantic precedence, and only `main` converts its typed exit
 code to an operating-system status. Renderers never infer outcomes from message
 text. See [CLI Outcome Contract](docs/cli-contract.md).
+
+Configuration resolution precedes every domain command. Domain modules receive
+only validated runtime policy and never reopen configuration files or reread
+configuration environment variables. New runs commit the versioned effective
+policy beside immutable v3 artifacts; report and plan use that historical
+snapshot rather than substituting current defaults. See
+[Configuration and Effective Policy](docs/configuration.md).
 
 ## Integration boundary
 

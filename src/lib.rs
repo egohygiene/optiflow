@@ -3,6 +3,7 @@
 pub mod adapters;
 pub mod app;
 pub mod cli;
+pub mod configuration;
 pub mod contracts;
 pub mod discovery;
 pub mod domain;
@@ -18,10 +19,12 @@ pub mod signals;
 pub mod state;
 
 use crate::cli::Cli;
-use crate::outcome::CommandResult;
 use crate::signals::SignalState;
 
 /// Execute one parsed optiflow command.
-pub fn run(cli: Cli, signals: &SignalState) -> CommandResult {
+pub fn run(
+    cli: Cli,
+    signals: &SignalState,
+) -> (crate::outcome::CommandResult, crate::cli::OutputFormat) {
     app::run(cli, signals)
 }
