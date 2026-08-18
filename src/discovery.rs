@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::domain::ScanOptions;
+use crate::signals::SignalState;
 
 #[derive(Debug, Clone)]
 pub struct DiscoveredFile {
@@ -19,51 +20,91 @@ pub struct DiscoveredFile {
 #[derive(Debug, Default)]
 pub struct DiscoveryResult {
     pub files: Vec<DiscoveredFile>,
-    pub warnings: Vec<String>,
+    pub issues: Vec<DiscoveryIssue>,
+    pub accepted_input_count: usize,
+    pub interrupted: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiscoveryIssueKind {
+    InputUnavailable,
+    InputExcludedByPolicy,
+    InvalidInputType,
+    TraversalIncomplete,
+    PathChanged,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscoveryIssue {
+    pub kind: DiscoveryIssueKind,
+    pub path: Option<PathBuf>,
+    pub message: String,
+    pub os_error_kind: Option<String>,
 }
 
 pub fn discover(
     inputs: &[PathBuf],
     options: &ScanOptions,
     state_directory: &Path,
+    signals: &SignalState,
 ) -> Result<DiscoveryResult> {
     let state_directory = state_directory.canonicalize().ok();
     let mut unique_paths = BTreeSet::new();
-    let mut warnings = Vec::new();
+    let mut issues = Vec::new();
+    let mut accepted_input_count = 0;
+    let mut interrupted = false;
 
     for input in inputs {
+        if signals.is_cancelled() {
+            interrupted = true;
+            break;
+        }
         let absolute_input = absolute_path(input)?;
         let link_metadata = match fs::symlink_metadata(&absolute_input) {
             Ok(metadata) => metadata,
             Err(error) => {
-                warnings.push(format!(
-                    "could not inspect {}: {error}",
-                    absolute_input.display()
-                ));
+                issues.push(DiscoveryIssue {
+                    kind: DiscoveryIssueKind::InputUnavailable,
+                    path: Some(absolute_input.clone()),
+                    message: format!("could not inspect {}: {error}", absolute_input.display()),
+                    os_error_kind: Some(format!("{:?}", error.kind()).to_lowercase()),
+                });
                 continue;
             }
         };
 
         if link_metadata.file_type().is_symlink() && !options.follow_symlinks {
-            warnings.push(format!(
-                "skipped symbolic-link input {} because link following is disabled",
-                absolute_input.display()
-            ));
+            issues.push(DiscoveryIssue {
+                kind: DiscoveryIssueKind::InputExcludedByPolicy,
+                path: Some(absolute_input.clone()),
+                message: format!(
+                    "skipped symbolic-link input {} because link following is disabled",
+                    absolute_input.display()
+                ),
+                os_error_kind: None,
+            });
             continue;
         }
 
         if link_metadata.is_file() {
+            accepted_input_count += 1;
             unique_paths.insert(absolute_input);
             continue;
         }
 
         if !link_metadata.is_dir() {
-            warnings.push(format!(
-                "skipped non-file, non-directory input {}",
-                absolute_input.display()
-            ));
+            issues.push(DiscoveryIssue {
+                kind: DiscoveryIssueKind::InvalidInputType,
+                path: Some(absolute_input.clone()),
+                message: format!(
+                    "skipped non-file, non-directory input {}",
+                    absolute_input.display()
+                ),
+                os_error_kind: None,
+            });
             continue;
         }
+        accepted_input_count += 1;
 
         let root_device = device_id(&link_metadata);
         let root = absolute_input.clone();
@@ -83,18 +124,36 @@ pub fn discover(
             });
 
         for entry in walker {
+            if signals.is_cancelled() {
+                interrupted = true;
+                break;
+            }
             match entry {
                 Ok(entry) if entry.file_type().is_file() => {
                     unique_paths.insert(entry.into_path());
                 }
                 Ok(_) => {}
-                Err(error) => warnings.push(format!("filesystem traversal warning: {error}")),
+                Err(error) => issues.push(DiscoveryIssue {
+                    kind: DiscoveryIssueKind::TraversalIncomplete,
+                    path: error.path().map(Path::to_path_buf),
+                    message: format!("filesystem traversal warning: {error}"),
+                    os_error_kind: error
+                        .io_error()
+                        .map(|error| format!("{:?}", error.kind()).to_lowercase()),
+                }),
             }
+        }
+        if interrupted {
+            break;
         }
     }
 
     let mut files = Vec::with_capacity(unique_paths.len());
     for path in unique_paths {
+        if signals.is_cancelled() {
+            interrupted = true;
+            break;
+        }
         match fs::metadata(&path) {
             Ok(metadata) if metadata.is_file() => files.push(DiscoveredFile {
                 path,
@@ -103,12 +162,27 @@ pub fn discover(
                 device_id: device_id(&metadata),
                 inode: inode(&metadata),
             }),
-            Ok(_) => warnings.push(format!("path stopped being a file: {}", path.display())),
-            Err(error) => warnings.push(format!("could not read {}: {error}", path.display())),
+            Ok(_) => issues.push(DiscoveryIssue {
+                kind: DiscoveryIssueKind::PathChanged,
+                path: Some(path.clone()),
+                message: format!("path stopped being a file: {}", path.display()),
+                os_error_kind: None,
+            }),
+            Err(error) => issues.push(DiscoveryIssue {
+                kind: DiscoveryIssueKind::PathChanged,
+                path: Some(path.clone()),
+                message: format!("could not read {}: {error}", path.display()),
+                os_error_kind: Some(format!("{:?}", error.kind()).to_lowercase()),
+            }),
         }
     }
 
-    Ok(DiscoveryResult { files, warnings })
+    Ok(DiscoveryResult {
+        files,
+        issues,
+        accepted_input_count,
+        interrupted,
+    })
 }
 
 fn absolute_path(path: &Path) -> Result<PathBuf> {
@@ -214,6 +288,7 @@ mod tests {
                 probe_media: false,
             },
             &directory.path().join("state"),
+            &SignalState::default(),
         )
         .expect("discovery succeeds");
 

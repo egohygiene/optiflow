@@ -13,6 +13,8 @@ inputs
   -> exact relationship evidence
   -> immutable report
   -> immutable review plan
+  -> typed command outcome
+  -> human or machine renderer
 ```
 
 The `v0.1.0` execution boundary ends at plan generation. Mutation, transactional
@@ -48,6 +50,10 @@ system cleaner.
 | --- | --- |
 | `cli` | Parse explicit commands, global output mode, and traversal policies |
 | `app` | Coordinate command-level use cases and artifact boundaries |
+| `outcome` | Resolve typed diagnostics, coverage, artifacts, and results into one stable process outcome |
+| `contracts` | Compile and enforce checked-in JSON Schemas at runtime |
+| `signals` | Capture cooperative Unix interruption state without terminating library code |
+| `render` | Enforce stdout/stderr ownership and buffer machine output |
 | `discovery` | Traverse inputs without following links, hidden trees, or mount boundaries by default |
 | `inventory` | Inspect actual content and normalize high-level media categories |
 | `adapters::ffprobe` | Discover and invoke `ffprobe` directly without a shell |
@@ -55,7 +61,7 @@ system cleaner.
 | `duplicates` | Derive exact groups from identical size and complete hash evidence |
 | `state` | Persist runs, observations, groups, and reusable file analysis in SQLite |
 | `planning` | Convert exact groups into non-mutating actions and explicit preconditions |
-| `reports` | Commit JSON artifacts atomically and render CLI results |
+| `reports` | Commit JSON artifacts atomically |
 
 ## Data model
 
@@ -91,14 +97,21 @@ schema.
 
 ## Failure model
 
-- Traversal failures become run warnings and do not erase successful evidence.
+- Traversal failures reduce coverage and do not erase successful evidence.
 - Content or hash read failures become unreadable observations.
 - `ffprobe` failures become per-file warnings; hashing remains independent.
 - Artifacts are written to a sibling temporary file, flushed, synchronized, and
   renamed into place.
-- A scan row remains `running` after an unexpected interruption, making
-  incomplete state distinguishable from a completed report.
+- Generated artifacts are validated against their checked-in contracts before
+  OptiFlow reports success.
+- Handled `SIGINT` and `SIGTERM` mark an active scan row `interrupted`, never
+  `completed`; a hard process failure can still leave `running` recovery state.
 - Source paths are opened read-only; no source-write API is present.
+
+Command modules return domain results and typed diagnostics. A single outcome
+resolver applies semantic precedence, and only `main` converts its typed exit
+code to an operating-system status. Renderers never infer outcomes from message
+text. See [CLI Outcome Contract](docs/cli-contract.md).
 
 ## Integration boundary
 

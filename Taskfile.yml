@@ -10,17 +10,17 @@ tasks:
   build:
     desc: Build all debug targets.
     cmds:
-      - cargo build --all-targets
+      - cargo build --locked --all-targets
 
   build:release:
     desc: Build the optimized release binary.
     cmds:
-      - cargo build --release
+      - cargo build --locked --release
 
   check:
     desc: Run fast compiler checks.
     cmds:
-      - cargo check --all-targets
+      - cargo check --locked --all-targets
 
   format:
     desc: Format Rust source.
@@ -35,12 +35,12 @@ tasks:
   lint:
     desc: Run strict Clippy checks.
     cmds:
-      - cargo clippy --all-targets --all-features -- -D warnings
+      - cargo clippy --locked --all-targets --all-features -- -D warnings
 
   test:
     desc: Run the complete test suite.
     cmds:
-      - cargo test --all-targets
+      - cargo test --locked --all-targets
 
   smoke:
     desc: Run the synthetic read-only end-to-end test.

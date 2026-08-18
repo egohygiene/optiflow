@@ -14,7 +14,7 @@ cp "$input_directory/first-🌌.bin" "$input_directory/second.bin"
 printf "%s" "different fixture" > "$input_directory/unique.bin"
 
 cd "$repository_root"
-cargo build --quiet
+cargo build --quiet --locked
 
 report_path="$temporary_root/report.json"
 ./target/debug/optiflow \
@@ -24,10 +24,12 @@ report_path="$temporary_root/report.json"
   --no-probe \
   "$input_directory" > "$report_path"
 
-jq --exit-status '.summary.exact_duplicate_groups == 1' "$report_path" >/dev/null
-jq --exit-status '.summary.reclaimable_bytes == 23' "$report_path" >/dev/null
+jq --exit-status '.schema == "optiflow.command-result.v1"' "$report_path" >/dev/null
+jq --exit-status '.outcome.exit_code == 0' "$report_path" >/dev/null
+jq --exit-status '.result.summary.exact_duplicate_groups == 1' "$report_path" >/dev/null
+jq --exit-status '.result.summary.reclaimable_bytes == 23' "$report_path" >/dev/null
 
-run_id="$(jq --raw-output '.run.run_id' "$report_path")"
+run_id="$(jq --raw-output '.result.run.run_id' "$report_path")"
 plan_path="$temporary_root/plan.json"
 ./target/debug/optiflow \
   --state-directory "$state_directory" \

@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/command-result.schema.json",
+  "title": "optiflow command result v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "command",
+    "outcome",
+    "artifacts",
+    "diagnostics",
+    "result"
+  ],
+  "properties": {
+    "schema": { "const": "optiflow.command-result.v1" },
+    "command": { "type": "string", "minLength": 1 },
+    "outcome": { "$ref": "#/$defs/outcome" },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "result": true
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "success" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 0 } }
+          },
+          "coverage": {
+            "properties": { "status": { "const": "complete" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "internal_failure" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "invalid_input" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 2 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "partial_success" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 3 } }
+          },
+          "coverage": {
+            "properties": { "status": { "const": "partial" } },
+            "required": ["status"]
+          }
+        },
+        "required": ["coverage"],
+        "anyOf": [
+          { "properties": { "artifacts": { "minItems": 1 } } },
+          { "properties": { "result": { "not": { "type": "null" } } } }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "capability_unavailable" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 4 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "stale_state" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 5 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "interrupted" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 130 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "properties": { "class": { "const": "terminated" } },
+            "required": ["class"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "properties": { "exit_code": { "const": 143 } }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "outcome": {
+      "type": "object",
+      "required": ["class", "exit_code"],
+      "properties": {
+        "class": {
+          "enum": [
+            "success",
+            "internal_failure",
+            "invalid_input",
+            "partial_success",
+            "capability_unavailable",
+            "stale_state",
+            "interrupted",
+            "terminated"
+          ]
+        },
+        "exit_code": { "enum": [0, 1, 2, 3, 4, 5, 130, 143] }
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["complete", "partial"] }
+      },
+      "additionalProperties": false
+    },
+    "serialized_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["encoding", "value"],
+          "properties": {
+            "encoding": { "const": "utf8" },
+            "value": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["encoding", "base64"],
+          "properties": {
+            "encoding": { "const": "unix_bytes" },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "schema", "path"],
+      "properties": {
+        "kind": { "enum": ["run", "report", "plan"] },
+        "schema": { "type": "string", "minLength": 1 },
+        "run_id": { "type": "string", "minLength": 1 },
+        "path": { "$ref": "#/$defs/serialized_path" }
+      },
+      "additionalProperties": false
+    },
+    "diagnostic_context": {
+      "type": "object",
+      "properties": {
+        "path": { "$ref": "#/$defs/serialized_path" },
+        "run_id": { "type": "string" },
+        "artifact_kind": { "type": "string" },
+        "os_error_kind": { "type": "string" },
+        "count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": [
+        "code",
+        "severity",
+        "classification",
+        "impact",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "invalid_invocation",
+            "invalid_command_input",
+            "required_capability_unavailable",
+            "optional_capability_unavailable",
+            "partial_inventory",
+            "source_run_partial",
+            "source_run_interrupted",
+            "stored_run_not_found",
+            "stored_state_incompatible",
+            "stale_evidence_prevents_operation",
+            "artifact_validation_failed",
+            "artifact_commit_failed",
+            "state_transaction_failed",
+            "internal_invariant_violated",
+            "operation_interrupted",
+            "operation_terminated",
+            "structured_output_failed",
+            "output_destination_invalid",
+            "result_produced_with_exclusions"
+          ]
+        },
+        "severity": { "enum": ["information", "warning", "error", "fatal"] },
+        "classification": {
+          "enum": [
+            "input",
+            "capability",
+            "coverage",
+            "observation",
+            "state",
+            "artifact",
+            "interruption",
+            "internal"
+          ]
+        },
+        "impact": { "enum": ["none", "degrades_coverage", "blocks_command"] },
+        "message": { "type": "string", "minLength": 1 },
+        "context": { "$ref": "#/$defs/diagnostic_context" },
+        "retryable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
