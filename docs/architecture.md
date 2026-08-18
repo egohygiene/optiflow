@@ -68,3 +68,9 @@ The repository-level
 [architecture reference](https://github.com/egohygiene/optiflow/blob/main/ARCHITECTURE.md)
 contains the complete component and data-model inventory.
 
+The root [meta-architecture
+inventory](https://github.com/egohygiene/optiflow/blob/main/META.md) connects
+the complete purpose, principles, knowledge, domain, system, design, decision,
+and roadmap document set. [Cloud-native placement](cloud-native-placement.md)
+explains how OptiFlow remains a portable product workload while Realm, Relay,
+Flow, and infrastructure provide replaceable platform capabilities.

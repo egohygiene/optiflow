@@ -212,6 +212,8 @@ intelligence, and release guidance.
 
 ## Project documents
 
+- [Complete architecture document inventory](META.md)
+- [Purpose](PURPOSE.md), [vision](VISION.md), and [principles](PRINCIPLES.md)
 - [Architecture](ARCHITECTURE.md)
 - [MVP specification](docs/mvp-spec.md)
 - [Safety model](docs/safety-model.md)
@@ -221,6 +223,7 @@ intelligence, and release guidance.
 - [Configuration and effective policy](docs/configuration.md)
 - [Development model](docs/development-model.md)
 - [Site publication architecture](docs/site-publication.md)
+- [Cloud-native placement](docs/cloud-native-placement.md)
 - [Roadmap](ROADMAP.md)
 
 ## License

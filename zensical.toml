@@ -25,6 +25,7 @@ nav = [
   ] },
   { "Engineering" = [
     { "MVP specification" = "mvp-spec.md" },
+    { "Cloud-native placement" = "cloud-native-placement.md" },
     { "Site publication" = "site-publication.md" },
   ] },
   { "Roadmap" = "https://github.com/egohygiene/optiflow/blob/main/ROADMAP.md" },

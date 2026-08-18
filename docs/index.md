@@ -28,6 +28,8 @@ produces immutable plans for human review.
   precedence, provenance, and fingerprints.
 - **[Inspect the architecture](architecture.md)** to see how observations
   become evidence-backed reports and plans.
+- **[Place OptiFlow in the platform](cloud-native-placement.md)** to understand
+  how CNCF capabilities fit around the portable product boundary.
 
 ## What the current release proves
 
@@ -57,4 +59,3 @@ implementation.
 The checked-in contracts live in the
 [`schemas/`](https://github.com/egohygiene/optiflow/tree/main/schemas)
 directory.
-
