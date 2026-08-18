@@ -2,7 +2,7 @@
 
 ## Current authority
 
-OptiFlow `v0.1.0` has read authority only. It can create state and report
+optiflow `v0.1.0` has read authority only. It can create state and report
 artifacts in its configured state directory, but it cannot change source media.
 
 ## Invariants
@@ -55,4 +55,3 @@ deliberate policy and never the universal default.
 - Successful decoding by one tool does not guarantee universal compatibility.
 - Cryptographic hashes provide extremely strong identity evidence but direct
   byte confirmation remains the final destructive gate.
-

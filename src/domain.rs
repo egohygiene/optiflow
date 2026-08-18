@@ -116,8 +116,16 @@ fn base64_encode(bytes: &[u8]) -> String {
     let mut output = String::with_capacity((bytes.len() * 4).div_ceil(3));
     for chunk in bytes.chunks(3) {
         let b0 = chunk[0] as usize;
-        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+        let b1 = if chunk.len() > 1 {
+            chunk[1] as usize
+        } else {
+            0
+        };
+        let b2 = if chunk.len() > 2 {
+            chunk[2] as usize
+        } else {
+            0
+        };
         output.push(ALPHABET[(b0 >> 2) & 0x3f] as char);
         output.push(ALPHABET[((b0 << 4) | (b1 >> 4)) & 0x3f] as char);
         if chunk.len() > 1 {
@@ -159,6 +167,33 @@ mod tests {
             SerializedPath::UnixBytes { .. } => panic!("expected Utf8 variant"),
         }
         assert_eq!(serialized.display(), "/tmp/example/file.txt");
+    }
+
+    #[test]
+    fn checked_in_schemas_match_current_contract_versions() {
+        let cases = [
+            (
+                include_str!("../schemas/run.schema.json"),
+                RUN_SCHEMA_VERSION,
+            ),
+            (
+                include_str!("../schemas/report.schema.json"),
+                REPORT_SCHEMA_VERSION,
+            ),
+            (
+                include_str!("../schemas/plan.schema.json"),
+                PLAN_SCHEMA_VERSION,
+            ),
+        ];
+
+        for (schema, expected_version) in cases {
+            let document: serde_json::Value =
+                serde_json::from_str(schema).expect("checked-in schema must be valid JSON");
+            let declared_version = document
+                .pointer("/properties/schema_version/const")
+                .and_then(serde_json::Value::as_str);
+            assert_eq!(declared_version, Some(expected_version));
+        }
     }
 }
 

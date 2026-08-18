@@ -5,6 +5,14 @@
 Every document contains a `schema_version`. Consumers must branch on that value
 rather than the installed binary version.
 
+The current artifact identifiers are:
+
+| Artifact | Identifier | Schema |
+| --- | --- | --- |
+| Run | `optiflow.run.v3` | `schemas/run.schema.json` |
+| Report | `optiflow.report.v3` | `schemas/report.schema.json` |
+| Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
+
 Within a schema major version:
 
 - Existing field meaning will not change.
@@ -49,6 +57,6 @@ Plans contain no executable mutation in `v0.1.0`. Each action includes:
 - Size, time, and hash preconditions
 - Required future apply-time re-hashing and byte confirmation
 
-Aniflow and RenderFlow should retain both the report and plan as provenance
-artifacts when invoking OptiFlow.
-
+`flow` should retain both the report and plan as provenance artifacts when it
+invokes `optiflow`. Other consumers should do the same when reproducibility
+matters.

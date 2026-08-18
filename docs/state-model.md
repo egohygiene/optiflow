@@ -35,7 +35,7 @@ path + size_bytes + modified_unix_ns
 ```
 
 Any mismatch causes re-analysis. If a cached file previously had no full hash
-but becomes a size-based duplicate candidate, OptiFlow calculates and stores its
+but becomes a size-based duplicate candidate, optiflow calculates and stores its
 full hash during the new scan.
 
 The current cache recognizes unchanged paths. Content-addressed recognition
@@ -52,4 +52,3 @@ not all hashed in the MVP.
 
 Interrupted rows remain visibly incomplete and are never returned as completed
 reports.
-

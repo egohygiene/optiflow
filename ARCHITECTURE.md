@@ -1,8 +1,8 @@
-# OptiFlow Architecture
+# optiflow architecture
 
 ## System overview
 
-OptiFlow converts immutable filesystem observations into evidence-backed plans.
+optiflow converts immutable filesystem observations into evidence-backed plans.
 It does not let detection imply deletion.
 
 ```text
@@ -21,7 +21,7 @@ and must cross a separate explicit apply boundary.
 
 ## Ownership boundaries
 
-OptiFlow owns:
+optiflow owns:
 
 - Input selection and filesystem traversal policy
 - Path observations and content-derived evidence
@@ -31,7 +31,7 @@ OptiFlow owns:
 - Explainable reports and plans
 - Schema-versioned subprocess contracts
 
-OptiFlow delegates:
+optiflow delegates:
 
 - Container and stream inspection to `ffprobe`
 - Future media encoding and decoding to specialized adapters
@@ -39,7 +39,7 @@ OptiFlow delegates:
 - Future audio fingerprinting to Chromaprint
 - Future reference-based video quality measurement to VMAF
 
-OptiFlow is not a media library, video editor, codec implementation, or general
+optiflow is not a media library, video editor, codec implementation, or general
 system cleaner.
 
 ## Components
@@ -102,10 +102,15 @@ schema.
 
 ## Integration boundary
 
-Aniflow and RenderFlow should invoke the CLI as a subprocess and consume JSON
-artifacts. This preserves independent release cycles and prevents early Rust
-crate coupling. Schema identifiers are stable within major contract version
-`v1`; additive fields may be introduced without changing their meaning.
+`optiflow` remains independently installable. In the Ego Hygiene suite, `flow`
+invokes the CLI as a subprocess and consumes its versioned JSON artifacts.
+Sibling tools compose through `flow` rather than embedding optiflow source or
+taking unversioned dependencies on its default branch. This preserves
+independent release cycles and keeps contract ownership with optiflow.
+
+Schema identifiers are explicit. Consumers must branch on the complete schema
+identifier and ignore additive fields they do not understand within a supported
+contract version.
 
 ## Deferred architecture
 
@@ -120,4 +125,3 @@ can be implemented and tested together:
 - Perceptual similarity and containment detection
 - Content-addressed cache recognition after arbitrary moves
 - Portable state export for removable volumes
-

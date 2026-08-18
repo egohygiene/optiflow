@@ -45,7 +45,7 @@ pub fn collect(path: &Path, logical_size_bytes: u64) -> RawFilesystemMetadata {
 mod platform {
     use std::path::Path;
 
-    use super::{RawFilesystemMetadata};
+    use super::RawFilesystemMetadata;
     use crate::filesystem::unix;
 
     pub(super) fn collect(path: &Path, logical_size_bytes: u64) -> RawFilesystemMetadata {

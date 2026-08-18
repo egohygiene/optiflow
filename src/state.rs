@@ -70,9 +70,14 @@ impl StateStore {
         let transaction = self.connection.transaction()?;
 
         for observation in observations {
-            let (filesystem_id, file_id, reported_link_count, allocated_size_bytes,
-                 identity_available, allocation_available) =
-                identity_columns(observation);
+            let (
+                filesystem_id,
+                file_id,
+                reported_link_count,
+                allocated_size_bytes,
+                identity_available,
+                allocation_available,
+            ) = identity_columns(observation);
 
             transaction.execute(
                 "INSERT INTO observations (
@@ -325,9 +330,7 @@ fn apply_migration_0003(connection: &Connection) -> Result<()> {
     }
 
     connection
-        .execute_batch(include_str!(
-            "../migrations/0003_observation_stability.sql"
-        ))
+        .execute_batch(include_str!("../migrations/0003_observation_stability.sql"))
         .context("failed to execute migration 0003 SQL")?;
 
     let recorded: bool = connection
@@ -346,8 +349,6 @@ fn apply_migration_0003(connection: &Connection) -> Result<()> {
     Ok(())
 }
 
-
-
 /// Extract structured identity/allocation columns from an observation.
 ///
 /// Returns `(filesystem_id, file_id, reported_link_count, allocated_size_bytes,
@@ -365,9 +366,7 @@ fn identity_columns(
     let (filesystem_id, file_id, reported_link_count, identity_available) =
         match &observation.filesystem_identity {
             Some(id) => {
-                let link_count = id
-                    .link_count
-                    .and_then(|lc| i64::try_from(lc).ok());
+                let link_count = id.link_count.and_then(|lc| i64::try_from(lc).ok());
                 (
                     Some(id.filesystem_id.clone()),
                     Some(id.file_id.clone()),
@@ -378,15 +377,14 @@ fn identity_columns(
             None => (None, None, None, 0_i64),
         };
 
-    let (allocated_size_bytes, allocation_available) =
-        match observation
-            .storage_allocation
-            .as_ref()
-            .and_then(|a| a.allocated_size_bytes)
-        {
-            Some(bytes) => (i64::try_from(bytes).ok(), 1_i64),
-            None => (None, 0_i64),
-        };
+    let (allocated_size_bytes, allocation_available) = match observation
+        .storage_allocation
+        .as_ref()
+        .and_then(|a| a.allocated_size_bytes)
+    {
+        Some(bytes) => (i64::try_from(bytes).ok(), 1_i64),
+        None => (None, 0_i64),
+    };
 
     (
         filesystem_id,

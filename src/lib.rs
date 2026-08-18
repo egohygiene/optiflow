@@ -2,11 +2,11 @@
 
 pub mod adapters;
 pub mod app;
-pub mod filesystem;
 pub mod cli;
 pub mod discovery;
 pub mod domain;
 pub mod duplicates;
+pub mod filesystem;
 pub mod hashing;
 pub mod inventory;
 pub mod planning;
@@ -17,7 +17,7 @@ use anyhow::Result;
 
 use crate::cli::Cli;
 
-/// Execute one parsed OptiFlow command.
+/// Execute one parsed optiflow command.
 pub fn run(cli: Cli) -> Result<()> {
     app::run(cli)
 }

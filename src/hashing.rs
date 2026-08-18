@@ -81,7 +81,8 @@ pub fn hash_with_stability(path: &Path) -> StableHashResult {
             stability: ObservationStability::RetryExhausted,
             evidence_validity: EvidenceValidity::Stale,
             attempt_count: DEFAULT_MAX_OBSERVATION_ATTEMPTS,
-            warning: first_error.or_else(|| Some(format!("retry exhausted for {}", path.display()))),
+            warning: first_error
+                .or_else(|| Some(format!("retry exhausted for {}", path.display()))),
         }
     }
 }
@@ -91,13 +92,15 @@ fn attempt_stable_hash(path: &Path) -> Result<String> {
         .with_context(|| format!("failed to stat {}", path.display()))?;
 
     if pre_meta.file_type().is_symlink() {
-        anyhow::bail!("path became a symbolic link before hashing: {}", path.display());
+        anyhow::bail!(
+            "path became a symbolic link before hashing: {}",
+            path.display()
+        );
     }
 
     let pre_sig = FileStateSignature::from_symlink_metadata(&pre_meta);
 
-    let file = File::open(path)
-        .with_context(|| format!("failed to open {}", path.display()))?;
+    let file = File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
     let mut reader = BufReader::with_capacity(BUFFER_SIZE, file);
     let mut hasher = blake3::Hasher::new();
     let mut buffer = vec![0_u8; BUFFER_SIZE];
@@ -116,7 +119,10 @@ fn attempt_stable_hash(path: &Path) -> Result<String> {
         .with_context(|| format!("failed to re-stat after hashing {}", path.display()))?;
 
     if post_meta.file_type().is_symlink() {
-        anyhow::bail!("path became a symbolic link during hashing: {}", path.display());
+        anyhow::bail!(
+            "path became a symbolic link during hashing: {}",
+            path.display()
+        );
     }
 
     let post_sig = FileStateSignature::from_symlink_metadata(&post_meta);

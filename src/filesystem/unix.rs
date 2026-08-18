@@ -100,10 +100,7 @@ mod tests {
             .expect("identity for original");
         let id_link = meta_link.identity.as_ref().expect("identity for link");
 
-        assert_eq!(
-            id_orig.filesystem_id, id_link.filesystem_id,
-            "same device"
-        );
+        assert_eq!(id_orig.filesystem_id, id_link.filesystem_id, "same device");
         assert_eq!(id_orig.file_id, id_link.file_id, "same inode");
         assert_eq!(
             id_orig.link_count,

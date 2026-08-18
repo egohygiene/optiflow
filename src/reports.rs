@@ -45,7 +45,7 @@ pub fn print_json<T: Serialize>(value: &T) -> Result<()> {
 }
 
 pub fn print_scan_report(report: &ScanReport) {
-    println!("OptiFlow scan {}", report.run.run_id);
+    println!("optiflow scan {}", report.run.run_id);
     println!("  Paths scanned:            {}", report.summary.file_count);
     println!(
         "  Unique filesystem objects: {}",
@@ -146,7 +146,7 @@ fn reason_code_label(code: &crate::domain::ReclaimabilityReasonCode) -> &'static
 }
 
 pub fn print_plan(plan: &Plan, path: &Path) {
-    println!("OptiFlow exact-duplicate review plan {}", plan.plan_id);
+    println!("optiflow exact-duplicate review plan {}", plan.plan_id);
     println!("  Actions: {}", plan.summary.action_count);
     println!("  Candidate files: {}", plan.summary.candidate_file_count);
     println!(
@@ -158,7 +158,7 @@ pub fn print_plan(plan: &Plan, path: &Path) {
 }
 
 pub fn print_doctor(report: &DoctorReport) {
-    println!("OptiFlow {}", report.optiflow_version);
+    println!("optiflow {}", report.optiflow_version);
     println!("  Platform: {}", report.platform);
     println!("  State directory: {}", report.state_directory);
     println!("  State ready: {}", report.state_ready);
@@ -173,7 +173,7 @@ pub fn print_doctor(report: &DoctorReport) {
 }
 
 pub fn print_cache_status(status: &CacheStatus) {
-    println!("OptiFlow cache");
+    println!("optiflow cache");
     println!("  Database: {}", status.database_path);
     println!("  Database bytes: {}", status.database_size_bytes);
     println!("  Cached files: {}", status.cached_file_count);

@@ -41,5 +41,4 @@ jq --exit-status '.summary.action_count == 1' "$plan_path" >/dev/null
 test -f "$input_directory/first-🌌.bin"
 test -f "$input_directory/second.bin"
 
-printf "%s\n" "OptiFlow smoke test passed."
-
+printf "%s\n" "optiflow smoke test passed."

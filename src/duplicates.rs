@@ -123,7 +123,8 @@ pub fn exact_groups(observations: &[FileObservation]) -> Vec<DuplicateGroup> {
                             .unwrap_or_default();
                         aliases.sort();
                         // The primary path is the lexicographically first path.
-                        let primary_path = aliases.first().cloned().unwrap_or_else(|| obs.path.clone());
+                        let primary_path =
+                            aliases.first().cloned().unwrap_or_else(|| obs.path.clone());
                         let alias_paths: Vec<String> =
                             aliases.into_iter().filter(|p| p != &primary_path).collect();
                         DuplicateMember {
@@ -142,10 +143,7 @@ fn assess_reclaimability(members: &[&FileObservation]) -> PhysicalReclaimability
     let mut reason_codes = Vec::new();
 
     // Check for missing identity.
-    if members
-        .iter()
-        .any(|obs| obs.filesystem_identity.is_none())
-    {
+    if members.iter().any(|obs| obs.filesystem_identity.is_none()) {
         reason_codes.push(ReclaimabilityReasonCode::FilesystemIdentityUnavailable);
     }
 
@@ -194,9 +192,7 @@ fn assess_reclaimability(members: &[&FileObservation]) -> PhysicalReclaimability
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::{
-        FilesystemIdentity, MediaKind, ObservationStatus, StorageAllocation,
-    };
+    use crate::domain::{FilesystemIdentity, MediaKind, ObservationStatus, StorageAllocation};
     use crate::filesystem::identity::{AllocationSource, ExtentSharingStatus};
 
     use super::*;
@@ -291,7 +287,11 @@ mod tests {
         ];
 
         let groups = exact_groups(&observations);
-        assert_eq!(groups.len(), 0, "aliases alone must not form a duplicate group");
+        assert_eq!(
+            groups.len(),
+            0,
+            "aliases alone must not form a duplicate group"
+        );
     }
 
     #[test]
