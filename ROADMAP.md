@@ -1,4 +1,28 @@
-# optiflow roadmap
+---
+schema: aether.architecture-document/v1
+id: optiflow-roadmap
+title: OptiFlow Roadmap
+kind: architecture-document
+version: 0.1.0
+status: draft
+owners:
+  - egohygiene
+created: 2026-08-18
+updated: 2026-08-18
+governed_by:
+  - architecture-roadmap
+depends_on:
+  - optiflow-vision
+  - optiflow-pillars
+  - optiflow-architecture
+  - optiflow-decisions
+related:
+  - optiflow-methodology
+  - optiflow-meta
+supersedes: []
+---
+
+# OptiFlow Roadmap
 
 > Observe first. Prove relationships. Plan explicitly. Mutate transactionally.
 
@@ -10,6 +34,44 @@ It intentionally excludes organization-wide automation, shared repository
 infrastructure, websites, dashboards, and work owned by other repositories.
 Repository-local automation required to test, package, secure, and release
 `optiflow` remains in scope.
+
+## Strategic Architecture Horizon
+
+### Now — Prove the read-only product boundary
+
+- Complete the `v0.1.x` evidence, diagnostics, contracts, documentation,
+  packaging, and supported-platform foundation.
+- Keep source-media authority read-only while users validate whether inventory,
+  exact relationships, and review plans solve the intended problem.
+- Publish one independently useful CLI and static product surface.
+- Establish the architecture corpus manually while Aether and Holon contracts
+  mature elsewhere.
+
+### Next — Earn transactional authority
+
+- Implement recoverable exact-duplicate resolution as one coherent transaction
+  system with current preconditions, byte confirmation, validation, durable
+  attempts, commit records, interruption, and recovery.
+- Add specialized media adapters only through typed capability boundaries.
+- Publish signed, verified packages and an OCI workload without changing domain
+  semantics.
+
+### Later — Expand relationships and execution forms
+
+- Add lossless and policy-driven media optimization.
+- Add reviewable perceptual, derivation, and containment evidence.
+- Improve collection identity, scale, and portable evidence.
+- Allow Realm, Relay, Flow, and infrastructure repositories to schedule the
+  same released contract locally or in cloud-native environments.
+
+### Maybe — Evidence-gated platform expansion
+
+- Distributed analysis, shared state, watch mode, graphical review, and
+  sandboxed hostile-media processing remain candidates.
+- Adopt a CNCF project only when a concrete capability need, ownership boundary,
+  operational model, and exit strategy are understood.
+- Keep Kubernetes, service meshes, and multi-cloud abstractions outside the
+  application core unless evidence shows that they solve a product problem.
 
 ## Roadmap contract
 
@@ -956,3 +1018,32 @@ When roadmap work competes, choose in this order:
 
 The central product rule remains simple: `optiflow` must earn mutation authority
 through evidence, explicit policy, validation, and recoverability.
+
+## Assumptions and Evidence Gaps
+
+- The roadmap sequences capabilities by safety dependency rather than a promised
+  calendar.
+- Transactional recovery, signed distribution, OCI execution, and cloud
+  scheduling are not current product guarantees.
+- The value of distributed execution is unproven for the current user base.
+- Aether installation and universal repository conformance remain external
+  architecture work.
+
+## Open Questions
+
+- Which read-only workflows should be validated with real users before the first
+  mutating milestone begins?
+- Which distribution target provides the best evidence for macOS and Linux
+  adoption?
+- When does an operational need justify selecting an orchestrator rather than a
+  local or provider-native batch runner?
+
+## Validation
+
+- Governing specification: `architecture-roadmap` version `1.1.0`.
+- Now, next, later, and maybe horizons derive from [`VISION.md`](VISION.md),
+  [`PILLARS.md`](PILLARS.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), and
+  [`DECISIONS.md`](DECISIONS.md).
+- Detailed release work remains ordered by safety and dependency rather than
+  dates.
+- Deferred platform capabilities are not represented as shipped behavior.

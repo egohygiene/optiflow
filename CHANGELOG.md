@@ -7,6 +7,12 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added the complete 18-document Aether architecture corpus for OptiFlow,
+  including canonical metadata, dependency relationships, decision records,
+  design semantics, AI authority, and a meta-architecture inventory.
+- Added cloud-native placement guidance that keeps OptiFlow a portable workload
+  while mapping CNCF capability families onto the surrounding Ego Hygiene
+  platform repositories and a need-driven adoption ladder.
 - Added a responsive, accessible, LaunchKit-derived product landing page that
   presents OptiFlow's current evidence pipeline and read-only safety boundary
   without implying unavailable distribution or mutation capabilities.

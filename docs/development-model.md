@@ -20,6 +20,7 @@ Each artifact is authoritative for a different concern:
 
 | Concern | Canonical artifact |
 | --- | --- |
+| Architecture intent, ownership, and relationships | Root document set indexed by `META.md` |
 | Product behavior and non-goals | `docs/mvp-spec.md` |
 | Safety authority and invariants | `docs/safety-model.md` |
 | State ownership and persistence | `docs/state-model.md` |
