@@ -8,6 +8,10 @@ description: How optiflow converts immutable observations into evidence-backed p
 `optiflow` converts immutable filesystem observations into evidence-backed
 reports and review-only plans. Detection never implies deletion authority.
 
+The generated [architecture portal](/architecture/) provides the interactive
+system boundary, structural layer, and canonical document graph. This page
+focuses on the runtime flow and verification model.
+
 ## Runtime flow
 
 ```text

@@ -204,15 +204,17 @@ task site:serve
 ```
 
 The strict documentation build validates internal links and anchors. The site
-build then composes the LaunchKit-derived landing source, Zensical output, and
-canonical JSON Schemas into a collision-checked `dist/` artifact. See [Site publication
-architecture](docs/site-publication.md) for the boundary between the landing
-page, documentation, generated API reference, schemas, repository
-intelligence, and release guidance.
+build generates an architecture portal from the canonical root corpus, then
+composes it with the LaunchKit-derived landing source, Zensical output, and
+canonical JSON Schemas into a collision-checked `dist/` artifact. See [Site
+publication architecture](docs/site-publication.md) for the boundary between
+the landing page, architecture, documentation, generated API reference,
+schemas, repository intelligence, and release guidance.
 
 ## Project documents
 
 - [Complete architecture document inventory](META.md)
+- [Architecture portal source and generation contract](web/architecture/README.md)
 - [Purpose](PURPOSE.md), [vision](VISION.md), and [principles](PRINCIPLES.md)
 - [Architecture](ARCHITECTURE.md)
 - [MVP specification](docs/mvp-spec.md)

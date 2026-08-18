@@ -86,10 +86,14 @@ artifact ports.
 
 ### Publication Layer
 
-Builds a separate static product surface from `web/landing/`, `docs/`, and
-`schemas/`. It describes the application but is not part of the CLI runtime.
+Builds separate static product surfaces from `web/landing/`,
+`web/architecture/`, `docs/`, and `schemas/`. It describes the application but
+is not part of the CLI runtime.
 
 - Build boundary: `scripts/site/build.sh`.
+- Architecture projection: `scripts/site/generate_architecture.py` reads this
+  corpus and repository-owned portal configuration without becoming a new
+  architecture authority.
 - Verification boundary: `scripts/site/verify.py` and strict Zensical build.
 - Output: one collision-checked `dist/` tree.
 
@@ -159,6 +163,9 @@ permission.
 9. Infrastructure orchestration consumes released CLI and artifact contracts;
    it does not embed default-branch source.
 10. Publication producers build in isolation and reject final-path collisions.
+11. Generated architecture projections remain disposable; canonical meaning
+    changes only in the root architecture documents or their declared local
+    presentation configuration.
 
 ## Dependency Direction
 
@@ -250,6 +257,8 @@ expanding `planning` into an implicit apply engine.
 - The project has not published a signed OCI image or proved a remote topology.
 - Shared-state concurrency and distributed trust are unspecified.
 - Final visual identity assets and runtime telemetry contracts are not frozen.
+- The architecture portal is a product-local proof; shared generator ownership,
+  installation, and update semantics remain future Aether and Holon concerns.
 
 ## Open Questions
 

@@ -237,8 +237,10 @@ without a visible three-way plan and human review.
   released dependency in OptiFlow.
 - Holon does not yet materialize or update this document set.
 - No repository gate currently enforces the metadata graph.
-- Architecture diagrams are source-native Mermaid only in this pass; PlantUML,
-  Excalidraw, SVG, and infographic projections remain future derivatives.
+- Mermaid remains available for document-local diagrams. The publication build
+  now derives an interactive SVG document graph and JSON projection from this
+  corpus; PlantUML, Excalidraw, and infographic projections remain future
+  derivatives.
 - Organization-wide CNCF technology selection belongs in Aether or the
   organization architecture, not this product corpus.
 

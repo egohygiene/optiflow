@@ -9,8 +9,8 @@ The upstream snapshot evaluated for this adaptation was commit
 `b51f64e1bd88a01608c1561a2d3240f230de4f46`. The LaunchKit MIT license is
 preserved in `LICENSE.launchkit`.
 
-Do not write generated documentation into this directory. Run
-`task site:build` to compose this source with the Zensical output under
-`dist/docs/`.
+Do not write generated architecture or documentation into this directory. Run
+`task site:build` to compose this source with the generated architecture portal
+under `dist/architecture/` and the Zensical output under `dist/docs/`.
 
 [launchkit]: https://github.com/evilmartians/devtool-template

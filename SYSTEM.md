@@ -106,10 +106,12 @@ preserves compatibility boundaries independently from internal types.
 
 ### Publication System
 
-Composes the product landing page, Zensical documentation, and canonical schema
-downloads into one collision-checked static artifact.
+Composes the product landing page, generated architecture portal, Zensical
+documentation, and canonical schema downloads into one collision-checked
+static artifact.
 
-- **Current evidence:** `web/landing/`, `docs/`, `scripts/site/`.
+- **Current evidence:** `web/landing/`, `web/architecture/`, `docs/`,
+  `scripts/site/`.
 - **State:** build and verification implemented; hosting and domain activation
   remain separate work.
 

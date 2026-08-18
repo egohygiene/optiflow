@@ -75,7 +75,7 @@ tasks:
       - uv run --frozen --only-group docs zensical build --clean --strict
 
   site:build:
-    desc: Compose and verify the landing page and documentation artifact.
+    desc: Compose and verify the product, architecture, documentation, and schema surfaces.
     deps:
       - docs:sync
     cmds:

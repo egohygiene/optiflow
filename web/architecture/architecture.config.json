@@ -1,0 +1,190 @@
+{
+  "$schema": "../../schemas/architecture-portal-config-v1.schema.json",
+  "schema": "optiflow.architecture-portal-config.v1",
+  "repository": {
+    "name": "egohygiene/optiflow",
+    "revision": "main",
+    "sourceUrl": "https://github.com/egohygiene/optiflow"
+  },
+  "product": {
+    "description": "A generated view of OptiFlow's architecture documents, system boundaries, structural layers, and declared dependencies.",
+    "eyebrow": "Architecture as executable context",
+    "summary": "Trace how purpose becomes policy, policy becomes structure, and structure becomes evidence-backed behavior. Every view on this page is generated from versioned repository truth.",
+    "title": "See the whole system."
+  },
+  "categories": [
+    {
+      "description": "The durable reason, future, commitments, and ethical posture of the product.",
+      "documentIds": [
+        "optiflow-purpose",
+        "optiflow-vision",
+        "optiflow-principles",
+        "optiflow-pillars",
+        "optiflow-manifesto"
+      ],
+      "id": "identity",
+      "label": "Identity",
+      "question": "Why does the product exist, and what does it refuse to compromise?"
+    },
+    {
+      "description": "The rules for evidence, uncertainty, claims, and delegated AI authority.",
+      "documentIds": [
+        "optiflow-epistemology",
+        "optiflow-ai-constitution"
+      ],
+      "id": "knowledge",
+      "label": "Knowledge & authority",
+      "question": "What may the system claim, and what authority may an agent exercise?"
+    },
+    {
+      "description": "The concepts, relationships, people, consent, and boundaries in the problem space.",
+      "documentIds": [
+        "optiflow-ontology",
+        "optiflow-personal-model"
+      ],
+      "id": "domain",
+      "label": "Domain",
+      "question": "Which concepts and human boundaries shape the product model?"
+    },
+    {
+      "description": "The assumptions, systems, structures, methods, decisions, and direction of implementation.",
+      "documentIds": [
+        "optiflow-foundations",
+        "optiflow-system",
+        "optiflow-architecture",
+        "optiflow-methodology",
+        "optiflow-decisions",
+        "optiflow-roadmap"
+      ],
+      "id": "foundation",
+      "label": "Foundation",
+      "question": "How is meaning translated into systems, boundaries, decisions, and sequence?"
+    },
+    {
+      "description": "The intended human experience and its reusable visual and content language.",
+      "documentIds": [
+        "optiflow-design",
+        "optiflow-design-system"
+      ],
+      "id": "experience",
+      "label": "Experience",
+      "question": "How should interacting with OptiFlow feel and remain coherent?"
+    },
+    {
+      "description": "The inventory, graph, lifecycle, ownership, and maintenance model of the corpus itself.",
+      "documentIds": [
+        "optiflow-meta"
+      ],
+      "id": "meta",
+      "label": "Meta",
+      "question": "How does the architecture system explain and govern itself?"
+    }
+  ],
+  "runtimeLayers": [
+    {
+      "components": [
+        "cli",
+        "render",
+        "main"
+      ],
+      "id": "interface",
+      "label": "Interface",
+      "state": "current",
+      "summary": "Owns command syntax, human and machine rendering, stream behavior, and operating-system outcomes."
+    },
+    {
+      "components": [
+        "app",
+        "outcome",
+        "signals",
+        "configuration::resolver"
+      ],
+      "id": "application",
+      "label": "Application",
+      "state": "current",
+      "summary": "Coordinates use cases, interruption, configuration resolution, and immutable artifact commit boundaries."
+    },
+    {
+      "components": [
+        "domain",
+        "inventory",
+        "duplicates",
+        "planning"
+      ],
+      "id": "domain",
+      "label": "Domain",
+      "state": "current",
+      "summary": "Owns evidence language, policy values, inventory classification, exact relationships, and plan semantics."
+    },
+    {
+      "components": [
+        "hashing",
+        "contracts",
+        "schemas"
+      ],
+      "id": "evidence",
+      "label": "Evidence & contracts",
+      "state": "current",
+      "summary": "Owns complete-content proof and the versioned boundary between domain values and public artifacts."
+    },
+    {
+      "components": [
+        "filesystem",
+        "state",
+        "reports",
+        "adapters::ffprobe"
+      ],
+      "id": "infrastructure",
+      "label": "Infrastructure",
+      "state": "current",
+      "summary": "Implements filesystem, SQLite, external-adapter, and atomic artifact ports without defining domain meaning."
+    },
+    {
+      "components": [
+        "web/landing",
+        "web/architecture",
+        "docs",
+        "scripts/site"
+      ],
+      "id": "publication",
+      "label": "Publication",
+      "state": "current",
+      "summary": "Projects repository truth into isolated static surfaces and assembles one collision-checked site artifact."
+    }
+  ],
+  "platformBoundaries": [
+    {
+      "eyebrow": "Product authority",
+      "id": "owns",
+      "items": [
+        "Conservative discovery and immutable observations",
+        "Exact relationship evidence and explicit uncertainty",
+        "Versioned reports, review-only plans, and typed outcomes"
+      ],
+      "label": "OptiFlow owns",
+      "summary": "The product turns opaque media collections into defensible evidence without treating detection as write permission."
+    },
+    {
+      "eyebrow": "Composable platform",
+      "id": "supplies",
+      "items": [
+        "Realm and Mantle provide reproducible environments",
+        "Relay and infrastructure schedule released artifacts",
+        "Flow orchestrates through versioned public contracts"
+      ],
+      "label": "The platform supplies",
+      "summary": "Surrounding repositories add environment, delivery, and orchestration capabilities while remaining replaceable consumers."
+    },
+    {
+      "eyebrow": "Authority boundary",
+      "id": "defers",
+      "items": [
+        "Source deletion, replacement, or transcoding",
+        "Implicit cloud upload or path-bearing telemetry",
+        "Unreviewed execution of generated plans"
+      ],
+      "label": "OptiFlow defers",
+      "summary": "Future mutation requires a separate transactional architecture with fresh evidence, explicit consent, validation, and recovery."
+    }
+  ]
+}

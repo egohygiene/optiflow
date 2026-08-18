@@ -26,8 +26,9 @@ produces immutable plans for human review.
   or another subprocess client.
 - **[Configure an effective policy](configuration.md)** with deterministic
   precedence, provenance, and fingerprints.
-- **[Inspect the architecture](architecture.md)** to see how observations
-  become evidence-backed reports and plans.
+- **[Explore the architecture](/architecture/)** for the generated system and
+  document graph, then **[inspect the runtime architecture](architecture.md)**
+  to see how observations become evidence-backed reports and plans.
 - **[Place OptiFlow in the platform](cloud-native-placement.md)** to understand
   how CNCF capabilities fit around the portable product boundary.
 
