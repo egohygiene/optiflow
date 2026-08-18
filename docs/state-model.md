@@ -46,9 +46,16 @@ not all hashed in the MVP.
 
 1. Insert a `running` scan row.
 2. Perform discovery and analysis.
-3. Atomically write `run.json` and `report.json`.
+3. Validate and atomically write `effective-policy.json`, `run.json`, and
+   `report.json`.
 4. Store observations and groups in one database transaction.
 5. Mark the run `completed` and attach final JSON.
 
-Interrupted rows remain visibly incomplete and are never returned as completed
-reports.
+Handled interruptions mark rows `interrupted`; internal failures mark rows
+`failed`; a hard process failure may leave recoverable `running` state. None is
+returned as a completed report.
+
+The effective-policy sidecar is referenced through the existing immutable run
+artifact directory, so migrations `0001`–`0003` and v1-v3 run/report schemas are
+unchanged. Historical runs without a sidecar have unknown policy evidence; the
+current resolver never fabricates a snapshot for them.

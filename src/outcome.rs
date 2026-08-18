@@ -142,6 +142,30 @@ pub enum DiagnosticCode {
     StructuredOutputFailed,
     OutputDestinationInvalid,
     ResultProducedWithExclusions,
+    ConfigurationNotFound,
+    ConfigurationUnreadable,
+    ConfigurationNotRegularFile,
+    ConfigurationParseFailed,
+    ConfigurationSchemaMissing,
+    ConfigurationSchemaUnsupported,
+    ConfigurationUnknownKey,
+    ConfigurationValueInvalid,
+    ConfigurationValueOutOfRange,
+    ConfigurationConflict,
+    ConfigurationSelectorConflict,
+    ConfigurationEnvironmentInvalid,
+    ConfigurationPathResolutionFailed,
+    ConfigurationDiscoveryFailed,
+    ConfigurationSourceReplacedDuringRead,
+    ConfigurationOverrideShadowed,
+    ConfigurationDeprecatedKey,
+    ConfigurationLockedInvariant,
+    EffectivePolicyInvalid,
+    EffectivePolicySerializationFailed,
+    EffectivePolicyFingerprintMismatch,
+    HistoricalPolicyUnknown,
+    SourcePolicyDiffers,
+    ConfigurationSettingUnknown,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -156,6 +180,14 @@ pub struct DiagnosticContext {
     pub os_error_kind: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub setting: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment_variable: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub column: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -235,7 +235,7 @@
       "type": "object",
       "required": ["kind", "schema", "path"],
       "properties": {
-        "kind": { "enum": ["run", "report", "plan"] },
+        "kind": { "enum": ["run", "report", "plan", "effective_policy"] },
         "schema": { "type": "string", "minLength": 1 },
         "run_id": { "type": "string", "minLength": 1 },
         "path": { "$ref": "#/$defs/serialized_path" }
@@ -249,7 +249,11 @@
         "run_id": { "type": "string" },
         "artifact_kind": { "type": "string" },
         "os_error_kind": { "type": "string" },
-        "count": { "type": "integer", "minimum": 0 }
+        "count": { "type": "integer", "minimum": 0 },
+        "setting": { "type": "string" },
+        "environment_variable": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
     },
@@ -283,7 +287,31 @@
             "operation_terminated",
             "structured_output_failed",
             "output_destination_invalid",
-            "result_produced_with_exclusions"
+            "result_produced_with_exclusions",
+            "configuration_not_found",
+            "configuration_unreadable",
+            "configuration_not_regular_file",
+            "configuration_parse_failed",
+            "configuration_schema_missing",
+            "configuration_schema_unsupported",
+            "configuration_unknown_key",
+            "configuration_value_invalid",
+            "configuration_value_out_of_range",
+            "configuration_conflict",
+            "configuration_selector_conflict",
+            "configuration_environment_invalid",
+            "configuration_path_resolution_failed",
+            "configuration_discovery_failed",
+            "configuration_source_replaced_during_read",
+            "configuration_override_shadowed",
+            "configuration_deprecated_key",
+            "configuration_locked_invariant",
+            "effective_policy_invalid",
+            "effective_policy_serialization_failed",
+            "effective_policy_fingerprint_mismatch",
+            "historical_policy_unknown",
+            "source_policy_differs",
+            "configuration_setting_unknown"
           ]
         },
         "severity": { "enum": ["information", "warning", "error", "fatal"] },

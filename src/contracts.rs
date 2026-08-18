@@ -9,6 +9,8 @@ pub enum Contract {
     Report,
     Plan,
     CommandResult,
+    Config,
+    EffectivePolicy,
 }
 
 pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
@@ -47,6 +49,8 @@ pub fn schema(contract: Contract) -> Result<Value> {
         Contract::Report => include_str!("../schemas/report.schema.json"),
         Contract::Plan => include_str!("../schemas/plan.schema.json"),
         Contract::CommandResult => include_str!("../schemas/command-result.schema.json"),
+        Contract::Config => include_str!("../schemas/config-v1.schema.json"),
+        Contract::EffectivePolicy => include_str!("../schemas/effective-policy-v1.schema.json"),
     };
     serde_json::from_str(source).context("checked-in JSON Schema is invalid JSON")
 }
@@ -54,7 +58,7 @@ pub fn schema(contract: Contract) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use serde_json::{Map, json};
 
     fn result(class: &str, exit_code: u64) -> Value {
         json!({
@@ -138,5 +142,108 @@ mod tests {
             "path": { "encoding": "locale_text", "value": "/tmp/report.json" }
         }]);
         assert!(validate(Contract::CommandResult, &invalid_path).is_err());
+    }
+
+    #[test]
+    fn configuration_schema_accepts_the_typed_surface_and_rejects_extensions() {
+        let complete = json!({
+            "schema": "optiflow.config.v1",
+            "output": { "format": "json" },
+            "state": { "directory": "./state" },
+            "scan": {
+                "follow_symlinks": false,
+                "include_hidden": true,
+                "cross_filesystems": false,
+                "probe_media": true
+            }
+        });
+        validate(Contract::Config, &json!({ "schema": "optiflow.config.v1" }))
+            .expect("minimal configuration");
+        validate(Contract::Config, &complete).expect("complete configuration");
+
+        for invalid in [
+            json!({}),
+            json!({ "schema": "optiflow.config.v2" }),
+            json!({ "schema": "optiflow.config.v1", "unknown": true }),
+            json!({ "schema": "optiflow.config.v1", "scan": { "unknown": true } }),
+            json!({ "schema": "optiflow.config.v1", "output": { "format": "yaml" } }),
+            json!({ "schema": "optiflow.config.v1", "state": { "directory": "" } }),
+        ] {
+            assert!(validate(Contract::Config, &invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn effective_policy_schema_requires_every_leaf_provenance_record() {
+        let provenance_keys = [
+            "presentation_policy.output_format",
+            "operational_policy.state_directory",
+            "evidence_policy.follow_symlinks",
+            "evidence_policy.include_hidden",
+            "evidence_policy.cross_filesystems",
+            "evidence_policy.probe_media",
+            "evidence_policy.exact_grouping_profile",
+            "evidence_policy.observation_stability",
+            "evidence_policy.unstable_observations",
+            "evidence_policy.maximum_observation_attempts",
+            "safety_invariants.source_mutation",
+            "safety_invariants.apply_enabled",
+            "safety_invariants.shell_execution",
+            "safety_invariants.artifact_validation_required",
+            "safety_invariants.atomic_artifact_commit_required",
+            "safety_invariants.current_stability_required_for_exact_groups",
+        ];
+        let provenance = provenance_keys
+            .into_iter()
+            .map(|key| {
+                (
+                    key.to_owned(),
+                    json!({ "source": "locked_invariant", "detail": "contract test" }),
+                )
+            })
+            .collect::<Map<String, Value>>();
+        let policy = json!({
+            "schema": "optiflow.effective-policy.v1",
+            "evidence_policy": {
+                "follow_symlinks": false,
+                "include_hidden": false,
+                "cross_filesystems": false,
+                "probe_media": true,
+                "exact_grouping_profile": "size_and_blake3_256",
+                "observation_stability": "required",
+                "unstable_observations": "exclude",
+                "maximum_observation_attempts": 2
+            },
+            "operational_policy": {
+                "state_directory": { "encoding": "unix_bytes", "base64": "L3RtcC9zdGF0ZQ==" }
+            },
+            "presentation_policy": { "output_format": "human" },
+            "safety_invariants": {
+                "source_mutation": false,
+                "apply_enabled": false,
+                "shell_execution": false,
+                "artifact_validation_required": true,
+                "atomic_artifact_commit_required": true,
+                "current_stability_required_for_exact_groups": true
+            },
+            "fingerprints": {
+                "effective_configuration": { "algorithm": "blake3-256", "value": "0".repeat(64) },
+                "evidence_policy": { "algorithm": "blake3-256", "value": "1".repeat(64) }
+            },
+            "provenance": provenance
+        });
+        validate(Contract::EffectivePolicy, &policy).expect("complete effective policy");
+
+        let mut missing = policy.clone();
+        missing["provenance"]
+            .as_object_mut()
+            .expect("provenance object")
+            .remove("evidence_policy.probe_media");
+        assert!(validate(Contract::EffectivePolicy, &missing).is_err());
+
+        let mut extended = policy;
+        extended["provenance"]["unrecognized.setting"] =
+            json!({ "source": "compiled_default", "detail": "not public" });
+        assert!(validate(Contract::EffectivePolicy, &extended).is_err());
     }
 }

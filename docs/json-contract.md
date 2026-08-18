@@ -11,6 +11,8 @@ The current artifact identifiers are:
 | Artifact | Identifier | Schema |
 | --- | --- | --- |
 | Command result | `optiflow.command-result.v1` | `schemas/command-result.schema.json` |
+| Configuration | `optiflow.config.v1` | `schemas/config-v1.schema.json` |
+| Effective policy | `optiflow.effective-policy.v1` | `schemas/effective-policy-v1.schema.json` |
 | Run | `optiflow.run.v3` | `schemas/run.schema.json` |
 | Report | `optiflow.report.v3` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
@@ -54,6 +56,8 @@ directly. They now wrap that value in `result`, with committed outputs listed in
 
 See [CLI Outcome Contract](cli-contract.md) for the exit-code matrix, typed
 diagnostics, partial-run semantics, stream ownership, and signal behavior.
+See [Configuration and Effective Policy](configuration.md) for policy
+canonicalization, provenance, fingerprints, and historical sidecars.
 
 ## Reports
 
@@ -63,6 +67,10 @@ Reports embed:
 - Aggregate counts and reclaimable bytes
 - Exact duplicate groups and evidence
 - Complete observations, warnings, cache facts, and optional media descriptors
+
+New runs also commit a validated `effective-policy.json` sidecar. Its immutable
+location is derived from the run's existing `artifact_directory`; historical
+runs without it remain reviewable with explicitly unknown policy evidence.
 
 ## Plans
 
