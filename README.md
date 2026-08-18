@@ -191,6 +191,22 @@ The end-to-end test uses synthetic files in a temporary directory, includes
 spaces and Unicode in paths, and verifies that both duplicate inputs remain
 unchanged after scanning and planning.
 
+### Documentation
+
+The product documentation is built with Zensical from the checked-in Markdown
+under `docs/`. Its Python environment is pinned independently from the Rust
+crate with `uv.lock`.
+
+```bash
+task docs:serve
+task docs:build
+```
+
+The strict build validates internal links and anchors before publication. See
+[Site publication architecture](docs/site-publication.md) for the boundary
+between the Zensical documentation, future LaunchKit landing page, generated
+API reference, schemas, repository intelligence, and release guidance.
+
 ## Project documents
 
 - [Architecture](ARCHITECTURE.md)
@@ -201,6 +217,7 @@ unchanged after scanning and planning.
 - [CLI outcome contract](docs/cli-contract.md)
 - [Configuration and effective policy](docs/configuration.md)
 - [Development model](docs/development-model.md)
+- [Site publication architecture](docs/site-publication.md)
 - [Roadmap](ROADMAP.md)
 
 ## License

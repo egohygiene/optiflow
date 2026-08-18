@@ -7,6 +7,12 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a pinned Zensical documentation environment, branded documentation
+  home and navigation, strict link validation, and a build-only documentation
+  workflow.
+- Added the static site publication contract for the future LaunchKit landing
+  page, documentation, API reference, schemas, intelligence, and release
+  surfaces.
 - Added strict, typed `optiflow.config.v1` TOML with deterministic user,
   project, explicit-file, environment, and CLI precedence.
 - Added `optiflow.effective-policy.v1`, per-leaf provenance and shadow traces,

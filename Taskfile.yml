@@ -55,6 +55,25 @@ tasks:
           jq empty "$schema"
         done
 
+  docs:sync:
+    desc: Synchronize the pinned documentation environment.
+    cmds:
+      - uv sync --frozen --only-group docs
+
+  docs:serve:
+    desc: Preview the Zensical documentation site locally.
+    deps:
+      - docs:sync
+    cmds:
+      - uv run --frozen --only-group docs zensical serve
+
+  docs:build:
+    desc: Build documentation with strict link and reference validation.
+    deps:
+      - docs:sync
+    cmds:
+      - uv run --frozen --only-group docs zensical build --clean --strict
+
   validate:
     desc: Run all repository validation.
     cmds:
@@ -63,3 +82,4 @@ tasks:
       - task: test
       - task: contracts
       - task: smoke
+      - task: docs:build

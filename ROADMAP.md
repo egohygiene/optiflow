@@ -253,11 +253,12 @@ enough to install before mutation is introduced.
 - [ ] Define duplicate path normalization for case-insensitive filesystems,
   relative paths, Unicode, and repeated inputs.
 - [ ] Add structured warnings for unsupported filesystem metadata.
-- [ ] Make partial and interrupted runs visible through CLI status/reporting.
+- [x] Make partial and interrupted runs visible through typed CLI outcomes and
+  persisted run status.
 
 ### CLI and diagnostics
 
-- [ ] Publish a stable exit-code taxonomy for success, partial success, invalid
+- [x] Publish a stable exit-code taxonomy for success, partial success, invalid
   input, unavailable capability, stale state, and internal failure.
 - [ ] Add `--quiet`, verbosity, and structured diagnostic behavior without
   contaminating JSON standard output.
@@ -270,18 +271,19 @@ enough to install before mutation is introduced.
 
 ### Configuration
 
-- [ ] Define precedence for built-in defaults, configuration file, environment
+- [x] Define precedence for built-in defaults, configuration file, environment
   variables, and CLI flags.
-- [ ] Add `config show`, `config paths`, and `config validate` commands.
-- [ ] Keep configuration optional; the default scan remains conservative.
-- [ ] Version configuration files and reject unknown safety-critical values.
-- [ ] Record the effective policy hash in every run.
+- [x] Add `config show`, `config explain`, and `config validate` commands.
+- [ ] Add a dedicated `config paths` command.
+- [x] Keep configuration optional; the default scan remains conservative.
+- [x] Version configuration files and reject unknown safety-critical values.
+- [x] Record the effective policy and its fingerprints in every new run.
 
 ### Release and supply-chain foundation
 
-- [ ] Add `CHANGELOG.md`, `SECURITY.md`, and a repository-local release
-  checklist.
-- [ ] Enforce the declared minimum supported Rust version in CI.
+- [x] Add `CHANGELOG.md`.
+- [ ] Add `SECURITY.md` and a repository-local release checklist.
+- [x] Enforce the declared minimum supported Rust version in CI.
 - [ ] Check dependency licenses, advisories, duplicate versions, and source
   policies.
 - [ ] Generate optimized binaries for supported macOS and Linux architectures.
@@ -311,7 +313,7 @@ enough to install before mutation is introduced.
 - [ ] Duplicate and reclaimable-space reporting is hard-link aware and honest
   about unknown physical allocation.
 - [ ] All emitted JSON validates against its declared schema.
-- [ ] The CLI has documented exit codes and keeps machine output clean.
+- [x] The CLI has documented exit codes and keeps machine output clean.
 - [ ] Supported platforms pass clean-install and upgrade smoke tests.
 
 ## `v0.2.0` — transactional exact-duplicate resolution
