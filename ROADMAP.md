@@ -240,16 +240,16 @@ enough to install before mutation is introduced.
 
 ### Inventory correctness
 
-- [ ] Record stable platform file identity where available: device, inode or
+- [x] Record stable platform file identity where available: device, inode or
   file ID, link count, and filesystem identifier.
-- [ ] Detect multiple paths to the same hard-linked file and avoid presenting
+- [x] Detect multiple paths to the same hard-linked file and avoid presenting
   them as independent physical copies.
-- [ ] Report logical size separately from allocated size when supported.
-- [ ] Detect or conservatively disclose sparse files, copy-on-write clones, and
+- [x] Report logical size separately from allocated size when supported.
+- [x] Detect or conservatively disclose sparse files, copy-on-write clones, and
   reflinks whose physical savings cannot be inferred from logical size alone.
-- [ ] Refuse to claim exact reclaimable physical bytes when the filesystem does
+- [x] Refuse to claim exact reclaimable physical bytes when the filesystem does
   not expose enough information.
-- [ ] Detect files that change during hashing and mark their evidence stale.
+- [x] Detect files that change during hashing and mark their evidence stale.
 - [ ] Define duplicate path normalization for case-insensitive filesystems,
   relative paths, Unicode, and repeated inputs.
 - [ ] Add structured warnings for unsupported filesystem metadata.
@@ -298,7 +298,7 @@ enough to install before mutation is introduced.
 - [ ] Add fixtures for empty files, huge sparse files, hard links, symbolic
   links, permission failures, disappearing files, invalid media, and files that
   change during hashing.
-- [ ] Test Linux and macOS path and filesystem behavior independently.
+- [x] Test Linux and macOS path and filesystem behavior independently.
 - [ ] Add schema validation for every emitted artifact in CI.
 - [ ] Test SQLite migrations from every previously released schema.
 - [ ] Establish a performance baseline for file discovery, candidate hashing,

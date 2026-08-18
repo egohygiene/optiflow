@@ -12,7 +12,7 @@ move, quarantine, or optimization command.
 ## Current capabilities
 
 - Scan one or more files and directories without modifying them.
-- Exclude hidden trees, symbolic links, filesystem crossings, and OptiFlow's
+- Exclude hidden trees, symbolic links, filesystem crossings, and optiflow's
   own state directory by default.
 - Classify files by inspected content rather than filename extension.
 - Collect optional container, stream, codec, dimensions, duration, sample-rate,
@@ -24,8 +24,7 @@ move, quarantine, or optimization command.
 - Calculate potential reclaimable storage without deleting anything.
 - Write schema-versioned run, report, and plan artifacts atomically.
 - Generate deterministic review plans with apply-time safety preconditions.
-- Emit human-readable or stable JSON output for Aniflow, RenderFlow, and other
-  pipelines.
+- Emit human-readable or stable JSON output for `flow` and other pipelines.
 
 ## Requirements
 
@@ -105,9 +104,9 @@ Every JSON document includes an explicit schema identifier:
 
 | Artifact | Identifier | Schema |
 | --- | --- | --- |
-| Run | `optiflow.run.v1` | `schemas/run.schema.json` |
-| Report | `optiflow.report.v1` | `schemas/report.schema.json` |
-| Plan | `optiflow.plan.v1` | `schemas/plan.schema.json` |
+| Run | `optiflow.run.v3` | `schemas/run.schema.json` |
+| Report | `optiflow.report.v3` | `schemas/report.schema.json` |
+| Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
 
 Use `--json` for subprocess integration. Human status text is otherwise written
 to standard output, while command failures use a non-zero exit status.
@@ -118,7 +117,7 @@ to standard output, while command failures use a non-zero exit status.
 - Linux: `$XDG_STATE_HOME/optiflow` or `~/.local/state/optiflow`
 - Override: `--state-directory` or `OPTIFLOW_STATE_DIRECTORY`
 
-The primary database stays on a local filesystem. OptiFlow uses SQLite's
+The primary database stays on a local filesystem. optiflow uses SQLite's
 rollback journal rather than assuming WAL-safe behavior on removable or network
 volumes.
 
@@ -126,7 +125,7 @@ volumes.
 
 An exact group in `v0.1.0` means equal byte length plus an equal complete BLAKE3
 content hash. Before a future destructive operation, every plan precondition
-requires OptiFlow to:
+requires optiflow to:
 
 1. Re-read filesystem metadata.
 2. Reject files changed since planning.
@@ -135,6 +134,14 @@ requires OptiFlow to:
 5. Refuse mutation if any precondition fails.
 
 See [Safety Model](docs/safety-model.md) for the complete invariant set.
+
+## Ecosystem integration
+
+`optiflow` is independently installable and useful as a standalone CLI. In the
+Ego Hygiene suite, [`flow`](https://github.com/egohygiene/flow) is the unified
+orchestration facade: it invokes `optiflow` through the CLI and consumes the
+versioned JSON artifacts. Sibling tools do not embed optiflow's source or take
+an unversioned Rust dependency on its default branch.
 
 ## Development
 
@@ -148,6 +155,7 @@ Equivalent commands:
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets
+task contracts
 ./scripts/smoke-test.sh
 ```
 
@@ -162,9 +170,9 @@ unchanged after scanning and planning.
 - [Safety model](docs/safety-model.md)
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
+- [Development model](docs/development-model.md)
 - [Roadmap](ROADMAP.md)
 
 ## License
 
 MIT
-

@@ -47,11 +47,19 @@ tasks:
     cmds:
       - ./scripts/smoke-test.sh
 
+  contracts:
+    desc: Verify checked-in JSON Schemas are syntactically valid.
+    cmds:
+      - |
+        for schema in schemas/*.schema.json; do
+          jq empty "$schema"
+        done
+
   validate:
     desc: Run all repository validation.
-    deps:
-      - format:check
-      - lint
-      - test
-      - smoke
-
+    cmds:
+      - task: format:check
+      - task: lint
+      - task: test
+      - task: contracts
+      - task: smoke
