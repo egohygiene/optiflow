@@ -29,8 +29,11 @@ fn scan_and_plan_exact_duplicates_without_mutating_inputs() {
         .output()
         .expect("scan command");
     assert!(scan_output.status.success());
-    let report: serde_json::Value =
+    let envelope: serde_json::Value =
         serde_json::from_slice(&scan_output.stdout).expect("scan report JSON");
+    assert_eq!(envelope["schema"], "optiflow.command-result.v1");
+    assert_eq!(envelope["outcome"]["class"], "success");
+    let report = &envelope["result"];
     assert_eq!(report["summary"]["exact_duplicate_groups"], 1);
     assert_eq!(report["summary"]["reclaimable_bytes"], 23);
 
@@ -48,7 +51,10 @@ fn scan_and_plan_exact_duplicates_without_mutating_inputs() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("\"mutates_files\": false"));
+        .stdout(predicate::str::contains("\"mutates_files\": false"))
+        .stdout(predicate::str::contains(
+            "\"schema\": \"optiflow.command-result.v1\"",
+        ));
 
     assert_eq!(
         fs::read(&first).expect("first remains"),

@@ -58,6 +58,26 @@ impl StateStore {
         Ok(())
     }
 
+    pub fn mark_scan_interrupted(&self, run_id: &str, completed_at: &str) -> Result<()> {
+        self.connection.execute(
+            "UPDATE scan_runs
+             SET completed_at = ?2, status = 'interrupted'
+             WHERE run_id = ?1 AND status = 'running'",
+            params![run_id, completed_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn mark_scan_failed(&self, run_id: &str, completed_at: &str) -> Result<()> {
+        self.connection.execute(
+            "UPDATE scan_runs
+             SET completed_at = ?2, status = 'failed'
+             WHERE run_id = ?1 AND status = 'running'",
+            params![run_id, completed_at],
+        )?;
+        Ok(())
+    }
+
     pub fn finalize_scan(
         &mut self,
         run: &ScanRun,
@@ -242,16 +262,27 @@ impl StateStore {
             .transpose()
     }
 
+    pub fn load_run_status(&self, run_id: &str) -> Result<Option<String>> {
+        self.connection
+            .query_row(
+                "SELECT status FROM scan_runs WHERE run_id = ?1",
+                params![run_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .context("failed to inspect stored scan-run status")
+    }
+
     pub fn cache_status(&self) -> Result<CacheStatus> {
         let cached_file_count =
             self.connection
                 .query_row("SELECT COUNT(*) FROM file_cache", [], |row| {
-                    row.get::<_, u64>(0)
+                    row.get::<_, i64>(0)
                 })?;
         let stored_run_count = self.connection.query_row(
             "SELECT COUNT(*) FROM scan_runs WHERE status = 'completed'",
             [],
-            |row| row.get::<_, u64>(0),
+            |row| row.get::<_, i64>(0),
         )?;
         let database_size_bytes = fs::metadata(&self.database_path)
             .map(|metadata| metadata.len())
@@ -261,8 +292,10 @@ impl StateStore {
             state_directory: self.state_directory.to_string_lossy().into_owned(),
             database_path: self.database_path.to_string_lossy().into_owned(),
             database_size_bytes,
-            cached_file_count,
-            stored_run_count,
+            cached_file_count: u64::try_from(cached_file_count)
+                .context("cached file count was negative")?,
+            stored_run_count: u64::try_from(stored_run_count)
+                .context("stored run count was negative")?,
         })
     }
 }
@@ -281,7 +314,7 @@ fn apply_migration_0002(connection: &mut Connection) -> Result<()> {
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
             [],
-            |row| row.get::<_, u64>(0),
+            |row| row.get::<_, i64>(0),
         )
         .context("failed to check schema_migrations for migration 0002")?
         > 0;
@@ -304,7 +337,7 @@ fn apply_migration_0002(connection: &mut Connection) -> Result<()> {
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
             [],
-            |row| row.get::<_, u64>(0),
+            |row| row.get::<_, i64>(0),
         )
         .context("failed to verify migration 0002 was recorded")?
         > 0;
@@ -325,7 +358,7 @@ fn apply_migration_0003(connection: &mut Connection) -> Result<()> {
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 3",
             [],
-            |row| row.get::<_, u64>(0),
+            |row| row.get::<_, i64>(0),
         )
         .context("failed to check schema_migrations for migration 0003")?
         > 0;
@@ -345,7 +378,7 @@ fn apply_migration_0003(connection: &mut Connection) -> Result<()> {
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 3",
             [],
-            |row| row.get::<_, u64>(0),
+            |row| row.get::<_, i64>(0),
         )
         .context("failed to verify migration 0003 was recorded")?
         > 0;

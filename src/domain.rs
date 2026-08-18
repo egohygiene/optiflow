@@ -101,7 +101,14 @@ impl SerializedPath {
     /// same bytes).
     pub fn display(&self) -> std::borrow::Cow<'_, str> {
         match self {
-            SerializedPath::Utf8 { value } => std::borrow::Cow::Borrowed(value.as_str()),
+            SerializedPath::Utf8 { value }
+                if value.chars().all(|character| !character.is_control()) =>
+            {
+                std::borrow::Cow::Borrowed(value.as_str())
+            }
+            SerializedPath::Utf8 { value } => {
+                std::borrow::Cow::Owned(value.chars().flat_map(char::escape_default).collect())
+            }
             SerializedPath::UnixBytes { base64 } => {
                 std::borrow::Cow::Owned(format!("<non-utf8:{base64}>"))
             }
@@ -167,6 +174,15 @@ mod tests {
             SerializedPath::UnixBytes { .. } => panic!("expected Utf8 variant"),
         }
         assert_eq!(serialized.display(), "/tmp/example/file.txt");
+    }
+
+    #[test]
+    fn serialized_path_display_escapes_terminal_control_characters() {
+        let serialized = SerializedPath::Utf8 {
+            value: "/tmp/line\n\u{1b}[31m.txt".to_owned(),
+        };
+
+        assert_eq!(serialized.display(), "/tmp/line\\n\\u{1b}[31m.txt");
     }
 
     #[test]

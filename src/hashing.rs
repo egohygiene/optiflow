@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 
 use crate::domain::{EvidenceValidity, ObservationStability};
 use crate::filesystem::identity::FileStateSignature;
+use crate::signals::SignalState;
 
 pub const HASH_ALGORITHM: &str = "blake3-256";
 const BUFFER_SIZE: usize = 1024 * 1024;
@@ -20,15 +21,16 @@ pub struct StableHashResult {
     pub evidence_validity: EvidenceValidity,
     pub attempt_count: u32,
     pub warning: Option<String>,
+    pub interrupted: bool,
 }
 
 /// Hash a file with full before/after stability checks, retrying up to
 /// `DEFAULT_MAX_OBSERVATION_ATTEMPTS` times if instability is detected.
-pub fn hash_with_stability(path: &Path) -> StableHashResult {
+pub fn hash_with_stability(path: &Path, signals: &SignalState) -> StableHashResult {
     let mut first_error: Option<String> = None;
 
     for attempt in 1..=DEFAULT_MAX_OBSERVATION_ATTEMPTS {
-        match attempt_stable_hash(path) {
+        match attempt_stable_hash(path, signals) {
             Ok(hash) => {
                 return StableHashResult {
                     hash,
@@ -43,9 +45,20 @@ pub fn hash_with_stability(path: &Path) -> StableHashResult {
                     } else {
                         None
                     },
+                    interrupted: false,
                 };
             }
-            Err(err) => {
+            Err(HashAttemptError::Interrupted) => {
+                return StableHashResult {
+                    hash: String::new(),
+                    stability: ObservationStability::RetryExhausted,
+                    evidence_validity: EvidenceValidity::Unavailable,
+                    attempt_count: attempt,
+                    warning: None,
+                    interrupted: true,
+                };
+            }
+            Err(HashAttemptError::Failed(err)) => {
                 let msg = err.to_string();
                 if first_error.is_none() {
                     first_error = Some(msg.clone());
@@ -68,6 +81,7 @@ pub fn hash_with_stability(path: &Path) -> StableHashResult {
                     warning: Some(format!(
                         "first instability: {first_msg}; final error: {msg}"
                     )),
+                    interrupted: false,
                 };
             }
         }
@@ -83,19 +97,32 @@ pub fn hash_with_stability(path: &Path) -> StableHashResult {
             attempt_count: DEFAULT_MAX_OBSERVATION_ATTEMPTS,
             warning: first_error
                 .or_else(|| Some(format!("retry exhausted for {}", path.display()))),
+            interrupted: false,
         }
     }
 }
 
-fn attempt_stable_hash(path: &Path) -> Result<String> {
+enum HashAttemptError {
+    Interrupted,
+    Failed(anyhow::Error),
+}
+
+impl From<anyhow::Error> for HashAttemptError {
+    fn from(error: anyhow::Error) -> Self {
+        Self::Failed(error)
+    }
+}
+
+fn attempt_stable_hash(path: &Path, signals: &SignalState) -> Result<String, HashAttemptError> {
     let pre_meta = std::fs::symlink_metadata(path)
         .with_context(|| format!("failed to stat {}", path.display()))?;
 
     if pre_meta.file_type().is_symlink() {
-        anyhow::bail!(
+        return Err(anyhow::anyhow!(
             "path became a symbolic link before hashing: {}",
             path.display()
-        );
+        )
+        .into());
     }
 
     let pre_sig = FileStateSignature::from_symlink_metadata(&pre_meta);
@@ -106,6 +133,9 @@ fn attempt_stable_hash(path: &Path) -> Result<String> {
     let mut buffer = vec![0_u8; BUFFER_SIZE];
 
     loop {
+        if signals.is_cancelled() {
+            return Err(HashAttemptError::Interrupted);
+        }
         let bytes_read = reader
             .read(&mut buffer)
             .with_context(|| format!("failed while hashing {}", path.display()))?;
@@ -119,16 +149,19 @@ fn attempt_stable_hash(path: &Path) -> Result<String> {
         .with_context(|| format!("failed to re-stat after hashing {}", path.display()))?;
 
     if post_meta.file_type().is_symlink() {
-        anyhow::bail!(
+        return Err(anyhow::anyhow!(
             "path became a symbolic link during hashing: {}",
             path.display()
-        );
+        )
+        .into());
     }
 
     let post_sig = FileStateSignature::from_symlink_metadata(&post_meta);
 
     if pre_sig != post_sig {
-        anyhow::bail!("file changed while it was being hashed: {}", path.display());
+        return Err(
+            anyhow::anyhow!("file changed while it was being hashed: {}", path.display()).into(),
+        );
     }
 
     Ok(hasher.finalize().to_hex().to_string())
@@ -227,11 +260,12 @@ mod tests {
         let path = directory.path().join("stable.bin");
         fs::write(&path, b"stable content").expect("fixture");
 
-        let result = hash_with_stability(&path);
+        let result = hash_with_stability(&path, &SignalState::default());
         assert_eq!(result.stability, ObservationStability::Stable);
         assert_eq!(result.evidence_validity, EvidenceValidity::Current);
         assert_eq!(result.attempt_count, 1);
         assert!(result.warning.is_none());
+        assert!(!result.interrupted);
         assert_eq!(result.hash, complete_hash(&path).expect("direct hash"));
     }
 
@@ -241,8 +275,22 @@ mod tests {
         let path = directory.path().join("empty.bin");
         fs::write(&path, b"").expect("empty fixture");
 
-        let result = hash_with_stability(&path);
+        let result = hash_with_stability(&path, &SignalState::default());
         assert_eq!(result.stability, ObservationStability::Stable);
         assert_eq!(result.evidence_validity, EvidenceValidity::Current);
+    }
+
+    #[test]
+    fn interrupted_hash_stops_without_producing_evidence() {
+        let directory = tempdir().expect("temporary directory");
+        let path = directory.path().join("interrupted.bin");
+        fs::write(&path, b"content").expect("fixture");
+
+        let signals = SignalState::interrupted(crate::signals::Interruption::Interrupt);
+        let result = hash_with_stability(&path, &signals);
+
+        assert!(result.interrupted);
+        assert_eq!(result.evidence_validity, EvidenceValidity::Unavailable);
+        assert!(result.hash.is_empty());
     }
 }

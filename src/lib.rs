@@ -3,21 +3,25 @@
 pub mod adapters;
 pub mod app;
 pub mod cli;
+pub mod contracts;
 pub mod discovery;
 pub mod domain;
 pub mod duplicates;
 pub mod filesystem;
 pub mod hashing;
 pub mod inventory;
+pub mod outcome;
 pub mod planning;
+pub mod render;
 pub mod reports;
+pub mod signals;
 pub mod state;
 
-use anyhow::Result;
-
 use crate::cli::Cli;
+use crate::outcome::CommandResult;
+use crate::signals::SignalState;
 
 /// Execute one parsed optiflow command.
-pub fn run(cli: Cli) -> Result<()> {
-    app::run(cli)
+pub fn run(cli: Cli, signals: &SignalState) -> CommandResult {
+    app::run(cli, signals)
 }

@@ -83,7 +83,8 @@ Global options:
 
 ```text
 --state-directory <DIRECTORY>  Override persistent local state
---json                         Emit the primary command result as JSON
+--output-format <FORMAT>       Select human or JSON command-result output
+--json                         Compatible alias for --output-format json
 ```
 
 Scan policy options:
@@ -100,16 +101,25 @@ archives.
 
 ## JSON pipeline contract
 
-Every JSON document includes an explicit schema identifier:
+Every JSON invocation emits one `optiflow.command-result.v1` envelope. The
+envelope carries the typed outcome, exact process exit code, coverage,
+diagnostics, committed artifact references, and domain result. Its schema is
+`schemas/command-result.schema.json`.
+
+Machine results and committed domain artifacts have independent identifiers:
 
 | Artifact | Identifier | Schema |
 | --- | --- | --- |
+| Command result | `optiflow.command-result.v1` | `schemas/command-result.schema.json` |
 | Run | `optiflow.run.v3` | `schemas/run.schema.json` |
 | Report | `optiflow.report.v3` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
 
-Use `--json` for subprocess integration. Human status text is otherwise written
-to standard output, while command failures use a non-zero exit status.
+Use `--output-format json` (or `--json`) for subprocess integration. JSON owns
+stdout; human primary output uses stdout and human diagnostics use stderr.
+Complete success is `0`, while a valid result with reduced coverage is `3`.
+See [CLI outcome contract](docs/cli-contract.md) for the complete stable exit
+matrix, stream rules, signal behavior, and shell examples.
 
 ## State locations
 
@@ -153,8 +163,8 @@ Equivalent commands:
 
 ```bash
 cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-targets
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --all-targets
 task contracts
 ./scripts/smoke-test.sh
 ```
@@ -170,6 +180,7 @@ unchanged after scanning and planning.
 - [Safety model](docs/safety-model.md)
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
+- [CLI outcome contract](docs/cli-contract.md)
 - [Development model](docs/development-model.md)
 - [Roadmap](ROADMAP.md)
 

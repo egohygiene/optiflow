@@ -2,40 +2,58 @@
 
 ## Stability
 
-Every document contains a `schema_version`. Consumers must branch on that value
-rather than the installed binary version.
+Every machine document declares its schema. Command results use `schema`; domain
+artifacts use `schema_version`. Consumers must branch on that identifier rather
+than the installed binary version.
 
 The current artifact identifiers are:
 
 | Artifact | Identifier | Schema |
 | --- | --- | --- |
+| Command result | `optiflow.command-result.v1` | `schemas/command-result.schema.json` |
 | Run | `optiflow.run.v3` | `schemas/run.schema.json` |
 | Report | `optiflow.report.v3` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
 
-Within a schema major version:
+Within an artifact schema major version:
 
 - Existing field meaning will not change.
 - Enum values will not be silently reinterpreted.
 - New fields may be added.
 - Consumers should ignore unknown fields.
-- Paths are serialized as lossy UTF-8 strings where the host path cannot be
-  represented directly in JSON.
+- Native paths in command diagnostic context and artifact references use a
+  lossless tagged UTF-8 or Unix-byte representation. Historical artifact path
+  fields retain their existing compatibility representation.
 
 ## Standard output
 
-Pass global `--json` before or after the subcommand. On success, standard output
-contains one complete JSON document and a trailing newline. Do not parse human
-output.
+Pass global `--output-format json` or its compatible `--json` alias before or
+after the subcommand. When structured rendering is possible, standard output
+contains exactly one complete `optiflow.command-result.v1` document and a
+trailing newline for success, partial success, and blocking failures. Do not
+parse human output.
 
 Example:
 
 ```bash
 optiflow \
-  --json \
+  --output-format json \
   --state-directory "/tmp/optiflow-state" \
-  scan "/data/media" > "report.json"
+  scan "/data/media" > "optiflow-result.json"
 ```
+
+The process status exactly matches `outcome.exit_code`. JSON stdout never
+contains banners, progress text, warnings, color, or logs. Diagnostics remain
+inside the envelope; JSON-mode stderr stays empty during ordinary rendering.
+The renderer buffers the full document before writing it.
+
+Before this contract, `--json scan`, `report`, and `plan` wrote the domain value
+directly. They now wrap that value in `result`, with committed outputs listed in
+`artifacts`. This is a pre-1.0 machine-output compatibility change. Immutable
+`v1`, `v2`, and `v3` artifact schemas were not changed.
+
+See [CLI Outcome Contract](cli-contract.md) for the exit-code matrix, typed
+diagnostics, partial-run semantics, stream ownership, and signal behavior.
 
 ## Reports
 
