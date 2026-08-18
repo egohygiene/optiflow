@@ -26,7 +26,7 @@ impl StateStore {
             )
         })?;
         let database_path = state_directory.join("state.sqlite3");
-        let connection = Connection::open(&database_path)
+        let mut connection = Connection::open(&database_path)
             .with_context(|| format!("failed to open {}", database_path.display()))?;
         connection
             .busy_timeout(Duration::from_secs(10))
@@ -38,10 +38,10 @@ impl StateStore {
             .context("failed to apply migration 0001")?;
 
         // Apply migration 0002 exactly once.
-        apply_migration_0002(&connection).context("failed to apply migration 0002")?;
+        apply_migration_0002(&mut connection).context("failed to apply migration 0002")?;
 
         // Apply migration 0003 exactly once.
-        apply_migration_0003(&connection).context("failed to apply migration 0003")?;
+        apply_migration_0003(&mut connection).context("failed to apply migration 0003")?;
 
         Ok(Self {
             connection,
@@ -276,7 +276,7 @@ impl StateStore {
 /// Checks `schema_migrations` for version 2.  If already present, the
 /// migration is skipped.  Otherwise the SQL statements are executed and the
 /// version row is inserted atomically.
-fn apply_migration_0002(connection: &Connection) -> Result<()> {
+fn apply_migration_0002(connection: &mut Connection) -> Result<()> {
     let already_applied: bool = connection
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
@@ -290,15 +290,17 @@ fn apply_migration_0002(connection: &Connection) -> Result<()> {
         return Ok(());
     }
 
-    // The migration SQL contains the INSERT OR IGNORE for version 2.
-    connection
+    let transaction = connection
+        .transaction()
+        .context("failed to begin migration 0002 transaction")?;
+    transaction
         .execute_batch(include_str!(
             "../migrations/0002_filesystem_identity_and_storage.sql"
         ))
         .context("failed to execute migration 0002 SQL")?;
 
     // Verify it was recorded.
-    let recorded: bool = connection
+    let recorded: bool = transaction
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 2",
             [],
@@ -311,11 +313,14 @@ fn apply_migration_0002(connection: &Connection) -> Result<()> {
         bail!("migration 0002 executed but was not recorded in schema_migrations");
     }
 
+    transaction
+        .commit()
+        .context("failed to commit migration 0002 transaction")?;
     Ok(())
 }
 
 /// Apply migration 0003 exactly once (observation stability columns).
-fn apply_migration_0003(connection: &Connection) -> Result<()> {
+fn apply_migration_0003(connection: &mut Connection) -> Result<()> {
     let already_applied: bool = connection
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 3",
@@ -329,11 +334,14 @@ fn apply_migration_0003(connection: &Connection) -> Result<()> {
         return Ok(());
     }
 
-    connection
+    let transaction = connection
+        .transaction()
+        .context("failed to begin migration 0003 transaction")?;
+    transaction
         .execute_batch(include_str!("../migrations/0003_observation_stability.sql"))
         .context("failed to execute migration 0003 SQL")?;
 
-    let recorded: bool = connection
+    let recorded: bool = transaction
         .query_row(
             "SELECT COUNT(*) FROM schema_migrations WHERE version = 3",
             [],
@@ -346,6 +354,9 @@ fn apply_migration_0003(connection: &Connection) -> Result<()> {
         bail!("migration 0003 executed but was not recorded in schema_migrations");
     }
 
+    transaction
+        .commit()
+        .context("failed to commit migration 0003 transaction")?;
     Ok(())
 }
 
@@ -398,4 +409,50 @@ fn identity_columns(
 
 fn to_database_integer(value: u64, label: &str) -> Result<i64> {
     i64::try_from(value).with_context(|| format!("{label} exceeds SQLite's integer range"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migration_0002_rolls_back_its_version_marker_on_failure() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        connection
+            .execute_batch(include_str!("../migrations/0001_initial.sql"))
+            .expect("initial schema");
+        connection
+            .execute("ALTER TABLE observations ADD COLUMN filesystem_id TEXT", [])
+            .expect("inject conflicting column");
+
+        assert!(apply_migration_0002(&mut connection).is_err());
+        assert_eq!(migration_count(&connection, 2), 0);
+    }
+
+    #[test]
+    fn migration_0003_rolls_back_its_version_marker_on_failure() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        connection
+            .execute_batch(include_str!("../migrations/0001_initial.sql"))
+            .expect("initial schema");
+        connection
+            .execute(
+                "ALTER TABLE observations ADD COLUMN observation_stability TEXT",
+                [],
+            )
+            .expect("inject conflicting column");
+
+        assert!(apply_migration_0003(&mut connection).is_err());
+        assert_eq!(migration_count(&connection, 3), 0);
+    }
+
+    fn migration_count(connection: &Connection, version: i64) -> i64 {
+        connection
+            .query_row(
+                "SELECT COUNT(*) FROM schema_migrations WHERE version = ?1",
+                [version],
+                |row| row.get(0),
+            )
+            .expect("migration count")
+    }
 }
