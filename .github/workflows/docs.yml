@@ -1,0 +1,54 @@
+---
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/docs.yml"
+      - "docs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "zensical.toml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/docs.yml"
+      - "docs/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "zensical.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+          version: "0.11.33"
+
+      - name: Install Python
+        run: uv python install 3.13
+
+      - name: Synchronize documentation dependencies
+        run: uv sync --frozen --only-group docs
+
+      - name: Build documentation in strict mode
+        run: uv run --frozen --only-group docs zensical build --clean --strict
+
