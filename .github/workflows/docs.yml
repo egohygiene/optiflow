@@ -5,24 +5,28 @@ on:
   pull_request:
     paths:
       - ".github/workflows/docs.yml"
+      - "*.md"
       - "docs/**"
       - "pyproject.toml"
       - "schemas/**"
       - "scripts/site/**"
       - "uv.lock"
       - "web/landing/**"
+      - "web/architecture/**"
       - "zensical.toml"
   push:
     branches:
       - main
     paths:
       - ".github/workflows/docs.yml"
+      - "*.md"
       - "docs/**"
       - "pyproject.toml"
       - "schemas/**"
       - "scripts/site/**"
       - "uv.lock"
       - "web/landing/**"
+      - "web/architecture/**"
       - "zensical.toml"
   workflow_dispatch:
 

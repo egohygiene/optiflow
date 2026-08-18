@@ -7,6 +7,12 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a deterministic `/architecture/` portal generated from the complete
+  canonical document corpus, including an interactive dependency graph,
+  system boundaries, structural layers, filtered document inventory, and a
+  machine-readable architecture projection.
+- Added versioned configuration and output schemas for the architecture portal
+  while preserving root architecture documents as the sole canonical source.
 - Added the complete 18-document Aether architecture corpus for OptiFlow,
   including canonical metadata, dependency relationships, decision records,
   design semantics, AI authority, and a meta-architecture inventory.

@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://optiflow.egohygiene.io/schemas/architecture-portal-v1.schema.json",
+  "title": "OptiFlow generated architecture portal data v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "sourceFingerprint",
+    "repository",
+    "product",
+    "stats",
+    "categories",
+    "runtimeLayers",
+    "platformBoundaries",
+    "documents",
+    "edges"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "/schemas/architecture-portal-v1.schema.json"
+    },
+    "schema": {
+      "const": "optiflow.architecture-portal.v1"
+    },
+    "sourceFingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "repository": {
+      "$ref": "architecture-portal-config-v1.schema.json#/$defs/repository"
+    },
+    "product": {
+      "$ref": "architecture-portal-config-v1.schema.json#/$defs/product"
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documents",
+        "categories",
+        "dependencies",
+        "layers"
+      ],
+      "properties": {
+        "documents": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "categories": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dependencies": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "layers": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "$ref": "architecture-portal-config-v1.schema.json#/$defs/category"
+      }
+    },
+    "runtimeLayers": {
+      "type": "array",
+      "items": {
+        "$ref": "architecture-portal-config-v1.schema.json#/$defs/runtimeLayer"
+      }
+    },
+    "platformBoundaries": {
+      "type": "array",
+      "items": {
+        "$ref": "architecture-portal-config-v1.schema.json#/$defs/platformBoundary"
+      }
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/document"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    }
+  },
+  "$defs": {
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "shortTitle",
+        "path",
+        "category",
+        "version",
+        "status",
+        "owners",
+        "governedBy",
+        "dependsOn",
+        "related",
+        "supersedes",
+        "rank",
+        "sourceUrl"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "architecture-portal-config-v1.schema.json#/$defs/documentId"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shortTitle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^[A-Z_]+\\.md$"
+        },
+        "category": {
+          "$ref": "architecture-portal-config-v1.schema.json#/$defs/identifier"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owners": {
+          "$ref": "#/$defs/stringList"
+        },
+        "governedBy": {
+          "$ref": "#/$defs/stringList"
+        },
+        "dependsOn": {
+          "$ref": "#/$defs/documentIdList"
+        },
+        "related": {
+          "$ref": "#/$defs/documentIdList"
+        },
+        "supersedes": {
+          "$ref": "#/$defs/documentIdList"
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "architecture-portal-config-v1.schema.json#/$defs/documentId"
+        },
+        "to": {
+          "$ref": "architecture-portal-config-v1.schema.json#/$defs/documentId"
+        }
+      }
+    },
+    "documentIdList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "architecture-portal-config-v1.schema.json#/$defs/documentId"
+      }
+    },
+    "stringList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}
