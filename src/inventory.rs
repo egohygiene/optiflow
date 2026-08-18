@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use crate::adapters::ffprobe;
-use crate::domain::{CachedAnalysis, EvidenceValidity, MediaKind, ObservationStability, ObservationStatus};
+use crate::domain::{
+    CachedAnalysis, EvidenceValidity, MediaKind, ObservationStability, ObservationStatus,
+};
 
 pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) -> CachedAnalysis {
     let mut warnings = Vec::new();

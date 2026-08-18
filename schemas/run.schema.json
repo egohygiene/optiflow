@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/egohygiene/optiflow/schemas/run.schema.json",
-  "title": "OptiFlow Run v1",
+  "title": "optiflow run v3",
   "type": "object",
   "required": [
     "schema_version",
@@ -18,7 +18,7 @@
     "warnings"
   ],
   "properties": {
-    "schema_version": { "const": "optiflow.run.v1" },
+    "schema_version": { "const": "optiflow.run.v3" },
     "run_id": { "type": "string", "format": "uuid" },
     "created_at": { "type": "string", "format": "date-time" },
     "completed_at": { "type": "string", "format": "date-time" },
@@ -54,4 +54,3 @@
   },
   "additionalProperties": false
 }
-

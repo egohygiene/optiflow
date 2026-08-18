@@ -6,7 +6,7 @@ use clap::{Args, Parser, Subcommand};
 #[derive(Debug, Parser)]
 #[command(author, version, about, propagate_version = true)]
 pub struct Cli {
-    /// Override the persistent OptiFlow state directory.
+    /// Override the persistent optiflow state directory.
     #[arg(long, global = true, value_name = "DIRECTORY")]
     pub state_directory: Option<PathBuf>,
 
@@ -20,7 +20,7 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Inspect OptiFlow's runtime and optional media tools.
+    /// Inspect optiflow's runtime and optional media tools.
     Doctor,
 
     /// Inventory files and prove exact duplicate groups without modifying inputs.

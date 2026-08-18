@@ -17,9 +17,16 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate
-    runs-on: ubuntu-latest
+    name: Validate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
 
     steps:
       - name: Check out repository
@@ -33,10 +40,21 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
 
-      - name: Install optional media tooling
+      - name: Install optional media tooling on Linux
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install --yes ffmpeg jq
+
+      - name: Install optional media tooling on macOS
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg jq
+
+      - name: Verify JSON Schema syntax
+        run: |
+          for schema in schemas/*.schema.json; do
+            jq empty "$schema"
+          done
 
       - name: Verify formatting
         run: cargo fmt --all -- --check
@@ -49,4 +67,3 @@ jobs:
 
       - name: Run synthetic end-to-end test
         run: ./scripts/smoke-test.sh
-

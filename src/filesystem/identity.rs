@@ -27,7 +27,11 @@ impl FileStateSignature {
     #[cfg(unix)]
     pub fn from_symlink_metadata(metadata: &std::fs::Metadata) -> Self {
         use std::os::unix::fs::MetadataExt;
-        let platform = if cfg!(target_os = "macos") { "macos" } else { "linux" };
+        let platform = if cfg!(target_os = "macos") {
+            "macos"
+        } else {
+            "linux"
+        };
         let identity = if !metadata.file_type().is_symlink() {
             Some(FilesystemIdentity {
                 platform: platform.to_owned(),

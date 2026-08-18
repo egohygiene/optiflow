@@ -12,9 +12,9 @@ use crate::cli::{CacheCommand, Cli, Command, PlanCommand, ScanArgs};
 use crate::discovery::discover;
 use crate::domain::{
     CacheStatus, CachedAnalysis, DoctorReport, EvidenceValidity, FileObservation, HardLinkGroup,
-    MediaKind, ObservationStatus, PhysicalReclaimability, REPORT_SCHEMA_VERSION, RUN_SCHEMA_VERSION,
-    ReclaimabilityReasonCode, ReclaimabilityStatus, ScanOptions, ScanReport, ScanRun, ScanSummary,
-    StorageAllocation, StorageSummary,
+    MediaKind, ObservationStatus, PhysicalReclaimability, REPORT_SCHEMA_VERSION,
+    RUN_SCHEMA_VERSION, ReclaimabilityReasonCode, ReclaimabilityStatus, ScanOptions, ScanReport,
+    ScanRun, ScanSummary, StorageAllocation, StorageSummary,
 };
 use crate::duplicates::exact_groups;
 use crate::filesystem::metadata as fs_metadata;
@@ -179,7 +179,8 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
                     logical_size_bytes: raw_fs_meta.logical_size_bytes,
                     allocated_size_bytes: raw_fs_meta.allocated_size_bytes,
                     allocation_source: raw_fs_meta.allocation_source.clone(),
-                    extent_sharing_status: crate::filesystem::identity::ExtentSharingStatus::Unknown,
+                    extent_sharing_status:
+                        crate::filesystem::identity::ExtentSharingStatus::Unknown,
                 })
             } else {
                 None
@@ -207,7 +208,8 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
     }
 
     let mut hard_link_groups: Vec<HardLinkGroup> = Vec::new();
-    let mut alias_observation_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut alias_observation_ids: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
 
     for ((fs_id, file_id), indices) in &identity_map {
         if indices.len() < 2 {
@@ -230,8 +232,8 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
 
         let reported_link_count = identity.link_count;
         let observed_path_count = u64::try_from(paths.len()).unwrap_or(u64::MAX);
-        let unobserved_link_count = reported_link_count
-            .and_then(|lc| lc.checked_sub(observed_path_count));
+        let unobserved_link_count =
+            reported_link_count.and_then(|lc| lc.checked_sub(observed_path_count));
 
         let logical_size_bytes = first.size_bytes;
         let allocated_size_bytes = first
@@ -297,7 +299,8 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
         }
     }
 
-    let hard_link_alias_logical_bytes = path_logical_bytes.saturating_sub(unique_object_logical_bytes);
+    let hard_link_alias_logical_bytes =
+        path_logical_bytes.saturating_sub(unique_object_logical_bytes);
 
     let duplicate_logical_bytes: u64 = duplicate_groups
         .iter()
@@ -423,9 +426,7 @@ fn run_scan(state_directory: &Path, json: bool, arguments: &ScanArgs) -> Result<
 }
 
 /// Aggregate physical reclaimability across all duplicate groups.
-fn aggregate_reclaimability(
-    groups: &[crate::domain::DuplicateGroup],
-) -> PhysicalReclaimability {
+fn aggregate_reclaimability(groups: &[crate::domain::DuplicateGroup]) -> PhysicalReclaimability {
     if groups.is_empty() {
         return PhysicalReclaimability::unknown(vec![]);
     }
@@ -474,8 +475,8 @@ fn observation_from_analysis(
         status: analysis.status,
         cache_hit,
         warnings: analysis.warnings,
-        filesystem_identity: None,   // populated after construction
-        storage_allocation: None,    // populated after construction
+        filesystem_identity: None, // populated after construction
+        storage_allocation: None,  // populated after construction
         observation_stability: analysis.observation_stability,
         evidence_validity: analysis.evidence_validity,
         attempt_count: analysis.attempt_count,
