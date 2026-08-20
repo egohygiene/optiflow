@@ -13,10 +13,10 @@ use crate::contracts::{self, Contract};
 use crate::discovery::{DiscoveryIssue, DiscoveryIssueKind, discover};
 use crate::domain::{
     CachedAnalysis, DoctorReport, EvidenceValidity, FileObservation, HardLinkGroup, MediaKind,
-    ObservationStatus, PLAN_SCHEMA_VERSION, PhysicalReclaimability, REPORT_SCHEMA_VERSION,
-    REPORT_SCHEMA_VERSION_V1, REPORT_SCHEMA_VERSION_V2, RUN_SCHEMA_VERSION,
-    ReclaimabilityReasonCode, ReclaimabilityStatus, ScanOptions, ScanReport, ScanRun, ScanSummary,
-    SerializedPath, StorageAllocation, StorageSummary,
+    NativePath, ObservationStatus, PLAN_SCHEMA_VERSION, PhysicalReclaimability,
+    REPORT_SCHEMA_VERSION, REPORT_SCHEMA_VERSION_V1, REPORT_SCHEMA_VERSION_V2,
+    REPORT_SCHEMA_VERSION_V3, RUN_SCHEMA_VERSION, ReclaimabilityReasonCode, ReclaimabilityStatus,
+    ScanOptions, ScanReport, ScanRun, ScanSummary, StorageAllocation, StorageSummary,
 };
 use crate::duplicates::exact_groups;
 use crate::filesystem::metadata as fs_metadata;
@@ -336,7 +336,7 @@ fn run_scan(
         }
         let first = &observations[indices[0]];
         let identity = first.filesystem_identity.clone().expect("identity present");
-        let mut paths: Vec<String> = indices
+        let mut paths: Vec<NativePath> = indices
             .iter()
             .map(|&i| observations[i].path.clone())
             .collect();
@@ -698,7 +698,7 @@ fn observation_from_analysis(
     FileObservation {
         observation_id: Uuid::now_v7().to_string(),
         run_id: run_id.to_owned(),
-        path: file.path.to_string_lossy().into_owned(),
+        path: NativePath::from_path(&file.path),
         size_bytes: file.size_bytes,
         modified_unix_ns: file.modified_unix_ns,
         device_id: file.device_id,
@@ -1004,7 +1004,12 @@ fn decode_report(bytes: &[u8], path: &Path) -> Result<ScanReport, Box<Diagnostic
         .map(str::to_owned);
     if !matches!(
         schema_version.as_deref(),
-        Some(REPORT_SCHEMA_VERSION | REPORT_SCHEMA_VERSION_V1 | REPORT_SCHEMA_VERSION_V2)
+        Some(
+            REPORT_SCHEMA_VERSION
+                | REPORT_SCHEMA_VERSION_V1
+                | REPORT_SCHEMA_VERSION_V2
+                | REPORT_SCHEMA_VERSION_V3
+        )
     ) {
         return Err(Box::new(
             Diagnostic::new(
@@ -1079,7 +1084,7 @@ fn discovery_diagnostics(issues: &[DiscoveryIssue], accepted_input: bool) -> Vec
                 issue.message.clone(),
             );
             diagnostic.context = DiagnosticContext {
-                path: issue.path.as_deref().map(SerializedPath::from_path),
+                path: issue.path.as_deref().map(NativePath::from_path),
                 os_error_kind: issue.os_error_kind.clone(),
                 ..DiagnosticContext::default()
             };
@@ -1192,7 +1197,7 @@ fn artifact_reference(kind: &str, schema: &str, run_id: &str, path: &Path) -> Ar
         kind: kind.to_owned(),
         schema: schema.to_owned(),
         run_id: Some(run_id.to_owned()),
-        path: SerializedPath::from_path(path),
+        path: NativePath::from_path(path),
     }
 }
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::domain::SerializedPath;
+use crate::domain::NativePath;
 
 pub const COMMAND_RESULT_SCHEMA: &str = "optiflow.command-result.v1";
 
@@ -171,7 +171,7 @@ pub enum DiagnosticCode {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiagnosticContext {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<SerializedPath>,
+    pub path: Option<NativePath>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -227,7 +227,7 @@ impl Diagnostic {
     }
 
     pub fn with_path(mut self, path: &std::path::Path) -> Self {
-        self.context.path = Some(SerializedPath::from_path(path));
+        self.context.path = Some(NativePath::from_path(path));
         self
     }
 
@@ -243,7 +243,7 @@ pub struct ArtifactReference {
     pub schema: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run_id: Option<String>,
-    pub path: SerializedPath,
+    pub path: NativePath,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

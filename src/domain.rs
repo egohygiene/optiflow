@@ -9,14 +9,20 @@ pub const RUN_SCHEMA_VERSION_V1: &str = "optiflow.run.v1";
 pub const REPORT_SCHEMA_VERSION_V1: &str = "optiflow.report.v1";
 pub const PLAN_SCHEMA_VERSION_V1: &str = "optiflow.plan.v1";
 
-/// Current v3 constants emitted for newly created runs and plans.
 pub const RUN_SCHEMA_VERSION_V2: &str = "optiflow.run.v2";
 pub const REPORT_SCHEMA_VERSION_V2: &str = "optiflow.report.v2";
 pub const PLAN_SCHEMA_VERSION_V2: &str = "optiflow.plan.v2";
 
-pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v3";
-pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v3";
-pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v3";
+/// v3 constants – retained for reading stored artifacts that predate v4.
+pub const RUN_SCHEMA_VERSION_V3: &str = "optiflow.run.v3";
+pub const REPORT_SCHEMA_VERSION_V3: &str = "optiflow.report.v3";
+pub const PLAN_SCHEMA_VERSION_V3: &str = "optiflow.plan.v3";
+
+/// Current v4 constants emitted for newly created runs and plans.
+/// v4 introduces lossless `NativePath` serialisation for all path fields.
+pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v4";
+pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v4";
+pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v4";
 
 // ---------------------------------------------------------------------------
 // Scan options and run metadata
@@ -47,20 +53,29 @@ pub struct ScanRun {
 }
 
 // ---------------------------------------------------------------------------
-// Path representation
+// Path representation (v4 – NativePath)
 // ---------------------------------------------------------------------------
 
-/// A platform-native path serialised to a lossless JSON-safe encoding.
+/// A lossless, versioned, platform-native path representation.
 ///
-/// Paths that are valid UTF-8 are stored as plain strings.  Paths that
-/// contain non-UTF-8 bytes (possible on Unix) are stored as base64-encoded
-/// raw bytes.  The encoding is reversible on the platform that emitted it.
+/// `NativePath` serialises a filesystem path into a JSON-safe tagged union
+/// without discarding any bytes.
 ///
-/// Display strings derived from `SerializedPath` must never be used for
-/// filesystem access or as unique keys; they are for human consumption only.
+/// * Paths that are valid UTF-8 are stored as `{"encoding":"utf8","value":"…"}`.
+/// * Paths that contain non-UTF-8 bytes (possible on Unix) are stored as
+///   `{"encoding":"unix_bytes","base64":"…"}` where the value is the
+///   RFC 4648 standard base64 encoding of the raw path bytes.
+///
+/// The encoding is fully reversible on the platform that produced it.
+/// `NativePath` values are suitable for use in JSON artifacts, SQLite rows,
+/// plan files, and CLI output without any loss of identity.
+///
+/// **Display strings** derived from `NativePath::display()` are for human
+/// consumption only and must never be used for filesystem access or as
+/// unique keys.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "encoding", rename_all = "snake_case")]
-pub enum SerializedPath {
+pub enum NativePath {
     /// The path bytes are valid UTF-8.
     Utf8 { value: String },
     /// The path bytes are not valid UTF-8; raw bytes are base64-encoded.
@@ -68,22 +83,27 @@ pub enum SerializedPath {
     UnixBytes { base64: String },
 }
 
-impl SerializedPath {
+/// `SerializedPath` is a backward-compatible alias for `NativePath` retained
+/// so that existing call-sites outside this module continue to compile while
+/// the codebase migrates to the `NativePath` name.
+pub type SerializedPath = NativePath;
+
+impl NativePath {
     /// Encode a `Path` without forcing it through lossy UTF-8 conversion.
     ///
-    /// On Unix, the raw `OsStr` bytes are inspected; non-UTF-8 sequences are
-    /// stored as base64.  On other platforms the path is converted losslessly
-    /// when possible and stored as UTF-8; otherwise a best-effort lossy
-    /// representation is used.
+    /// On Unix the raw `OsStr` bytes are inspected directly; sequences that
+    /// are not valid UTF-8 are stored as RFC 4648 base64.  On non-Unix
+    /// platforms the path is converted to UTF-8 losslessly when possible and
+    /// falls back to a best-effort lossy representation.
     #[cfg(unix)]
     pub fn from_path(path: &std::path::Path) -> Self {
         use std::os::unix::ffi::OsStrExt;
         let bytes = path.as_os_str().as_bytes();
         match std::str::from_utf8(bytes) {
-            Ok(s) => SerializedPath::Utf8 {
+            Ok(s) => NativePath::Utf8 {
                 value: s.to_owned(),
             },
-            Err(_) => SerializedPath::UnixBytes {
+            Err(_) => NativePath::UnixBytes {
                 base64: base64_encode(bytes),
             },
         }
@@ -92,32 +112,100 @@ impl SerializedPath {
     /// Non-Unix fallback: convert to UTF-8 when possible; fall back to lossy.
     #[cfg(not(unix))]
     pub fn from_path(path: &std::path::Path) -> Self {
-        SerializedPath::Utf8 {
+        NativePath::Utf8 {
             value: path.to_string_lossy().into_owned(),
         }
     }
 
+    /// Decode back to a `PathBuf`, preserving the original bytes on Unix.
+    ///
+    /// On Unix `UnixBytes` paths are reconstructed from the raw byte sequence.
+    /// On non-Unix platforms `UnixBytes` paths fall back to lossy UTF-8
+    /// (the bytes cannot be represented as an `OsString` on those platforms).
+    #[cfg(unix)]
+    pub fn to_path_buf(&self) -> std::path::PathBuf {
+        use std::os::unix::ffi::OsStrExt;
+        match self {
+            NativePath::Utf8 { value } => std::path::PathBuf::from(value),
+            NativePath::UnixBytes { base64 } => {
+                let bytes = base64_decode(base64);
+                let os_str = std::ffi::OsStr::from_bytes(&bytes);
+                std::path::PathBuf::from(os_str)
+            }
+        }
+    }
+
+    /// Non-Unix fallback: reconstruct from UTF-8; `UnixBytes` paths are
+    /// decoded from base64 and then converted lossily.
+    #[cfg(not(unix))]
+    pub fn to_path_buf(&self) -> std::path::PathBuf {
+        match self {
+            NativePath::Utf8 { value } => std::path::PathBuf::from(value),
+            NativePath::UnixBytes { base64 } => {
+                let bytes = base64_decode(base64);
+                // Best-effort: replace non-UTF-8 bytes with U+FFFD.
+                let s = String::from_utf8_lossy(&bytes).into_owned();
+                std::path::PathBuf::from(s)
+            }
+        }
+    }
+
     /// Human-readable display string (lossy – may not round-trip to the exact
-    /// same bytes).
+    /// same bytes on the filesystem).
+    ///
+    /// ASCII control characters in UTF-8 paths are escaped with Rust's
+    /// `char::escape_default` so that terminal control sequences cannot be
+    /// injected through path display.
     pub fn display(&self) -> std::borrow::Cow<'_, str> {
         match self {
-            SerializedPath::Utf8 { value }
+            NativePath::Utf8 { value }
                 if value.chars().all(|character| !character.is_control()) =>
             {
                 std::borrow::Cow::Borrowed(value.as_str())
             }
-            SerializedPath::Utf8 { value } => {
+            NativePath::Utf8 { value } => {
                 std::borrow::Cow::Owned(value.chars().flat_map(char::escape_default).collect())
             }
-            SerializedPath::UnixBytes { base64 } => {
+            NativePath::UnixBytes { base64 } => {
                 std::borrow::Cow::Owned(format!("<non-utf8:{base64}>"))
+            }
+        }
+    }
+
+    /// A stable string key suitable for use as a SQLite column value or as a
+    /// `HashMap`/`BTreeMap` key.
+    ///
+    /// * UTF-8 paths return the string as-is.
+    /// * Non-UTF-8 paths return `"\x00unix_bytes:" + base64`.  The leading
+    ///   `NUL` byte is not valid in any filesystem path, so there is no risk
+    ///   of collision with real UTF-8 paths.
+    pub fn sqlite_key(&self) -> std::borrow::Cow<'_, str> {
+        match self {
+            NativePath::Utf8 { value } => std::borrow::Cow::Borrowed(value.as_str()),
+            NativePath::UnixBytes { base64 } => {
+                std::borrow::Cow::Owned(format!("\x00unix_bytes:{base64}"))
             }
         }
     }
 }
 
-/// Minimal base64 encoding (no external dependency – standard alphabet without
-/// padding, using the `std` alphabet).
+// `NativePath` can be compared and sorted using its SQLite key so that
+// duplicate-detection and plan-generation produce a stable, deterministic
+// ordering regardless of whether paths are UTF-8 or not.
+impl PartialOrd for NativePath {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for NativePath {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.sqlite_key().cmp(&other.sqlite_key())
+    }
+}
+
+/// Minimal base64 encoding (no external dependency – standard alphabet with
+/// padding, RFC 4648 §4).
 fn base64_encode(bytes: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut output = String::with_capacity((bytes.len() * 4).div_ceil(3));
@@ -149,6 +237,47 @@ fn base64_encode(bytes: &[u8]) -> String {
     output
 }
 
+/// Minimal base64 decoding (inverse of `base64_encode`).
+///
+/// Accepts standard RFC 4648 base64 (with or without padding).  Invalid
+/// characters are silently skipped, which matches the lenient behaviour
+/// common in base64 decoders and is safe because the input always originates
+/// from our own encoder.
+fn base64_decode(encoded: &str) -> Vec<u8> {
+    const DECODE: [u8; 128] = {
+        let mut table = [0xff_u8; 128];
+        let mut i = 0u8;
+        while i < 64 {
+            let ch = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i as usize];
+            table[ch as usize] = i;
+            i += 1;
+        }
+        table
+    };
+
+    let mut output = Vec::with_capacity(encoded.len() * 3 / 4);
+    let bytes: Vec<u8> = encoded
+        .bytes()
+        .filter(|&b| b != b'=' && (b as usize) < 128 && DECODE[b as usize] != 0xff)
+        .collect();
+
+    for chunk in bytes.chunks(4) {
+        let v0 = DECODE[chunk[0] as usize] as u32;
+        let v1 = if chunk.len() > 1 { DECODE[chunk[1] as usize] as u32 } else { 0 };
+        let v2 = if chunk.len() > 2 { DECODE[chunk[2] as usize] as u32 } else { 0 };
+        let v3 = if chunk.len() > 3 { DECODE[chunk[3] as usize] as u32 } else { 0 };
+        let combined = (v0 << 18) | (v1 << 12) | (v2 << 6) | v3;
+        output.push(((combined >> 16) & 0xff) as u8);
+        if chunk.len() > 2 {
+            output.push(((combined >> 8) & 0xff) as u8);
+        }
+        if chunk.len() > 3 {
+            output.push((combined & 0xff) as u8);
+        }
+    }
+    output
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,23 +295,118 @@ mod tests {
     }
 
     #[test]
-    fn serialized_path_utf8_roundtrips() {
-        let path = std::path::Path::new("/tmp/example/file.txt");
-        let serialized = SerializedPath::from_path(path);
-        match &serialized {
-            SerializedPath::Utf8 { value } => assert_eq!(value, "/tmp/example/file.txt"),
-            SerializedPath::UnixBytes { .. } => panic!("expected Utf8 variant"),
+    fn base64_decode_inverts_encode() {
+        // RFC 4648 §10 test vectors (roundtrip).
+        for original in [b"".as_ref(), b"f", b"fo", b"foo", b"foob", b"fooba", b"foobar"] {
+            let encoded = base64_encode(original);
+            let decoded = base64_decode(&encoded);
+            assert_eq!(
+                decoded.as_slice(),
+                original,
+                "roundtrip failed for {:?}",
+                original
+            );
         }
-        assert_eq!(serialized.display(), "/tmp/example/file.txt");
     }
 
     #[test]
-    fn serialized_path_display_escapes_terminal_control_characters() {
-        let serialized = SerializedPath::Utf8 {
+    fn base64_decode_handles_arbitrary_bytes() {
+        // Ensure every byte value round-trips through encode/decode.
+        let all_bytes: Vec<u8> = (0u8..=255).collect();
+        let encoded = base64_encode(&all_bytes);
+        let decoded = base64_decode(&encoded);
+        assert_eq!(decoded, all_bytes);
+    }
+
+    #[test]
+    fn native_path_utf8_roundtrips() {
+        let path = std::path::Path::new("/tmp/example/file.txt");
+        let native = NativePath::from_path(path);
+        match &native {
+            NativePath::Utf8 { value } => assert_eq!(value, "/tmp/example/file.txt"),
+            NativePath::UnixBytes { .. } => panic!("expected Utf8 variant"),
+        }
+        assert_eq!(native.display(), "/tmp/example/file.txt");
+        assert_eq!(native.to_path_buf(), path);
+    }
+
+    #[test]
+    fn native_path_display_escapes_terminal_control_characters() {
+        let native = NativePath::Utf8 {
             value: "/tmp/line\n\u{1b}[31m.txt".to_owned(),
         };
 
-        assert_eq!(serialized.display(), "/tmp/line\\n\\u{1b}[31m.txt");
+        assert_eq!(native.display(), "/tmp/line\\n\\u{1b}[31m.txt");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn native_path_non_utf8_unix_roundtrips() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        // A byte sequence that is not valid UTF-8.
+        let raw: &[u8] = b"/tmp/\xff\xfe/file.bin";
+        let os_str = OsStr::from_bytes(raw);
+        let path = std::path::Path::new(os_str);
+
+        let native = NativePath::from_path(path);
+        // Must be encoded as unix_bytes, not utf8.
+        match &native {
+            NativePath::UnixBytes { .. } => {}
+            NativePath::Utf8 { .. } => panic!("expected UnixBytes variant for non-UTF-8 path"),
+        }
+
+        // sqlite_key must differ from the lossy display form.
+        let key = native.sqlite_key();
+        assert!(key.starts_with('\x00'), "sqlite_key must have NUL sentinel");
+
+        // to_path_buf() must round-trip to the exact original bytes.
+        let reconstructed = native.to_path_buf();
+        assert_eq!(
+            reconstructed.as_os_str().as_bytes(),
+            raw,
+            "to_path_buf must exactly reproduce original bytes"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn native_path_non_utf8_serialisation_roundtrips() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        let raw: &[u8] = b"/data/\x80\x81\x82/media.mkv";
+        let os_str = OsStr::from_bytes(raw);
+        let path = std::path::Path::new(os_str);
+
+        let native = NativePath::from_path(path);
+
+        // Serialise to JSON and deserialise back – must be bit-identical.
+        let json = serde_json::to_string(&native).expect("serialise");
+        let deserialised: NativePath = serde_json::from_str(&json).expect("deserialise");
+        assert_eq!(native, deserialised);
+
+        // The reconstructed path must match the original bytes.
+        let reconstructed = deserialised.to_path_buf();
+        assert_eq!(reconstructed.as_os_str().as_bytes(), raw);
+    }
+
+    #[test]
+    fn native_path_sqlite_key_is_stable_for_utf8_paths() {
+        let native = NativePath::Utf8 {
+            value: "/home/user/file.txt".to_owned(),
+        };
+        assert_eq!(native.sqlite_key(), "/home/user/file.txt");
+    }
+
+    #[test]
+    fn native_path_ordering_is_consistent() {
+        let a = NativePath::Utf8 { value: "/a".to_owned() };
+        let b = NativePath::Utf8 { value: "/b".to_owned() };
+        assert!(a < b);
+        assert!(b > a);
+        assert_eq!(a.cmp(&a), std::cmp::Ordering::Equal);
     }
 
     #[test]
@@ -333,7 +557,8 @@ pub use crate::filesystem::identity::{
 pub struct FileObservation {
     pub observation_id: String,
     pub run_id: String,
-    pub path: String,
+    // --- v4: lossless NativePath (was String) ---
+    pub path: NativePath,
     pub size_bytes: u64,
     pub modified_unix_ns: Option<i64>,
     /// Device (filesystem) identifier – kept for compatibility; also encoded
@@ -382,7 +607,8 @@ pub struct HardLinkGroup {
     pub group_id: String,
     pub identity: FilesystemIdentity,
     /// All observed paths that map to this identity.
-    pub observed_paths: Vec<String>,
+    // --- v4: lossless NativePath (was Vec<String>) ---
+    pub observed_paths: Vec<NativePath>,
     /// Number of observed paths (convenience field).
     pub observed_path_count: u64,
     /// Hard-link count as reported by the filesystem.
@@ -410,11 +636,13 @@ pub struct HardLinkGroup {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DuplicateMember {
     /// Primary (representative) path for this filesystem object.
-    pub path: String,
+    // --- v4: lossless NativePath (was String) ---
+    pub path: NativePath,
     pub observation_id: String,
     /// Hard-link alias paths observed for the same filesystem object.
     #[serde(default)]
-    pub alias_paths: Vec<String>,
+    // --- v4: lossless NativePath (was Vec<String>) ---
+    pub alias_paths: Vec<NativePath>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -555,12 +783,15 @@ pub struct PlanAction {
     pub action_id: String,
     pub classification: String,
     pub proposed_operation: String,
-    pub keep_path: String,
+    // --- v4: lossless NativePath (was String) ---
+    pub keep_path: NativePath,
     /// All observed paths belonging to the keeper filesystem object (including
     /// hard-link aliases).
     #[serde(default)]
-    pub keep_alias_paths: Vec<String>,
-    pub candidate_paths: Vec<String>,
+    // --- v4: lossless NativePath (was Vec<String>) ---
+    pub keep_alias_paths: Vec<NativePath>,
+    // --- v4: lossless NativePath (was Vec<String>) ---
+    pub candidate_paths: Vec<NativePath>,
     pub potential_reclaimable_bytes: u64,
     /// Physical reclaimability assessment (v2).
     #[serde(default = "default_physical_reclaimability")]
@@ -572,7 +803,8 @@ pub struct PlanAction {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilePrecondition {
-    pub path: String,
+    // --- v4: lossless NativePath (was String) ---
+    pub path: NativePath,
     pub expected_size_bytes: u64,
     pub expected_modified_unix_ns: Option<i64>,
     pub expected_complete_content_hash: String,
