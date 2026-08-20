@@ -50,28 +50,35 @@ release projection -------> staging/releases/
                                dist/
 ```
 
-The implemented composer currently owns the landing, architecture,
-documentation, and checked-in schema producers. It generates the architecture
-portal from the 18 canonical root documents and repository-owned presentation
-configuration, builds Zensical into `.site/staging/docs/`, copies each static
-source into an isolated stage, rejects pre-existing `architecture/`, `docs/`,
-or `schemas/` mounts in the landing source, and only then replaces `dist/` with
-the verified composition. A failed build never publishes a partially composed
-tree.
+The implemented composer owns the landing, architecture, documentation,
+repository-intelligence, and checked-in schema producers. It generates the
+architecture portal from the 18 canonical root documents and repository-owned
+presentation configuration, builds Zensical into `.site/staging/docs/`, copies each static
+source into an isolated stage, accepts Relay's public-only dashboard bundle
+from `.site/producers/intelligence/`, rejects pre-existing `architecture/`,
+`docs/`, `intelligence/`, or `schemas/` mounts in the landing source, and only
+then replaces `dist/` with the verified composition. A failed build never
+publishes a partially composed tree.
 
-Run the same contract used by CI:
+Build and preview the checked-in surfaces locally:
 
 ```bash
 task site:build
 task site:serve
 ```
 
+This local build intentionally omits the CI-generated Intelligence producer
+and passes the verifier's explicit `--allow-missing-intelligence` waiver. Set
+`INTELLIGENCE_SOURCE` to a generated directory inside `.site/producers/` to
+exercise the published contract; every Pages build requires the complete
+`/intelligence/` mount.
+
 ## Current scope
 
-The repository now establishes the Zensical source, a LaunchKit-derived landing
-shell, generated architecture portal, canonical schema downloads, and their
-deterministic composition contract. Generated API reference, repository
-intelligence, GitHub Pages deployment, custom-domain activation, and final
+The repository now publishes the Zensical source, a LaunchKit-derived landing
+shell, generated architecture portal, canonical schema downloads, and a
+commit-scoped repository-intelligence dashboard through one deterministic
+GitHub Pages artifact. Generated API reference, release projection, and final
 identity or motion assets remain separate reviewable changes.
 
 ## Architecture projection rule

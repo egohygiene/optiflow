@@ -1,6 +1,7 @@
 /target/
 /dist/
 /.site/
+/.cache/
 /.venv/
 /.uv-cache/
 __pycache__/
