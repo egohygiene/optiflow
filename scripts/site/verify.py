@@ -31,6 +31,13 @@ REQUIRED_PATHS = (
     "schemas/architecture-portal-v1.schema.json",
 )
 
+INTELLIGENCE_PATHS = (
+    "intelligence/index.html",
+    "intelligence/styles.css",
+    "intelligence/explorer.js",
+    "intelligence/summary.json",
+)
+
 REQUIRED_COPY = (
     "Know what is <em>actually</em> on disk.",
     "v0.1 · read-only by design",
@@ -180,13 +187,34 @@ def verify_architecture(site_root: Path) -> list[str]:
     return errors
 
 
-def verify(site_root: Path) -> list[str]:
+def verify(site_root: Path, *, allow_missing_intelligence: bool = False) -> list[str]:
     errors: list[str] = []
     resolved_root = site_root.resolve()
 
     for relative_path in REQUIRED_PATHS:
         if not (site_root / relative_path).is_file():
             errors.append(f"missing required site path: {relative_path}")
+
+    intelligence_root = site_root / "intelligence"
+    if not intelligence_root.exists() and not allow_missing_intelligence:
+        errors.append("missing required site path: intelligence/")
+    elif intelligence_root.exists():
+        for relative_path in INTELLIGENCE_PATHS:
+            if not (site_root / relative_path).is_file():
+                errors.append(f"missing required intelligence path: {relative_path}")
+        summary_path = intelligence_root / "summary.json"
+        if summary_path.is_file():
+            try:
+                intelligence = json.loads(summary_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as error:
+                errors.append(f"intelligence summary is not valid JSON: {error}")
+            else:
+                if not isinstance(intelligence, dict):
+                    errors.append("intelligence summary must be a JSON object")
+                elif intelligence.get("schema") != "egohygiene.repository-intelligence-dashboard/v3":
+                    errors.append("intelligence summary has an unexpected schema")
+                elif intelligence.get("schema_version") != 1:
+                    errors.append("intelligence summary has an unexpected schema version")
 
     landing_path = site_root / "index.html"
     if landing_path.is_file():
@@ -225,6 +253,11 @@ def verify(site_root: Path) -> list[str]:
                 target /= "index.html"
 
             if not target.exists():
+                if (
+                    allow_missing_intelligence
+                    and urlsplit(raw_link).path.rstrip("/") == "/intelligence"
+                ):
+                    continue
                 errors.append(f"{document.relative_to(site_root)}: broken local link: {raw_link}")
                 continue
 
@@ -250,12 +283,18 @@ def verify(site_root: Path) -> list[str]:
 
 
 def main() -> int:
-    site_root = Path(sys.argv[1] if len(sys.argv) > 1 else "dist")
+    arguments = sys.argv[1:]
+    allow_missing_intelligence = "--allow-missing-intelligence" in arguments
+    paths = [argument for argument in arguments if not argument.startswith("--")]
+    site_root = Path(paths[0] if paths else "dist")
     if not site_root.is_dir():
         print(f"site root is not a directory: {site_root}", file=sys.stderr)
         return 1
 
-    errors = verify(site_root)
+    errors = verify(
+        site_root,
+        allow_missing_intelligence=allow_missing_intelligence,
+    )
     if errors:
         for error in errors:
             print(error, file=sys.stderr)

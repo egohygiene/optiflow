@@ -1,0 +1,101 @@
+---
+name: Publish site
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'deploy' }}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compose Pages artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
+
+    steps:
+      - name: Check out complete repository history
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generate public repository intelligence
+        # relay v1.0.0
+        uses: egohygiene/relay/actions/repository-intelligence@ca6e9319d5133615c1b9e0b5ea5a4f5d3a113210
+        with:
+          output-directory: ".site/producers/intelligence"
+          work-directory: ".cache/repository-intelligence"
+          reports-directory: ".reports"
+          excluded-paths: >-
+            .git,.staging,.cache,.venv,.site,docs/generated,node_modules,
+            vendor,dist,build,coverage,__pycache__,target
+          analytics-excluded-paths: >-
+            .git,.staging,.cache,.venv,.site,.tox,.mypy_cache,.ruff_cache,
+            .reports,docs/generated,node_modules,vendor,dist,build,coverage,
+            __pycache__,target
+          activity-since: "1 year ago"
+          max-depth: "10"
+          require-full-history: "true"
+
+      - name: Install uv
+        # astral-sh/setup-uv v8.1.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: false
+          version: "0.11.33"
+
+      - name: Install Python
+        run: uv python install 3.13
+
+      - name: Synchronize documentation dependencies
+        run: uv sync --frozen --only-group docs
+
+      - name: Compose and verify complete static site
+        env:
+          INTELLIGENCE_SOURCE: ".site/producers/intelligence"
+        run: ./scripts/site/build.sh
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        # actions/configure-pages v6.0.0
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        # actions/upload-pages-artifact v5.0.0
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: "dist"
+
+  deploy:
+    name: Deploy public site
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: "${{ steps.deployment.outputs.page_url }}"
+
+    steps:
+      - name: Deploy GitHub Pages site
+        id: deployment
+        # actions/deploy-pages v5.0.0
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128
