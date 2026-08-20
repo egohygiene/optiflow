@@ -17,6 +17,7 @@ pub mod render;
 pub mod reports;
 pub mod signals;
 pub mod state;
+pub mod subprocess;
 
 use crate::cli::Cli;
 use crate::signals::SignalState;

@@ -1,10 +1,11 @@
 use std::path::Path;
-use std::process::Command;
+use std::sync::OnceLock;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use serde::Deserialize;
 
 use crate::domain::{MediaDescriptor, MediaStream, ToolStatus};
+use crate::subprocess::{SubprocessCommand, SubprocessRunner};
 
 #[derive(Debug, Deserialize)]
 struct ProbeOutput {
@@ -31,8 +32,13 @@ struct ProbeStream {
     channels: Option<u32>,
 }
 
+fn runner() -> &'static SubprocessRunner {
+    static RUNNER: OnceLock<SubprocessRunner> = OnceLock::new();
+    RUNNER.get_or_init(SubprocessRunner::default)
+}
+
 pub fn inspect(path: &Path) -> Result<MediaDescriptor> {
-    let output = Command::new("ffprobe")
+    let command = SubprocessCommand::new("ffprobe")
         .args([
             "-v",
             "error",
@@ -41,17 +47,11 @@ pub fn inspect(path: &Path) -> Result<MediaDescriptor> {
             "-of",
             "json",
         ])
-        .arg(path)
-        .output()
-        .with_context(|| format!("failed to execute ffprobe for {}", path.display()))?;
+        .arg(path.as_os_str().to_owned());
 
-    if !output.status.success() {
-        let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-        bail!("ffprobe rejected {}: {message}", path.display());
-    }
-
-    let parsed: ProbeOutput = serde_json::from_slice(&output.stdout)
-        .with_context(|| format!("ffprobe returned invalid JSON for {}", path.display()))?;
+    let parsed: ProbeOutput = runner()
+        .run_json(&command)
+        .with_context(|| format!("ffprobe inspection failed for {}", path.display()))?;
 
     let format = parsed.format;
     Ok(MediaDescriptor {
@@ -100,14 +100,9 @@ pub fn signature(name: &str) -> Option<String> {
 }
 
 fn tool_version(executable: Option<&Path>) -> Option<String> {
-    Command::new(executable?)
-        .arg("-version")
-        .output()
+    let command = SubprocessCommand::new(executable?.as_os_str().to_owned()).arg("-version");
+    let output = runner().run(&command).ok()?;
+    String::from_utf8(output.stdout)
         .ok()
-        .filter(|output| output.status.success())
-        .and_then(|output| {
-            String::from_utf8(output.stdout)
-                .ok()
-                .and_then(|text| text.lines().next().map(str::to_owned))
-        })
+        .and_then(|text| text.lines().next().map(str::to_owned))
 }
