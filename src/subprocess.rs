@@ -223,6 +223,7 @@ impl PermitPool {
         &self,
         command: &SubprocessCommand,
         deadline: Instant,
+        timeout: Duration,
         poll_interval: Duration,
         is_cancelled: &F,
     ) -> Result<Permit<'_>, SubprocessError>
@@ -245,12 +246,7 @@ impl PermitPool {
 
             let now = Instant::now();
             if now >= deadline {
-                return Err(SubprocessError::Timeout {
-                    program,
-                    timeout: deadline.saturating_duration_since(
-                        deadline.checked_sub(Duration::from_secs(0)).unwrap_or(deadline),
-                    ),
-                });
+                return Err(SubprocessError::Timeout { program, timeout });
             }
             let remaining = deadline.saturating_duration_since(now);
             let wait_for = poll_interval.min(remaining);
@@ -417,6 +413,7 @@ impl SubprocessRunner {
         let _permit = self.permits.acquire(
             command,
             deadline,
+            self.limits.timeout,
             self.limits.poll_interval,
             &is_cancelled,
         )?;
@@ -573,9 +570,7 @@ mod tests {
         let mut limits = test_limits();
         limits.max_stdout_bytes = 64;
         let runner = SubprocessRunner::new(limits).unwrap();
-        let error = runner
-            .run(&shell("printf '%04096d' 0"))
-            .unwrap_err();
+        let error = runner.run(&shell("printf '%04096d' 0")).unwrap_err();
         assert!(matches!(
             error,
             SubprocessError::Truncated {
