@@ -22,6 +22,8 @@ produces immutable plans for human review.
   against a directory you control.
 - **[Understand the safety boundary](safety-model.md)** before integrating
   `optiflow` with automation.
+- **[See the current v0.1.x milestone](current-release-milestone.md)** for the
+  dependency-ready hardening queue and release exit criteria.
 - **[Consume the CLI contract](cli-contract.md)** from `flow`, a shell script,
   or another subprocess client.
 - **[Configure an effective policy](configuration.md)** with deterministic
