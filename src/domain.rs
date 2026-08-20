@@ -189,9 +189,17 @@ impl NativePath {
     }
 }
 
-// `NativePath` can be compared and sorted using its SQLite key so that
-// duplicate-detection and plan-generation produce a stable, deterministic
-// ordering regardless of whether paths are UTF-8 or not.
+// `NativePath` can be compared and sorted using a stable ordering that
+// does not require heap allocation:
+//
+//  * `UnixBytes` paths sort before `Utf8` paths because the sqlite_key for
+//    non-UTF-8 paths starts with a NUL byte (`\x00`), which is less than
+//    any byte that can appear in a valid filesystem path.
+//  * Within the same variant the inner string is compared directly.
+//
+// This ordering is consistent with the `sqlite_key()` byte ordering and
+// produces a stable, deterministic sequence for duplicate-detection and
+// plan generation without allocating on each comparison.
 impl PartialOrd for NativePath {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -200,7 +208,19 @@ impl PartialOrd for NativePath {
 
 impl Ord for NativePath {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.sqlite_key().cmp(&other.sqlite_key())
+        match (self, other) {
+            (NativePath::UnixBytes { base64: a }, NativePath::UnixBytes { base64: b }) => {
+                a.cmp(b)
+            }
+            (NativePath::Utf8 { value: a }, NativePath::Utf8 { value: b }) => a.cmp(b),
+            // UnixBytes sorts before Utf8 (NUL-prefixed key < any real path byte).
+            (NativePath::UnixBytes { .. }, NativePath::Utf8 { .. }) => {
+                std::cmp::Ordering::Less
+            }
+            (NativePath::Utf8 { .. }, NativePath::UnixBytes { .. }) => {
+                std::cmp::Ordering::Greater
+            }
+        }
     }
 }
 
@@ -407,6 +427,10 @@ mod tests {
         assert!(a < b);
         assert!(b > a);
         assert_eq!(a.cmp(&a), std::cmp::Ordering::Equal);
+
+        // UnixBytes sorts before Utf8 because the sqlite_key starts with NUL.
+        let non_utf8 = NativePath::UnixBytes { base64: "Zm9v".to_owned() };
+        assert!(non_utf8 < a, "UnixBytes must sort before Utf8");
     }
 
     #[test]
