@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use crate::domain::{
     DuplicateGroup, DuplicateMember, EvidenceValidity, ExactDuplicateEvidence, ExtentSharingStatus,
-    FileObservation, PhysicalReclaimability, ReclaimabilityReasonCode, ReclaimabilityStatus,
+    FileObservation, NativePath, PhysicalReclaimability, ReclaimabilityReasonCode,
+    ReclaimabilityStatus,
 };
 use crate::hashing::HASH_ALGORITHM;
 
@@ -29,7 +30,7 @@ pub fn exact_groups(observations: &[FileObservation]) -> Vec<DuplicateGroup> {
 
     let mut identity_to_primary: BTreeMap<IdentityKey, String> = BTreeMap::new();
     // primary_observation_id → all alias paths (sorted later)
-    let mut primary_to_aliases: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut primary_to_aliases: BTreeMap<String, Vec<NativePath>> = BTreeMap::new();
 
     for obs in observations {
         let key = match &obs.filesystem_identity {
@@ -117,7 +118,7 @@ pub fn exact_groups(observations: &[FileObservation]) -> Vec<DuplicateGroup> {
                 members: members
                     .into_iter()
                     .map(|obs| {
-                        let mut aliases: Vec<String> = primary_to_aliases
+                        let mut aliases: Vec<NativePath> = primary_to_aliases
                             .get(obs.observation_id.as_str())
                             .cloned()
                             .unwrap_or_default();
@@ -125,7 +126,7 @@ pub fn exact_groups(observations: &[FileObservation]) -> Vec<DuplicateGroup> {
                         // The primary path is the lexicographically first path.
                         let primary_path =
                             aliases.first().cloned().unwrap_or_else(|| obs.path.clone());
-                        let alias_paths: Vec<String> =
+                        let alias_paths: Vec<NativePath> =
                             aliases.into_iter().filter(|p| p != &primary_path).collect();
                         DuplicateMember {
                             path: primary_path,
@@ -201,7 +202,7 @@ mod tests {
         FileObservation {
             observation_id: path.to_owned(),
             run_id: "run".to_owned(),
-            path: path.to_owned(),
+            path: NativePath::Utf8 { value: path.to_owned() },
             size_bytes: 10,
             modified_unix_ns: None,
             device_id: None,
@@ -312,7 +313,11 @@ mod tests {
             "only stable observations counted"
         );
         // Ensure /a is not a member of the group.
-        let paths: Vec<&str> = groups[0].members.iter().map(|m| m.path.as_str()).collect();
-        assert!(!paths.contains(&"/a"), "/a must not appear in the group");
+        let paths: Vec<String> = groups[0]
+            .members
+            .iter()
+            .map(|m| m.path.sqlite_key().into_owned())
+            .collect();
+        assert!(!paths.contains(&"/a".to_owned()), "/a must not appear in the group");
     }
 }

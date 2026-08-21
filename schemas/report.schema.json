@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/egohygiene/optiflow/schemas/report.schema.json",
-  "title": "optiflow report v3",
+  "title": "optiflow report v4",
   "type": "object",
   "required": [
     "schema_version",
@@ -13,23 +13,40 @@
     "hard_link_groups"
   ],
   "properties": {
-    "schema_version": { "const": "optiflow.report.v3" },
-    "generated_at": { "type": "string", "format": "date-time" },
-    "run": { "$ref": "run.schema.json" },
-    "summary": { "$ref": "#/$defs/summary" },
+    "schema_version": {
+      "const": "optiflow.report.v4"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "run": {
+      "$ref": "run.schema.json"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
     "duplicate_groups": {
       "type": "array",
-      "items": { "$ref": "#/$defs/duplicate_group" }
+      "items": {
+        "$ref": "#/$defs/duplicate_group"
+      }
     },
     "observations": {
       "type": "array",
-      "items": { "$ref": "#/$defs/observation" }
+      "items": {
+        "$ref": "#/$defs/observation"
+      }
     },
     "hard_link_groups": {
       "type": "array",
-      "items": { "$ref": "#/$defs/hard_link_group" }
+      "items": {
+        "$ref": "#/$defs/hard_link_group"
+      }
     },
-    "storage": { "$ref": "#/$defs/storage_summary" }
+    "storage": {
+      "$ref": "#/$defs/storage_summary"
+    }
   },
   "$defs": {
     "non_negative_integer": {
@@ -53,29 +70,70 @@
         "unstable_observation_count"
       ],
       "properties": {
-        "file_count": { "$ref": "#/$defs/non_negative_integer" },
-        "total_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "media_files": { "$ref": "#/$defs/non_negative_integer" },
-        "unsupported_files": { "$ref": "#/$defs/non_negative_integer" },
-        "unreadable_files": { "$ref": "#/$defs/non_negative_integer" },
-        "exact_duplicate_groups": { "$ref": "#/$defs/non_negative_integer" },
-        "exact_duplicate_files": { "$ref": "#/$defs/non_negative_integer" },
-        "reclaimable_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "cache_hits": { "$ref": "#/$defs/non_negative_integer" },
-        "unique_object_count": { "$ref": "#/$defs/non_negative_integer" },
-        "hard_link_alias_path_count": { "$ref": "#/$defs/non_negative_integer" },
-        "unstable_observation_count": { "$ref": "#/$defs/non_negative_integer" }
+        "file_count": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "total_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "media_files": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "unsupported_files": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "unreadable_files": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "exact_duplicate_groups": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "exact_duplicate_files": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "reclaimable_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "cache_hits": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "unique_object_count": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "hard_link_alias_path_count": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "unstable_observation_count": {
+          "$ref": "#/$defs/non_negative_integer"
+        }
       },
       "additionalProperties": false
     },
     "filesystem_identity": {
       "type": "object",
-      "required": ["platform", "filesystem_id", "file_id", "link_count"],
+      "required": [
+        "platform",
+        "filesystem_id",
+        "file_id",
+        "link_count"
+      ],
       "properties": {
-        "platform": { "type": "string" },
-        "filesystem_id": { "type": "string" },
-        "file_id": { "type": "string" },
-        "link_count": { "type": ["integer", "null"], "minimum": 0 }
+        "platform": {
+          "type": "string"
+        },
+        "filesystem_id": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     },
@@ -88,18 +146,44 @@
         "extent_sharing_status"
       ],
       "properties": {
-        "logical_size_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "allocated_size_bytes": { "type": ["integer", "null"], "minimum": 0 },
-        "allocation_source": { "enum": ["st_blocks512", "unavailable"] },
-        "extent_sharing_status": { "enum": ["unknown", "not_detected"] }
+        "logical_size_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "allocated_size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "allocation_source": {
+          "enum": [
+            "st_blocks512",
+            "unavailable"
+          ]
+        },
+        "extent_sharing_status": {
+          "enum": [
+            "unknown",
+            "not_detected"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "physical_reclaimability": {
       "type": "object",
-      "required": ["status", "reason_codes"],
+      "required": [
+        "status",
+        "reason_codes"
+      ],
       "properties": {
-        "status": { "enum": ["estimated", "unknown"] },
+        "status": {
+          "enum": [
+            "estimated",
+            "unknown"
+          ]
+        },
         "reason_codes": {
           "type": "array",
           "uniqueItems": true,
@@ -127,26 +211,47 @@
         "observed_path_count"
       ],
       "properties": {
-        "algorithm": { "const": "blake3-256" },
+        "algorithm": {
+          "const": "blake3-256"
+        },
         "complete_content_hash": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
         },
-        "identical_size_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "member_count": { "type": "integer", "minimum": 2 },
-        "observed_path_count": { "type": "integer", "minimum": 2 }
+        "identical_size_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "member_count": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "observed_path_count": {
+          "type": "integer",
+          "minimum": 2
+        }
       },
       "additionalProperties": false
     },
     "duplicate_member": {
       "type": "object",
-      "required": ["path", "observation_id", "alias_paths"],
+      "required": [
+        "path",
+        "observation_id",
+        "alias_paths"
+      ],
       "properties": {
-        "path": { "type": "string" },
-        "observation_id": { "type": "string", "format": "uuid" },
+        "path": {
+          "$ref": "#/$defs/native_path"
+        },
+        "observation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
         "alias_paths": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "$ref": "#/$defs/native_path"
+          }
         }
       },
       "additionalProperties": false
@@ -162,16 +267,28 @@
         "physical_reclaimability"
       ],
       "properties": {
-        "group_id": { "type": "string" },
-        "classification": { "const": "exact" },
-        "evidence": { "$ref": "#/$defs/exact_evidence" },
+        "group_id": {
+          "type": "string"
+        },
+        "classification": {
+          "const": "exact"
+        },
+        "evidence": {
+          "$ref": "#/$defs/exact_evidence"
+        },
         "members": {
           "type": "array",
           "minItems": 2,
-          "items": { "$ref": "#/$defs/duplicate_member" }
+          "items": {
+            "$ref": "#/$defs/duplicate_member"
+          }
         },
-        "reclaimable_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "physical_reclaimability": { "$ref": "#/$defs/physical_reclaimability" }
+        "reclaimable_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "physical_reclaimability": {
+          "$ref": "#/$defs/physical_reclaimability"
+        }
       },
       "additionalProperties": false
     },
@@ -187,26 +304,86 @@
         "channels"
       ],
       "properties": {
-        "index": { "$ref": "#/$defs/non_negative_integer" },
-        "codec_type": { "type": ["string", "null"] },
-        "codec_name": { "type": ["string", "null"] },
-        "width": { "type": ["integer", "null"], "minimum": 0 },
-        "height": { "type": ["integer", "null"], "minimum": 0 },
-        "sample_rate": { "type": ["integer", "null"], "minimum": 0 },
-        "channels": { "type": ["integer", "null"], "minimum": 0 }
+        "index": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "codec_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "codec_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "height": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "sample_rate": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "channels": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     },
     "media": {
       "type": "object",
-      "required": ["format_name", "duration_seconds", "bit_rate", "streams"],
+      "required": [
+        "format_name",
+        "duration_seconds",
+        "bit_rate",
+        "streams"
+      ],
       "properties": {
-        "format_name": { "type": ["string", "null"] },
-        "duration_seconds": { "type": ["number", "null"], "minimum": 0 },
-        "bit_rate": { "type": ["integer", "null"], "minimum": 0 },
+        "format_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "duration_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "bit_rate": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
         "streams": {
           "type": "array",
-          "items": { "$ref": "#/$defs/stream" }
+          "items": {
+            "$ref": "#/$defs/stream"
+          }
         }
       },
       "additionalProperties": false
@@ -236,49 +413,120 @@
         "attempt_count"
       ],
       "properties": {
-        "observation_id": { "type": "string", "format": "uuid" },
-        "run_id": { "type": "string", "format": "uuid" },
-        "path": { "type": "string" },
-        "size_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "modified_unix_ns": { "type": ["integer", "null"] },
-        "device_id": { "type": ["integer", "null"], "minimum": 0 },
-        "inode": { "type": ["integer", "null"], "minimum": 0 },
-        "content_type": { "type": ["string", "null"] },
-        "media_kind": { "enum": ["image", "video", "audio", "other", "unknown"] },
+        "observation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "path": {
+          "$ref": "#/$defs/native_path"
+        },
+        "size_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "modified_unix_ns": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "device_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "inode": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "media_kind": {
+          "enum": [
+            "image",
+            "video",
+            "audio",
+            "other",
+            "unknown"
+          ]
+        },
         "content_hash": {
           "oneOf": [
-            { "type": "null" },
-            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
           ]
         },
         "hash_algorithm": {
           "oneOf": [
-            { "type": "null" },
-            { "const": "blake3-256" }
+            {
+              "type": "null"
+            },
+            {
+              "const": "blake3-256"
+            }
           ]
         },
         "media": {
           "oneOf": [
-            { "type": "null" },
-            { "$ref": "#/$defs/media" }
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/media"
+            }
           ]
         },
-        "status": { "enum": ["analyzed", "unsupported", "unreadable"] },
-        "cache_hit": { "type": "boolean" },
+        "status": {
+          "enum": [
+            "analyzed",
+            "unsupported",
+            "unreadable"
+          ]
+        },
+        "cache_hit": {
+          "type": "boolean"
+        },
         "warnings": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "filesystem_identity": {
           "oneOf": [
-            { "type": "null" },
-            { "$ref": "#/$defs/filesystem_identity" }
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/filesystem_identity"
+            }
           ]
         },
         "storage_allocation": {
           "oneOf": [
-            { "type": "null" },
-            { "$ref": "#/$defs/storage_allocation" }
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/storage_allocation"
+            }
           ]
         },
         "observation_stability": {
@@ -295,8 +543,17 @@
             "unreadable"
           ]
         },
-        "evidence_validity": { "enum": ["current", "stale", "unavailable"] },
-        "attempt_count": { "type": "integer", "minimum": 1 }
+        "evidence_validity": {
+          "enum": [
+            "current",
+            "stale",
+            "unavailable"
+          ]
+        },
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
@@ -314,21 +571,52 @@
         "warnings"
       ],
       "properties": {
-        "group_id": { "type": "string" },
-        "identity": { "$ref": "#/$defs/filesystem_identity" },
+        "group_id": {
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/filesystem_identity"
+        },
         "observed_paths": {
           "type": "array",
           "minItems": 2,
-          "items": { "type": "string" }
+          "items": {
+            "$ref": "#/$defs/native_path"
+          }
         },
-        "observed_path_count": { "type": "integer", "minimum": 2 },
-        "reported_link_count": { "type": ["integer", "null"], "minimum": 0 },
-        "unobserved_link_count": { "type": ["integer", "null"], "minimum": 0 },
-        "logical_size_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "allocated_size_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "observed_path_count": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "reported_link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "unobserved_link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "logical_size_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "allocated_size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
         "warnings": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
@@ -346,19 +634,74 @@
         "physical_reclaimability"
       ],
       "properties": {
-        "path_logical_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "unique_object_logical_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "known_allocated_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "unknown_allocation_object_count": { "$ref": "#/$defs/non_negative_integer" },
-        "hard_link_alias_logical_bytes": { "$ref": "#/$defs/non_negative_integer" },
-        "duplicate_logical_bytes": { "$ref": "#/$defs/non_negative_integer" },
+        "path_logical_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "unique_object_logical_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "known_allocated_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "unknown_allocation_object_count": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "hard_link_alias_logical_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
+        "duplicate_logical_bytes": {
+          "$ref": "#/$defs/non_negative_integer"
+        },
         "estimated_reclaimable_allocated_bytes": {
-          "type": ["integer", "null"],
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 0
         },
-        "physical_reclaimability": { "$ref": "#/$defs/physical_reclaimability" }
+        "physical_reclaimability": {
+          "$ref": "#/$defs/physical_reclaimability"
+        }
       },
       "additionalProperties": false
+    },
+    "native_path": {
+      "description": "A lossless platform-native path. UTF-8 paths are stored as {\"encoding\":\"utf8\",\"value\":\"\u2026\"}; non-UTF-8 paths are stored as {\"encoding\":\"unix_bytes\",\"base64\":\"\u2026\"} (RFC 4648 standard base64 of the raw path bytes).",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "value"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "utf8"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "base64"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "unix_bytes"
+            },
+            "base64": {
+              "type": "string",
+              "description": "RFC 4648 standard base64 encoding of the raw path bytes."
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   },
   "additionalProperties": false

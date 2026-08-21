@@ -1,24 +1,22 @@
-use std::collections::HashMap;
-
 use chrono::Utc;
 use uuid::Uuid;
 
 use crate::domain::{
-    FileObservation, FilePrecondition, PLAN_SCHEMA_VERSION, Plan, PlanAction, PlanSafety,
-    PlanSummary, ScanReport,
+    FileObservation, FilePrecondition, NativePath, PLAN_SCHEMA_VERSION, Plan, PlanAction,
+    PlanSafety, PlanSummary, ScanReport,
 };
 
 pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
-    let observations: HashMap<&str, &FileObservation> = report
+    let observations: std::collections::HashMap<String, &FileObservation> = report
         .observations
         .iter()
-        .map(|observation| (observation.path.as_str(), observation))
+        .map(|observation| (observation.path.sqlite_key().into_owned(), observation))
         .collect();
     let mut actions = Vec::new();
 
     for group in &report.duplicate_groups {
         // Collect all paths: primary + aliases for every member, sorted.
-        let mut all_member_paths: Vec<(String, Vec<String>)> = group
+        let mut all_member_paths: Vec<(NativePath, Vec<NativePath>)> = group
             .members
             .iter()
             .map(|member| (member.path.clone(), member.alias_paths.clone()))
@@ -30,7 +28,7 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
         };
 
         // Candidate paths = all paths from non-keeper members.
-        let candidate_paths: Vec<String> = all_member_paths
+        let candidate_paths: Vec<NativePath> = all_member_paths
             .iter()
             .skip(1)
             .flat_map(|(primary, aliases)| {
@@ -49,7 +47,7 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
                 paths.extend_from_slice(&member.alias_paths);
                 paths
             })
-            .filter_map(|path| observations.get(path.as_str()))
+            .filter_map(|path| observations.get(path.sqlite_key().as_ref()))
             .map(|observation| FilePrecondition {
                 path: observation.path.clone(),
                 expected_size_bytes: observation.size_bytes,
@@ -106,8 +104,8 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
 #[cfg(test)]
 mod tests {
     use crate::domain::{
-        DuplicateGroup, DuplicateMember, ExactDuplicateEvidence, MediaKind, ObservationStatus,
-        PhysicalReclaimability, REPORT_SCHEMA_VERSION, ReclaimabilityReasonCode,
+        DuplicateGroup, DuplicateMember, ExactDuplicateEvidence, MediaKind, NativePath,
+        ObservationStatus, PhysicalReclaimability, REPORT_SCHEMA_VERSION, ReclaimabilityReasonCode,
         ReclaimabilityStatus, ScanOptions, ScanRun, ScanSummary,
     };
 
@@ -117,7 +115,7 @@ mod tests {
         FileObservation {
             observation_id: path.to_owned(),
             run_id: "run".to_owned(),
-            path: path.to_owned(),
+            path: NativePath::Utf8 { value: path.to_owned() },
             size_bytes: 100,
             modified_unix_ns: Some(1),
             device_id: None,
@@ -199,12 +197,12 @@ mod tests {
                 },
                 members: vec![
                     DuplicateMember {
-                        path: "/z".to_owned(),
+                        path: NativePath::Utf8 { value: "/z".to_owned() },
                         observation_id: "/z".to_owned(),
                         alias_paths: Vec::new(),
                     },
                     DuplicateMember {
-                        path: "/a".to_owned(),
+                        path: NativePath::Utf8 { value: "/a".to_owned() },
                         observation_id: "/a".to_owned(),
                         alias_paths: Vec::new(),
                     },
@@ -219,7 +217,13 @@ mod tests {
 
         let plan = exact_duplicate_plan(&report);
         assert!(!plan.safety.mutates_files);
-        assert_eq!(plan.actions[0].keep_path, "/a");
-        assert_eq!(plan.actions[0].candidate_paths, vec!["/z"]);
+        assert_eq!(
+            plan.actions[0].keep_path,
+            NativePath::Utf8 { value: "/a".to_owned() }
+        );
+        assert_eq!(
+            plan.actions[0].candidate_paths,
+            vec![NativePath::Utf8 { value: "/z".to_owned() }]
+        );
     }
 }

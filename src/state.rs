@@ -8,7 +8,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::domain::{
     CacheStatus, CachedAnalysis, DuplicateGroup, FileObservation, MediaDescriptor, MediaKind,
-    ObservationStatus, ScanReport, ScanRun,
+    NativePath, ObservationStatus, ScanReport, ScanRun,
 };
 
 pub struct StateStore {
@@ -42,6 +42,9 @@ impl StateStore {
 
         // Apply migration 0003 exactly once.
         apply_migration_0003(&mut connection).context("failed to apply migration 0003")?;
+
+        // Apply migration 0004 exactly once.
+        apply_migration_0004(&mut connection).context("failed to apply migration 0004")?;
 
         Ok(Self {
             connection,
@@ -109,7 +112,7 @@ impl StateStore {
                 params![
                     observation.observation_id,
                     observation.run_id,
-                    observation.path,
+                    observation.path.sqlite_key().as_ref(),
                     to_database_integer(observation.size_bytes, "file size")?,
                     observation.content_hash,
                     serde_json::to_string(observation)?,
@@ -151,7 +154,8 @@ impl StateStore {
         modified_unix_ns: Option<i64>,
         required_probe_signature: Option<&str>,
     ) -> Result<Option<CachedAnalysis>> {
-        let path = path.to_string_lossy();
+        let path_key = NativePath::from_path(path);
+        let path_key = path_key.sqlite_key();
         let row = self
             .connection
             .query_row(
@@ -161,7 +165,7 @@ impl StateStore {
                  WHERE path = ?1 AND size_bytes = ?2 AND modified_unix_ns IS ?3
                    AND (?4 IS NULL OR probe_signature = ?4)",
                 params![
-                    path.as_ref(),
+                    path_key.as_ref(),
                     to_database_integer(size_bytes, "file size")?,
                     modified_unix_ns,
                     required_probe_signature,
@@ -227,7 +231,7 @@ impl StateStore {
                 warnings_json = excluded.warnings_json,
                 analyzed_at = excluded.analyzed_at",
             params![
-                path.to_string_lossy().as_ref(),
+                NativePath::from_path(path).sqlite_key().as_ref(),
                 to_database_integer(size_bytes, "file size")?,
                 modified_unix_ns,
                 analysis.content_type,
@@ -393,6 +397,47 @@ fn apply_migration_0003(connection: &mut Connection) -> Result<()> {
     Ok(())
 }
 
+/// Apply migration 0004 exactly once (native path encoding columns).
+fn apply_migration_0004(connection: &mut Connection) -> Result<()> {
+    let already_applied: bool = connection
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 4",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .context("failed to check schema_migrations for migration 0004")?
+        > 0;
+
+    if already_applied {
+        return Ok(());
+    }
+
+    let transaction = connection
+        .transaction()
+        .context("failed to begin migration 0004 transaction")?;
+    transaction
+        .execute_batch(include_str!("../migrations/0004_native_path.sql"))
+        .context("failed to execute migration 0004 SQL")?;
+
+    let recorded: bool = transaction
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 4",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .context("failed to verify migration 0004 was recorded")?
+        > 0;
+
+    if !recorded {
+        bail!("migration 0004 executed but was not recorded in schema_migrations");
+    }
+
+    transaction
+        .commit()
+        .context("failed to commit migration 0004 transaction")?;
+    Ok(())
+}
+
 /// Extract structured identity/allocation columns from an observation.
 ///
 /// Returns `(filesystem_id, file_id, reported_link_count, allocated_size_bytes,
@@ -477,6 +522,25 @@ mod tests {
 
         assert!(apply_migration_0003(&mut connection).is_err());
         assert_eq!(migration_count(&connection, 3), 0);
+    }
+
+    #[test]
+    fn migration_0004_rolls_back_its_version_marker_on_failure() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        connection
+            .execute_batch(include_str!("../migrations/0001_initial.sql"))
+            .expect("initial schema");
+        // Pre-inject the column that migration 0004 adds so it fails with a
+        // duplicate-column error.
+        connection
+            .execute(
+                "ALTER TABLE observations ADD COLUMN path_encoding TEXT",
+                [],
+            )
+            .expect("inject conflicting column");
+
+        assert!(apply_migration_0004(&mut connection).is_err());
+        assert_eq!(migration_count(&connection, 4), 0);
     }
 
     fn migration_count(connection: &Connection, version: i64) -> i64 {
