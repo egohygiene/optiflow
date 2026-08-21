@@ -209,17 +209,11 @@ impl PartialOrd for NativePath {
 impl Ord for NativePath {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
-            (NativePath::UnixBytes { base64: a }, NativePath::UnixBytes { base64: b }) => {
-                a.cmp(b)
-            }
+            (NativePath::UnixBytes { base64: a }, NativePath::UnixBytes { base64: b }) => a.cmp(b),
             (NativePath::Utf8 { value: a }, NativePath::Utf8 { value: b }) => a.cmp(b),
             // UnixBytes sorts before Utf8 (NUL-prefixed key < any real path byte).
-            (NativePath::UnixBytes { .. }, NativePath::Utf8 { .. }) => {
-                std::cmp::Ordering::Less
-            }
-            (NativePath::Utf8 { .. }, NativePath::UnixBytes { .. }) => {
-                std::cmp::Ordering::Greater
-            }
+            (NativePath::UnixBytes { .. }, NativePath::Utf8 { .. }) => std::cmp::Ordering::Less,
+            (NativePath::Utf8 { .. }, NativePath::UnixBytes { .. }) => std::cmp::Ordering::Greater,
         }
     }
 }
@@ -268,7 +262,8 @@ fn base64_decode(encoded: &str) -> Vec<u8> {
         let mut table = [0xff_u8; 128];
         let mut i = 0u8;
         while i < 64 {
-            let ch = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i as usize];
+            let ch =
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i as usize];
             table[ch as usize] = i;
             i += 1;
         }
@@ -283,9 +278,21 @@ fn base64_decode(encoded: &str) -> Vec<u8> {
 
     for chunk in bytes.chunks(4) {
         let v0 = DECODE[chunk[0] as usize] as u32;
-        let v1 = if chunk.len() > 1 { DECODE[chunk[1] as usize] as u32 } else { 0 };
-        let v2 = if chunk.len() > 2 { DECODE[chunk[2] as usize] as u32 } else { 0 };
-        let v3 = if chunk.len() > 3 { DECODE[chunk[3] as usize] as u32 } else { 0 };
+        let v1 = if chunk.len() > 1 {
+            DECODE[chunk[1] as usize] as u32
+        } else {
+            0
+        };
+        let v2 = if chunk.len() > 2 {
+            DECODE[chunk[2] as usize] as u32
+        } else {
+            0
+        };
+        let v3 = if chunk.len() > 3 {
+            DECODE[chunk[3] as usize] as u32
+        } else {
+            0
+        };
         let combined = (v0 << 18) | (v1 << 12) | (v2 << 6) | v3;
         output.push(((combined >> 16) & 0xff) as u8);
         if chunk.len() > 2 {
@@ -317,7 +324,15 @@ mod tests {
     #[test]
     fn base64_decode_inverts_encode() {
         // RFC 4648 §10 test vectors (roundtrip).
-        for original in [b"".as_ref(), b"f", b"fo", b"foo", b"foob", b"fooba", b"foobar"] {
+        for original in [
+            b"".as_ref(),
+            b"f",
+            b"fo",
+            b"foo",
+            b"foob",
+            b"fooba",
+            b"foobar",
+        ] {
             let encoded = base64_encode(original);
             let decoded = base64_decode(&encoded);
             assert_eq!(
@@ -422,14 +437,20 @@ mod tests {
 
     #[test]
     fn native_path_ordering_is_consistent() {
-        let a = NativePath::Utf8 { value: "/a".to_owned() };
-        let b = NativePath::Utf8 { value: "/b".to_owned() };
+        let a = NativePath::Utf8 {
+            value: "/a".to_owned(),
+        };
+        let b = NativePath::Utf8 {
+            value: "/b".to_owned(),
+        };
         assert!(a < b);
         assert!(b > a);
         assert_eq!(a.cmp(&a), std::cmp::Ordering::Equal);
 
         // UnixBytes sorts before Utf8 because the sqlite_key starts with NUL.
-        let non_utf8 = NativePath::UnixBytes { base64: "Zm9v".to_owned() };
+        let non_utf8 = NativePath::UnixBytes {
+            base64: "Zm9v".to_owned(),
+        };
         assert!(non_utf8 < a, "UnixBytes must sort before Utf8");
     }
 

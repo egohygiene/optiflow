@@ -202,7 +202,9 @@ mod tests {
         FileObservation {
             observation_id: path.to_owned(),
             run_id: "run".to_owned(),
-            path: NativePath::Utf8 { value: path.to_owned() },
+            path: NativePath::Utf8 {
+                value: path.to_owned(),
+            },
             size_bytes: 10,
             modified_unix_ns: None,
             device_id: None,
@@ -318,6 +320,9 @@ mod tests {
             .iter()
             .map(|m| m.path.sqlite_key().into_owned())
             .collect();
-        assert!(!paths.contains(&"/a".to_owned()), "/a must not appear in the group");
+        assert!(
+            !paths.contains(&"/a".to_owned()),
+            "/a must not appear in the group"
+        );
     }
 }

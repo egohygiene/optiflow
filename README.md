@@ -162,6 +162,8 @@ requires optiflow to:
 5. Refuse mutation if any precondition fails.
 
 See [Safety Model](docs/safety-model.md) for the complete invariant set.
+The [handle-bound observation protocol](docs/observation-protocol.md) documents
+how OptiFlow rejects replacement and in-read races without mixing evidence.
 
 ## Ecosystem integration
 
@@ -219,6 +221,7 @@ schemas, repository intelligence, and release guidance.
 - [Architecture](ARCHITECTURE.md)
 - [MVP specification](docs/mvp-spec.md)
 - [Safety model](docs/safety-model.md)
+- [Handle-bound observation protocol](docs/observation-protocol.md)
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
 - [CLI outcome contract](docs/cli-contract.md)

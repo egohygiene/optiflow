@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::path::Path;
 
 pub use crate::filesystem::identity::{
@@ -41,6 +42,20 @@ pub fn collect(path: &Path, logical_size_bytes: u64) -> RawFilesystemMetadata {
     platform::collect(path, logical_size_bytes)
 }
 
+/// Collect filesystem metadata from an already-opened file handle.
+///
+/// Failure is represented explicitly so callers cannot fall back to a path
+/// lookup and accidentally mix evidence from different filesystem objects.
+pub fn collect_from_file(file: &File) -> std::io::Result<RawFilesystemMetadata> {
+    let metadata = file.metadata()?;
+    Ok(collect_from_handle_metadata(&metadata))
+}
+
+/// Convert metadata already obtained from an opened handle.
+pub fn collect_from_handle_metadata(metadata: &std::fs::Metadata) -> RawFilesystemMetadata {
+    platform::collect_from_metadata(metadata)
+}
+
 #[cfg(unix)]
 mod platform {
     use std::path::Path;
@@ -50,6 +65,10 @@ mod platform {
 
     pub(super) fn collect(path: &Path, logical_size_bytes: u64) -> RawFilesystemMetadata {
         unix::collect(path, logical_size_bytes)
+    }
+
+    pub(super) fn collect_from_metadata(metadata: &std::fs::Metadata) -> RawFilesystemMetadata {
+        unix::collect_from_metadata(metadata, metadata.len(), Vec::new())
     }
 }
 
@@ -67,6 +86,19 @@ mod platform {
             allocation_source: AllocationSource::Unavailable,
             warnings: vec![
                 "filesystem identity and allocation metadata are unavailable on this platform"
+                    .to_owned(),
+            ],
+        }
+    }
+
+    pub(super) fn collect_from_metadata(metadata: &std::fs::Metadata) -> RawFilesystemMetadata {
+        RawFilesystemMetadata {
+            identity: None,
+            logical_size_bytes: metadata.len(),
+            allocated_size_bytes: None,
+            allocation_source: AllocationSource::Unavailable,
+            warnings: vec![
+                "handle-bound filesystem identity and allocation metadata are unavailable on this platform"
                     .to_owned(),
             ],
         }

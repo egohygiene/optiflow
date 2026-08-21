@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use anyhow::{Context, Result};
@@ -13,6 +13,39 @@ const BUFFER_SIZE: usize = 1024 * 1024;
 
 /// Maximum number of observation attempts before marking a file `retry_exhausted`.
 pub const DEFAULT_MAX_OBSERVATION_ATTEMPTS: u32 = 2;
+
+pub enum HandleHashOutcome {
+    Complete(String),
+    Interrupted,
+}
+
+/// Calculate a complete hash through an already-opened handle.
+pub fn hash_file_handle(file: &mut File, signals: &SignalState) -> Result<HandleHashOutcome> {
+    file.seek(SeekFrom::Start(0))
+        .context("failed to rewind opened file before hashing")?;
+    let mut reader = BufReader::with_capacity(BUFFER_SIZE, file);
+    let mut hasher = blake3::Hasher::new();
+    let mut buffer = vec![0_u8; BUFFER_SIZE];
+
+    loop {
+        if signals.is_cancelled() {
+            return Ok(HandleHashOutcome::Interrupted);
+        }
+        let bytes_read = reader
+            .read(&mut buffer)
+            .context("failed while hashing opened file handle")?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..bytes_read]);
+    }
+    reader
+        .seek(SeekFrom::Start(0))
+        .context("failed to rewind opened file after hashing")?;
+    Ok(HandleHashOutcome::Complete(
+        hasher.finalize().to_hex().to_string(),
+    ))
+}
 
 /// Result of a stable hash attempt.
 pub struct StableHashResult {

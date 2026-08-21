@@ -115,7 +115,9 @@ mod tests {
         FileObservation {
             observation_id: path.to_owned(),
             run_id: "run".to_owned(),
-            path: NativePath::Utf8 { value: path.to_owned() },
+            path: NativePath::Utf8 {
+                value: path.to_owned(),
+            },
             size_bytes: 100,
             modified_unix_ns: Some(1),
             device_id: None,
@@ -197,12 +199,16 @@ mod tests {
                 },
                 members: vec![
                     DuplicateMember {
-                        path: NativePath::Utf8 { value: "/z".to_owned() },
+                        path: NativePath::Utf8 {
+                            value: "/z".to_owned(),
+                        },
                         observation_id: "/z".to_owned(),
                         alias_paths: Vec::new(),
                     },
                     DuplicateMember {
-                        path: NativePath::Utf8 { value: "/a".to_owned() },
+                        path: NativePath::Utf8 {
+                            value: "/a".to_owned(),
+                        },
                         observation_id: "/a".to_owned(),
                         alias_paths: Vec::new(),
                     },
@@ -219,11 +225,15 @@ mod tests {
         assert!(!plan.safety.mutates_files);
         assert_eq!(
             plan.actions[0].keep_path,
-            NativePath::Utf8 { value: "/a".to_owned() }
+            NativePath::Utf8 {
+                value: "/a".to_owned()
+            }
         );
         assert_eq!(
             plan.actions[0].candidate_paths,
-            vec![NativePath::Utf8 { value: "/z".to_owned() }]
+            vec![NativePath::Utf8 {
+                value: "/z".to_owned()
+            }]
         );
     }
 }
