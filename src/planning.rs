@@ -85,6 +85,7 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
         schema_version: PLAN_SCHEMA_VERSION.to_owned(),
         plan_id: Uuid::now_v7().to_string(),
         source_run_id: report.run.run_id.clone(),
+        source_artifact_set_id: report.run.artifact_set_id.clone(),
         created_at: Utc::now().to_rfc3339(),
         mode: "exact_duplicates_review".to_owned(),
         safety: PlanSafety {
@@ -145,6 +146,7 @@ mod tests {
             run: ScanRun {
                 schema_version: "optiflow.run.v3".to_owned(),
                 run_id: "run".to_owned(),
+                artifact_set_id: None,
                 created_at: "now".to_owned(),
                 completed_at: "now".to_owned(),
                 inputs: Vec::new(),

@@ -22,6 +22,8 @@ produces immutable plans for human review.
   against a directory you control.
 - **[Understand the safety boundary](safety-model.md)** before integrating
   `optiflow` with automation.
+- **[Inspect the artifact-set commit protocol](artifact-set-protocol.md)** to
+  see staging, marker validation, crash recovery, and durability boundaries.
 - **[Inspect the handle-bound observation protocol](observation-protocol.md)**
   to see how file races, retries, cache reuse, and refusal are handled.
 - **[See the current v0.1.x milestone](current-release-milestone.md)** for the

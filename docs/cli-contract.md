@@ -102,12 +102,12 @@ stops accepting new scan work, checks for cancellation between discovery
 entries and observations, and checks every 1 MiB while hashing. An interrupted
 database run is marked `interrupted`, never `completed`.
 
-Already committed cache entries remain valid and readable. A validated run or
-report artifact that was atomically committed before interruption may be
-listed in the interruption envelope, but OptiFlow never presents the run as
-complete. In-memory observations are not promoted to an immutable partial run
-artifact because the current `v3` schemas do not model an interrupted run;
-changing those immutable schemas is outside this contract.
+Already committed cache entries remain valid and readable. A validated artifact
+set published before interruption may be listed in the interruption envelope,
+but OptiFlow never presents the run as complete. In-memory observations are not
+promoted to an immutable partial run artifact because the current `v5` schemas
+do not model an interrupted run; changing those immutable schemas is outside
+this contract.
 
 OptiFlow v0.1.0 has no background worker pool. Graceful interruption is bounded
 by its cooperative checkpoints, except that an operating-system metadata call,

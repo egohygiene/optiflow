@@ -35,7 +35,8 @@ paths are preferred where they do not weaken the filesystem model.
 - No source mutation APIs in the binary.
 - No shell invocation for external adapters.
 - Paths containing spaces and Unicode are supported.
-- JSON artifacts are committed atomically.
+- Related JSON artifacts use staged, marker-gated set publication with explicit
+  crash-recovery and durability boundaries.
 - SQLite uses a rollback journal and full synchronization.
 - CI requires formatting, strict Clippy, tests, and a synthetic end-to-end run.
 - No GPU is required.
@@ -63,3 +64,5 @@ paths are preferred where they do not weaken the filesystem model.
   current exact-duplicate evidence.
 - Missing `ffprobe` does not prevent hashing or duplicate reporting.
 - Inaccessible files are reported rather than silently treated as duplicates.
+- Current readers distinguish committed, incomplete, and incompatible artifact
+  sets and never accept a digest-mismatched member.

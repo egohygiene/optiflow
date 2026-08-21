@@ -282,6 +282,8 @@ change source media.
 - [x] Produce evidence-backed exact duplicate groups and potential logical
   reclaimable-byte totals.
 - [x] Write immutable run, report, and review-plan artifacts atomically.
+- [x] Publish related artifacts through staged, digest-verified commit markers
+  with crash and disk-full recovery semantics.
 - [x] Include stale-plan, re-hash, and byte-confirmation requirements in each
   planned group.
 - [x] Publish versioned JSON schemas for run, report, and plan artifacts.

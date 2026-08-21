@@ -1,40 +1,10 @@
-use std::fs::{self, File};
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::Serialize;
 
 use crate::domain::{CacheStatus, DoctorReport, Plan, ReclaimabilityStatus, ScanReport};
-
-pub fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<()> {
-    let parent = path
-        .parent()
-        .context("artifact path does not have a parent directory")?;
-    fs::create_dir_all(parent)
-        .with_context(|| format!("failed to create artifact directory {}", parent.display()))?;
-
-    let file_name = path
-        .file_name()
-        .context("artifact path does not have a file name")?
-        .to_string_lossy();
-    let temporary_path = parent.join(format!(".{file_name}.tmp"));
-    let file = File::create(&temporary_path)
-        .with_context(|| format!("failed to create {}", temporary_path.display()))?;
-    let mut writer = BufWriter::new(file);
-    serde_json::to_writer_pretty(&mut writer, value)?;
-    writer.write_all(b"\n")?;
-    writer.flush()?;
-    writer.get_ref().sync_all()?;
-    fs::rename(&temporary_path, path).with_context(|| {
-        format!(
-            "failed to commit artifact {} to {}",
-            temporary_path.display(),
-            path.display()
-        )
-    })?;
-    Ok(())
-}
 
 pub fn print_json<T: Serialize>(value: &T) -> Result<()> {
     let stdout = std::io::stdout();

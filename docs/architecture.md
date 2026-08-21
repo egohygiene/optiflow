@@ -49,6 +49,11 @@ separate specification and execution architecture.
 relationship derivation, immutable artifacts, local state, and its versioned
 CLI contracts.
 
+Current scan outputs are published as a sealed directory set; plan outputs use
+a recoverable plan-and-marker handshake. The
+[artifact-set protocol](artifact-set-protocol.md) defines the visibility,
+durability, inspection, and recovery boundaries.
+
 Specialized tools remain behind typed adapters. The current media probe invokes
 `ffprobe` without a shell; future encoders, optimizers, quality metrics, and
 fingerprinters must follow the same explicit capability boundary.

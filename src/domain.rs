@@ -18,11 +18,15 @@ pub const RUN_SCHEMA_VERSION_V3: &str = "optiflow.run.v3";
 pub const REPORT_SCHEMA_VERSION_V3: &str = "optiflow.report.v3";
 pub const PLAN_SCHEMA_VERSION_V3: &str = "optiflow.plan.v3";
 
-/// Current v4 constants emitted for newly created runs and plans.
-/// v4 introduces lossless `NativePath` serialisation for all path fields.
-pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v4";
-pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v4";
-pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v4";
+/// v4 constants – lossless `NativePath` artifacts that predate artifact sets.
+pub const RUN_SCHEMA_VERSION_V4: &str = "optiflow.run.v4";
+pub const REPORT_SCHEMA_VERSION_V4: &str = "optiflow.report.v4";
+pub const PLAN_SCHEMA_VERSION_V4: &str = "optiflow.plan.v4";
+
+/// Current v5 constants bind newly published documents to an artifact set.
+pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v5";
+pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v5";
+pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v5";
 
 // ---------------------------------------------------------------------------
 // Scan options and run metadata
@@ -40,6 +44,8 @@ pub struct ScanOptions {
 pub struct ScanRun {
     pub schema_version: String,
     pub run_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_set_id: Option<String>,
     pub created_at: String,
     pub completed_at: String,
     pub inputs: Vec<String>,
@@ -802,6 +808,7 @@ pub struct Plan {
     pub schema_version: String,
     pub plan_id: String,
     pub source_run_id: String,
+    pub source_artifact_set_id: Option<String>,
     pub created_at: String,
     pub mode: String,
     pub safety: PlanSafety,

@@ -7,6 +7,10 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::adapters::ffprobe;
+use crate::artifact_set::{
+    self, ARTIFACT_SET_SCHEMA, ArtifactPayload, ArtifactSetInspection, ArtifactSetManifest,
+    ArtifactSetStatus,
+};
 use crate::cli::{CacheCommand, Cli, Command, ConfigCommand, OutputFormat, PlanCommand, ScanArgs};
 use crate::configuration::{ConfigurationResolution, EffectivePolicyV1};
 use crate::contracts::{self, Contract};
@@ -15,8 +19,9 @@ use crate::domain::{
     CachedAnalysis, DoctorReport, EvidenceValidity, FileObservation, HardLinkGroup, MediaKind,
     NativePath, ObservationStatus, PLAN_SCHEMA_VERSION, PhysicalReclaimability,
     REPORT_SCHEMA_VERSION, REPORT_SCHEMA_VERSION_V1, REPORT_SCHEMA_VERSION_V2,
-    REPORT_SCHEMA_VERSION_V3, RUN_SCHEMA_VERSION, ReclaimabilityReasonCode, ReclaimabilityStatus,
-    ScanOptions, ScanReport, ScanRun, ScanSummary, StorageAllocation, StorageSummary,
+    REPORT_SCHEMA_VERSION_V3, REPORT_SCHEMA_VERSION_V4, RUN_SCHEMA_VERSION,
+    ReclaimabilityReasonCode, ReclaimabilityStatus, ScanOptions, ScanReport, ScanRun, ScanSummary,
+    StorageAllocation, StorageSummary,
 };
 use crate::duplicates::exact_groups;
 use crate::hashing::HASH_ALGORITHM;
@@ -26,7 +31,6 @@ use crate::outcome::{
     DiagnosticCode, DiagnosticContext, DiagnosticImpact, DiagnosticSeverity,
 };
 use crate::planning::exact_duplicate_plan;
-use crate::reports;
 use crate::signals::{Interruption, SignalState};
 use crate::state::StateStore;
 
@@ -469,10 +473,12 @@ fn run_scan(
     .unwrap_or(u64::MAX);
 
     let artifact_directory = state_directory.join("runs").join(&run_id);
+    let artifact_set_id = Uuid::now_v7().to_string();
     let completed_at = Utc::now().to_rfc3339();
     let run = ScanRun {
         schema_version: RUN_SCHEMA_VERSION.to_owned(),
         run_id: run_id.clone(),
+        artifact_set_id: Some(artifact_set_id.clone()),
         created_at,
         completed_at: completed_at.clone(),
         inputs: arguments
@@ -547,37 +553,48 @@ fn run_scan(
     let run_path = artifact_directory.join("run.json");
     let report_path = artifact_directory.join("report.json");
     let policy_path = artifact_directory.join("effective-policy.json");
-    if let Err(error) = reports::write_json_atomic(&policy_path, effective_policy) {
+    let committed_set = (|| -> anyhow::Result<ArtifactSetManifest> {
+        let payloads = vec![
+            ArtifactPayload::json(
+                "effective_policy",
+                &effective_policy.schema,
+                "effective-policy.json",
+                effective_policy,
+            )?,
+            ArtifactPayload::json("run", RUN_SCHEMA_VERSION, "run.json", &run)?,
+            ArtifactPayload::json("report", REPORT_SCHEMA_VERSION, "report.json", &report)?,
+        ];
+        artifact_set::commit_scan_set(&artifact_directory, &run_id, &artifact_set_id, payloads)
+    })();
+    if let Err(error) = committed_set {
+        if artifact_set::inspect_scan_set(&artifact_directory).status
+            == ArtifactSetStatus::Committed
+        {
+            return recoverable_active_scan_failure(
+                &run_id,
+                DiagnosticCode::ArtifactCommitFailed,
+                DiagnosticClassification::Artifact,
+                "the scan artifact set is complete but its final durability sync failed",
+                &error,
+                vec![artifact_reference(
+                    "artifact_set",
+                    ARTIFACT_SET_SCHEMA,
+                    &run_id,
+                    &artifact_directory.join(artifact_set::SCAN_MARKER_FILE_NAME),
+                )],
+            );
+        }
         return fail_active_scan(
             &store,
             &run_id,
             DiagnosticCode::ArtifactCommitFailed,
             DiagnosticClassification::Artifact,
-            "failed to commit the effective-policy artifact",
-            &error,
-        );
-    }
-    if let Err(error) = reports::write_json_atomic(&run_path, &run) {
-        return fail_active_scan(
-            &store,
-            &run_id,
-            DiagnosticCode::ArtifactCommitFailed,
-            DiagnosticClassification::Artifact,
-            "failed to commit the run artifact",
-            &error,
-        );
-    }
-    if let Err(error) = reports::write_json_atomic(&report_path, &report) {
-        return fail_active_scan(
-            &store,
-            &run_id,
-            DiagnosticCode::ArtifactCommitFailed,
-            DiagnosticClassification::Artifact,
-            "failed to commit the report artifact",
+            "failed to commit the scan artifact set",
             &error,
         );
     }
 
+    let marker_path = artifact_directory.join(artifact_set::SCAN_MARKER_FILE_NAME);
     let artifacts = vec![
         artifact_reference(
             "effective_policy",
@@ -587,23 +604,17 @@ fn run_scan(
         ),
         artifact_reference("run", RUN_SCHEMA_VERSION, &run_id, &run_path),
         artifact_reference("report", REPORT_SCHEMA_VERSION, &run_id, &report_path),
+        artifact_reference("artifact_set", ARTIFACT_SET_SCHEMA, &run_id, &marker_path),
     ];
-    if signals.is_cancelled() {
-        let mut execution = interrupt_active_scan(&store, &run_id, signals.current());
-        execution.artifacts = artifacts;
-        return execution;
-    }
     if let Err(error) = store.finalize_scan(&run, &report, &observations, &duplicate_groups) {
-        let mut execution = fail_active_scan(
-            &store,
+        return recoverable_active_scan_failure(
             &run_id,
             DiagnosticCode::StateTransactionFailed,
             DiagnosticClassification::Internal,
-            "failed to finalize scan state",
+            "the artifact set is committed but scan-state finalization requires recovery",
             &error,
+            artifacts,
         );
-        execution.artifacts = artifacts;
-        return execution;
     }
 
     let mut diagnostics = discovery_diagnostics(&discovery.issues, true);
@@ -708,6 +719,7 @@ fn observation_from_analysis(
 struct LoadedReport {
     report: ScanReport,
     path: PathBuf,
+    artifact_set: Option<ArtifactSetManifest>,
 }
 
 fn run_report(
@@ -744,6 +756,19 @@ fn run_report(
         &loaded.report.run.run_id,
         &loaded.path,
     )];
+    if loaded.artifact_set.is_some() {
+        let marker_path = loaded
+            .path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(artifact_set::SCAN_MARKER_FILE_NAME);
+        artifacts.push(artifact_reference(
+            "artifact_set",
+            ARTIFACT_SET_SCHEMA,
+            &loaded.report.run.run_id,
+            &marker_path,
+        ));
+    }
     if let Some(policy_artifact) = policy_artifact {
         artifacts.push(policy_artifact);
     }
@@ -794,7 +819,41 @@ fn run_plan(
             format!("the generated plan failed contract validation: {error}"),
         ));
     }
-    if let Err(error) = reports::write_json_atomic(&output_path, &plan) {
+    let plan_payload = match output_path
+        .file_name()
+        .map(|file_name| ArtifactPayload::json("plan", PLAN_SCHEMA_VERSION, file_name, &plan))
+    {
+        Some(Ok(payload)) => payload,
+        Some(Err(error)) => {
+            return internal_failure_with_code(
+                DiagnosticCode::ArtifactCommitFailed,
+                "failed to serialize the plan artifact set",
+                &error,
+            );
+        }
+        None => {
+            return Execution::failure(
+                Diagnostic::new(
+                    DiagnosticCode::OutputDestinationInvalid,
+                    DiagnosticSeverity::Error,
+                    DiagnosticClassification::Input,
+                    DiagnosticImpact::BlocksCommand,
+                    "the plan output destination has no file name",
+                )
+                .with_path(&output_path),
+            );
+        }
+    };
+    let source_set_id = loaded
+        .artifact_set
+        .as_ref()
+        .map(|manifest| manifest.set_id.as_str());
+    if let Err(error) = artifact_set::commit_plan_set(
+        &output_path,
+        &loaded.report.run.run_id,
+        source_set_id,
+        plan_payload,
+    ) {
         let mut diagnostic = Diagnostic::new(
             DiagnosticCode::OutputDestinationInvalid,
             DiagnosticSeverity::Error,
@@ -816,6 +875,12 @@ fn run_plan(
         &loaded.report.run.run_id,
         &output_path,
     )];
+    artifacts.push(artifact_reference(
+        "artifact_set",
+        ARTIFACT_SET_SCHEMA,
+        &loaded.report.run.run_id,
+        &artifact_set::plan_marker_path(&output_path),
+    ));
     if let Some(policy_artifact) = policy_artifact {
         artifacts.push(policy_artifact);
     }
@@ -901,9 +966,20 @@ fn load_report(store: &StateStore, run_or_path: &str) -> Result<LoadedReport, Bo
             )
         })?;
         let report = decode_report(&bytes, &report_path)?;
+        let artifact_set = if report.schema_version == REPORT_SCHEMA_VERSION {
+            let directory = report_path.parent().unwrap_or_else(|| Path::new("."));
+            Some(require_report_artifact_set(
+                artifact_set::inspect_scan_set(directory),
+                directory,
+                &report,
+            )?)
+        } else {
+            None
+        };
         return Ok(LoadedReport {
             report,
             path: report_path,
+            artifact_set,
         });
     }
 
@@ -930,9 +1006,20 @@ fn load_report(store: &StateStore, run_or_path: &str) -> Result<LoadedReport, Bo
         )
     })?;
     if let Some(report) = report {
+        let directory = Path::new(&report.run.artifact_directory);
+        let artifact_set = if report.schema_version == REPORT_SCHEMA_VERSION {
+            Some(require_report_artifact_set(
+                artifact_set::inspect_scan_set(directory),
+                directory,
+                &report,
+            )?)
+        } else {
+            None
+        };
         return Ok(LoadedReport {
             path: Path::new(&report.run.artifact_directory).join("report.json"),
             report,
+            artifact_set,
         });
     }
 
@@ -971,6 +1058,67 @@ fn load_report(store: &StateStore, run_or_path: &str) -> Result<LoadedReport, Bo
     ))
 }
 
+fn require_committed_artifact_set(
+    inspection: ArtifactSetInspection,
+    path: &Path,
+) -> Result<ArtifactSetManifest, Box<Diagnostic>> {
+    match inspection.status {
+        ArtifactSetStatus::Committed => inspection.manifest.ok_or_else(|| {
+            Box::new(
+                Diagnostic::new(
+                    DiagnosticCode::InternalInvariantViolated,
+                    DiagnosticSeverity::Fatal,
+                    DiagnosticClassification::Internal,
+                    DiagnosticImpact::BlocksCommand,
+                    "artifact-set inspection omitted its committed manifest",
+                )
+                .with_path(path),
+            )
+        }),
+        ArtifactSetStatus::Incomplete => Err(Box::new(
+            Diagnostic::new(
+                DiagnosticCode::ArtifactSetIncomplete,
+                DiagnosticSeverity::Error,
+                DiagnosticClassification::State,
+                DiagnosticImpact::BlocksCommand,
+                inspection.detail,
+            )
+            .with_path(path),
+        )),
+        ArtifactSetStatus::Incompatible => Err(Box::new(
+            Diagnostic::new(
+                DiagnosticCode::ArtifactSetIncompatible,
+                DiagnosticSeverity::Error,
+                DiagnosticClassification::State,
+                DiagnosticImpact::BlocksCommand,
+                inspection.detail,
+            )
+            .with_path(path),
+        )),
+    }
+}
+
+fn require_report_artifact_set(
+    inspection: ArtifactSetInspection,
+    path: &Path,
+    report: &ScanReport,
+) -> Result<ArtifactSetManifest, Box<Diagnostic>> {
+    let manifest = require_committed_artifact_set(inspection, path)?;
+    if report.run.artifact_set_id.as_deref() != Some(manifest.set_id.as_str()) {
+        return Err(Box::new(
+            Diagnostic::new(
+                DiagnosticCode::ArtifactSetIncompatible,
+                DiagnosticSeverity::Error,
+                DiagnosticClassification::State,
+                DiagnosticImpact::BlocksCommand,
+                "the report and artifact-set marker declare different set identities",
+            )
+            .with_path(path),
+        ));
+    }
+    Ok(manifest)
+}
+
 fn decode_report(bytes: &[u8], path: &Path) -> Result<ScanReport, Box<Diagnostic>> {
     let document: serde_json::Value = serde_json::from_slice(bytes).map_err(|error| {
         Box::new(
@@ -995,6 +1143,7 @@ fn decode_report(bytes: &[u8], path: &Path) -> Result<ScanReport, Box<Diagnostic
                 | REPORT_SCHEMA_VERSION_V1
                 | REPORT_SCHEMA_VERSION_V2
                 | REPORT_SCHEMA_VERSION_V3
+                | REPORT_SCHEMA_VERSION_V4
         )
     ) {
         return Err(Box::new(
@@ -1224,6 +1373,31 @@ fn fail_active_scan(
     ));
     execution.diagnostics[0].context.run_id = Some(run_id.to_owned());
     execution
+}
+
+fn recoverable_active_scan_failure(
+    run_id: &str,
+    code: DiagnosticCode,
+    classification: DiagnosticClassification,
+    message: &str,
+    error: &dyn std::fmt::Display,
+    artifacts: Vec<ArtifactReference>,
+) -> Execution {
+    Execution {
+        coverage: None,
+        artifacts,
+        diagnostics: vec![
+            Diagnostic::new(
+                code,
+                DiagnosticSeverity::Fatal,
+                classification,
+                DiagnosticImpact::BlocksCommand,
+                format!("{message}: {error}"),
+            )
+            .with_run_id(run_id.to_owned()),
+        ],
+        result: None,
+    }
 }
 
 fn interrupt_active_scan(

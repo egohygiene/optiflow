@@ -52,16 +52,23 @@ not all hashed in the MVP.
 
 1. Insert a `running` scan row.
 2. Perform discovery and analysis.
-3. Validate and atomically write `effective-policy.json`, `run.json`, and
-   `report.json`.
-4. Store observations and groups in one database transaction.
-5. Mark the run `completed` and attach final JSON.
+3. Validate and stage `effective-policy.json`, `run.json`, `report.json`, and
+   their digest-bearing commit marker.
+4. Flush the members and marker, then publish the directory with one rename.
+5. Store observations and groups in one database transaction.
+6. Mark the run `completed` and attach final JSON.
 
 Handled interruptions mark rows `interrupted`; internal failures mark rows
 `failed`; a hard process failure may leave recoverable `running` state. None is
-returned as a completed report.
+returned as a completed report. A still-`running` row with a committed v5
+artifact set is recovered idempotently when state is next opened. Stale staging
+directories are removed; incomplete or incompatible final sets are never
+promoted.
 
 The effective-policy sidecar is referenced through the existing immutable run
-artifact directory, so migrations `0001`–`0003` and v1-v3 run/report schemas are
+artifact directory, so migrations `0001`–`0003` and v1-v4 run/report schemas are
 unchanged. Historical runs without a sidecar have unknown policy evidence; the
 current resolver never fabricates a snapshot for them.
+
+See the [artifact-set commit protocol](artifact-set-protocol.md) for marker,
+reader-state, plan-handshake, crash-recovery, and durability semantics.

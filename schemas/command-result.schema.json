@@ -235,7 +235,7 @@
       "type": "object",
       "required": ["kind", "schema", "path"],
       "properties": {
-        "kind": { "enum": ["run", "report", "plan", "effective_policy"] },
+        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set"] },
         "schema": { "type": "string", "minLength": 1 },
         "run_id": { "type": "string", "minLength": 1 },
         "path": { "$ref": "#/$defs/serialized_path" }
@@ -278,6 +278,8 @@
             "source_run_interrupted",
             "stored_run_not_found",
             "stored_state_incompatible",
+            "artifact_set_incomplete",
+            "artifact_set_incompatible",
             "stale_evidence_prevents_operation",
             "artifact_validation_failed",
             "artifact_commit_failed",

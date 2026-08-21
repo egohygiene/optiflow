@@ -132,6 +132,8 @@ pub enum DiagnosticCode {
     SourceRunInterrupted,
     StoredRunNotFound,
     StoredStateIncompatible,
+    ArtifactSetIncomplete,
+    ArtifactSetIncompatible,
     StaleEvidencePreventsOperation,
     ArtifactValidationFailed,
     ArtifactCommitFailed,

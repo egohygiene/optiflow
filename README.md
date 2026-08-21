@@ -22,7 +22,8 @@ move, quarantine, or optimization command.
 - Calculate complete streaming BLAKE3-256 hashes only for size candidates.
 - Produce exact-duplicate groups with transparent evidence.
 - Calculate potential reclaimable storage without deleting anything.
-- Write schema-versioned run, report, and plan artifacts atomically.
+- Publish schema-versioned run, report, and plan artifacts as coherent,
+  marker-sealed sets.
 - Generate deterministic review plans with apply-time safety preconditions.
 - Emit human-readable or stable JSON output for `flow` and other pipelines.
 
@@ -129,9 +130,10 @@ Machine results and committed domain artifacts have independent identifiers:
 | Command result | `optiflow.command-result.v1` | `schemas/command-result.schema.json` |
 | Configuration | `optiflow.config.v1` | `schemas/config-v1.schema.json` |
 | Effective policy | `optiflow.effective-policy.v1` | `schemas/effective-policy-v1.schema.json` |
-| Run | `optiflow.run.v3` | `schemas/run.schema.json` |
-| Report | `optiflow.report.v3` | `schemas/report.schema.json` |
-| Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
+| Artifact set | `optiflow.artifact-set.v1` | `schemas/artifact-set-v1.schema.json` |
+| Run | `optiflow.run.v5` | `schemas/run.schema.json` |
+| Report | `optiflow.report.v5` | `schemas/report.schema.json` |
+| Plan | `optiflow.plan.v5` | `schemas/plan.schema.json` |
 
 Use `--output-format json` (or `--json`) for subprocess integration. JSON owns
 stdout; human primary output uses stdout and human diagnostics use stderr.
@@ -162,6 +164,8 @@ requires optiflow to:
 5. Refuse mutation if any precondition fails.
 
 See [Safety Model](docs/safety-model.md) for the complete invariant set.
+The [artifact-set commit protocol](docs/artifact-set-protocol.md) defines
+coherent scan/plan publication, marker validation, and crash recovery.
 The [handle-bound observation protocol](docs/observation-protocol.md) documents
 how OptiFlow rejects replacement and in-read races without mixing evidence.
 
@@ -221,6 +225,7 @@ schemas, repository intelligence, and release guidance.
 - [Architecture](ARCHITECTURE.md)
 - [MVP specification](docs/mvp-spec.md)
 - [Safety model](docs/safety-model.md)
+- [Artifact-set commit protocol](docs/artifact-set-protocol.md)
 - [Handle-bound observation protocol](docs/observation-protocol.md)
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
