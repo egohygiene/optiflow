@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::domain::ScanOptions;
+use crate::filesystem::identity::FileStateSignature;
 use crate::signals::SignalState;
 
 #[derive(Debug, Clone)]
@@ -13,8 +14,7 @@ pub struct DiscoveredFile {
     pub path: PathBuf,
     pub size_bytes: u64,
     pub modified_unix_ns: Option<i64>,
-    pub device_id: Option<u64>,
-    pub inode: Option<u64>,
+    pub signature: FileStateSignature,
 }
 
 #[derive(Debug, Default)]
@@ -154,14 +154,16 @@ pub fn discover(
             interrupted = true;
             break;
         }
-        match fs::metadata(&path) {
-            Ok(metadata) if metadata.is_file() => files.push(DiscoveredFile {
-                path,
-                size_bytes: metadata.len(),
-                modified_unix_ns: modified_unix_ns(&metadata),
-                device_id: device_id(&metadata),
-                inode: inode(&metadata),
-            }),
+        match fs::symlink_metadata(&path) {
+            Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+                let signature = FileStateSignature::from_symlink_metadata(&metadata);
+                files.push(DiscoveredFile {
+                    path,
+                    size_bytes: signature.logical_size_bytes,
+                    modified_unix_ns: signature.modified_unix_ns,
+                    signature,
+                });
+            }
             Ok(_) => issues.push(DiscoveryIssue {
                 kind: DiscoveryIssueKind::PathChanged,
                 path: Some(path.clone()),
@@ -234,15 +236,6 @@ fn is_hidden(path: &Path, root: &Path) -> bool {
     })
 }
 
-fn modified_unix_ns(metadata: &fs::Metadata) -> Option<i64> {
-    let duration = metadata
-        .modified()
-        .ok()?
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()?;
-    i64::try_from(duration.as_nanos()).ok()
-}
-
 #[cfg(unix)]
 fn device_id(metadata: &fs::Metadata) -> Option<u64> {
     use std::os::unix::fs::MetadataExt;
@@ -251,17 +244,6 @@ fn device_id(metadata: &fs::Metadata) -> Option<u64> {
 
 #[cfg(not(unix))]
 fn device_id(_metadata: &fs::Metadata) -> Option<u64> {
-    None
-}
-
-#[cfg(unix)]
-fn inode(metadata: &fs::Metadata) -> Option<u64> {
-    use std::os::unix::fs::MetadataExt;
-    Some(metadata.ino())
-}
-
-#[cfg(not(unix))]
-fn inode(_metadata: &fs::Metadata) -> Option<u64> {
     None
 }
 

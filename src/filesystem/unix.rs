@@ -8,8 +8,6 @@ use crate::filesystem::metadata::RawFilesystemMetadata;
 /// Uses only safe standard-library APIs.  `unsafe_code` is forbidden at the
 /// crate level so no unsafe blocks appear here.
 pub fn collect(path: &Path, logical_size_bytes: u64) -> RawFilesystemMetadata {
-    use std::os::unix::fs::MetadataExt;
-
     let mut warnings = Vec::new();
 
     let metadata = match std::fs::metadata(path) {
@@ -28,6 +26,19 @@ pub fn collect(path: &Path, logical_size_bytes: u64) -> RawFilesystemMetadata {
             };
         }
     };
+
+    collect_from_metadata(&metadata, logical_size_bytes, warnings)
+}
+
+/// Convert metadata obtained from an opened handle into the portable storage
+/// representation. This is the preferred observation path because it cannot be
+/// redirected by a later directory-entry replacement.
+pub fn collect_from_metadata(
+    metadata: &std::fs::Metadata,
+    logical_size_bytes: u64,
+    warnings: Vec<String>,
+) -> RawFilesystemMetadata {
+    use std::os::unix::fs::MetadataExt;
 
     let dev = metadata.dev();
     let ino = metadata.ino();

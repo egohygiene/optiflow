@@ -8,6 +8,10 @@ artifacts in its configured state directory, but it cannot change source media.
 ## Invariants
 
 - Scanning never mutates source files.
+- Accepted content, identity, and allocation evidence comes from one opened
+  read-only handle and one stable path-observation window.
+- An unstable attempt is discarded as a unit; evidence is never combined
+  across bounded retries.
 - Detection and resolution remain separate phases.
 - Equal duration, dimensions, filenames, or partial fingerprints never prove
   exact identity.
@@ -53,9 +57,16 @@ deliberate policy and never the universal default.
 
 ## Remaining risks
 
-- Files can change during a read-only scan; a future apply engine must re-prove
-  all preconditions.
+- Files can change after an accepted read-only observation; a future apply
+  engine must re-open each object and re-prove all preconditions.
 - Modification-time precision varies by filesystem.
+- Portable Unix identity signatures do not provide a universal object
+  generation number, and unusual filesystems may not provide strong enough
+  identity or timestamp semantics. Current evidence is refused when required
+  fields are unavailable.
 - Successful decoding by one tool does not guarantee universal compatibility.
 - Cryptographic hashes provide extremely strong identity evidence but direct
   byte confirmation remains the final destructive gate.
+
+See the [handle-bound observation protocol](observation-protocol.md) for the
+stage checks, cache binding, retry behavior, and filesystem limits.

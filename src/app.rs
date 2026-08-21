@@ -19,8 +19,8 @@ use crate::domain::{
     ScanOptions, ScanReport, ScanRun, ScanSummary, StorageAllocation, StorageSummary,
 };
 use crate::duplicates::exact_groups;
-use crate::filesystem::metadata as fs_metadata;
-use crate::hashing::{HASH_ALGORITHM, hash_with_stability};
+use crate::hashing::HASH_ALGORITHM;
+use crate::observation;
 use crate::outcome::{
     ArtifactReference, CommandResult, CoverageStatus, Diagnostic, DiagnosticClassification,
     DiagnosticCode, DiagnosticContext, DiagnosticImpact, DiagnosticSeverity,
@@ -211,12 +211,8 @@ fn run_scan(
         if signals.is_cancelled() {
             return interrupt_active_scan(&store, &run_id, signals.current());
         }
-        let cached = match store.lookup_cache(
-            &file.path,
-            file.size_bytes,
-            file.modified_unix_ns,
-            required_probe_signature,
-        ) {
+        let cached = match store.lookup_cache(&file.path, &file.signature, required_probe_signature)
+        {
             Ok(cached) => cached,
             Err(error) => {
                 return fail_active_scan(
@@ -229,85 +225,72 @@ fn run_scan(
                 );
             }
         };
-        let was_cache_hit = cached.is_some();
-        if was_cache_hit {
-            cache_hits = cache_hits.saturating_add(1);
-        }
-        let mut analysis = cached.unwrap_or_else(|| {
-            crate::inventory::analyze(
-                &file.path,
-                options.probe_media,
-                ffprobe_signature.as_deref(),
-            )
-        });
-
         let is_exact_candidate = size_frequency
             .get(&file.size_bytes)
             .is_some_and(|count| *count > 1);
-        if is_exact_candidate && analysis.status != ObservationStatus::Unreadable {
-            analysis.content_hash = None;
-            let hash_result = hash_with_stability(&file.path, signals);
-            if hash_result.interrupted {
-                return interrupt_active_scan(&store, &run_id, signals.current());
-            }
-            if let Some(w) = hash_result.warning.clone() {
-                analysis.warnings.push(w);
-            }
-            if hash_result.evidence_validity == EvidenceValidity::Current {
-                analysis.content_hash = Some(hash_result.hash.clone());
-            } else {
-                analysis.status = ObservationStatus::Unreadable;
-            }
-            analysis.observation_stability = hash_result.stability;
-            analysis.evidence_validity = hash_result.evidence_validity;
-            analysis.attempt_count = hash_result.attempt_count;
+        let observed = observation::observe(
+            file,
+            cached,
+            is_exact_candidate,
+            options.probe_media,
+            ffprobe_signature.as_deref(),
+            signals,
+        );
+        if observed.interrupted {
+            return interrupt_active_scan(&store, &run_id, signals.current());
         }
+        if observed.cache_hit {
+            cache_hits = cache_hits.saturating_add(1);
+        }
+        let analysis = observed.analysis;
 
         // Only write to the cache when the observation is stable.  An unstable
         // result must not pollute the cache and be returned on a future scan.
         if analysis.evidence_validity == EvidenceValidity::Current {
-            if let Err(error) = store.upsert_cache(
-                &file.path,
-                file.size_bytes,
-                file.modified_unix_ns,
-                &analysis,
-            ) {
-                return fail_active_scan(
-                    &store,
-                    &run_id,
-                    DiagnosticCode::StateTransactionFailed,
-                    DiagnosticClassification::Internal,
-                    "failed to commit analysis cache state",
-                    &error,
-                );
+            if let Some(signature) = observed.signature.as_ref() {
+                if let Err(error) = store.upsert_cache(&file.path, signature, &analysis) {
+                    return fail_active_scan(
+                        &store,
+                        &run_id,
+                        DiagnosticCode::StateTransactionFailed,
+                        DiagnosticClassification::Internal,
+                        "failed to commit analysis cache state",
+                        &error,
+                    );
+                }
             }
         }
 
-        // Collect filesystem identity and allocation metadata for this scan.
-        // This is always refreshed (not cached) because link counts and
-        // allocated sizes can change independently of content.
-        let raw_fs_meta = fs_metadata::collect(&file.path, file.size_bytes);
-        let (filesystem_identity, storage_allocation, fs_warnings) = {
-            let warnings = raw_fs_meta.warnings.clone();
-            let identity = raw_fs_meta.identity.clone();
-            let allocation = if raw_fs_meta.allocated_size_bytes.is_some()
-                || raw_fs_meta.allocation_source
-                    != crate::filesystem::identity::AllocationSource::Unavailable
-            {
-                Some(StorageAllocation {
-                    logical_size_bytes: raw_fs_meta.logical_size_bytes,
-                    allocated_size_bytes: raw_fs_meta.allocated_size_bytes,
-                    allocation_source: raw_fs_meta.allocation_source.clone(),
-                    extent_sharing_status:
-                        crate::filesystem::identity::ExtentSharingStatus::Unknown,
-                })
-            } else {
-                None
-            };
-            (identity, allocation, warnings)
-        };
+        // Identity and allocation evidence come from the same opened handle as
+        // content evidence. An unstable attempt publishes neither.
+        let (filesystem_identity, storage_allocation, fs_warnings) = observed
+            .filesystem_metadata
+            .map(|raw| {
+                let allocation = if raw.allocated_size_bytes.is_some()
+                    || raw.allocation_source
+                        != crate::filesystem::identity::AllocationSource::Unavailable
+                {
+                    Some(StorageAllocation {
+                        logical_size_bytes: raw.logical_size_bytes,
+                        allocated_size_bytes: raw.allocated_size_bytes,
+                        allocation_source: raw.allocation_source.clone(),
+                        extent_sharing_status:
+                            crate::filesystem::identity::ExtentSharingStatus::Unknown,
+                    })
+                } else {
+                    None
+                };
+                (raw.identity, allocation, raw.warnings)
+            })
+            .unwrap_or_else(|| (None, None, Vec::new()));
 
-        let mut obs = observation_from_analysis(&run_id, file, analysis, was_cache_hit);
+        let mut obs = observation_from_analysis(
+            &run_id,
+            file,
+            observed.signature.as_ref(),
+            analysis,
+            observed.cache_hit,
+        );
         obs.filesystem_identity = filesystem_identity;
         obs.storage_allocation = storage_allocation;
         obs.warnings.extend(fs_warnings);
@@ -688,9 +671,12 @@ fn aggregate_reclaimability(groups: &[crate::domain::DuplicateGroup]) -> Physica
 fn observation_from_analysis(
     run_id: &str,
     file: &crate::discovery::DiscoveredFile,
+    accepted_signature: Option<&crate::filesystem::identity::FileStateSignature>,
     analysis: CachedAnalysis,
     cache_hit: bool,
 ) -> FileObservation {
+    let signature = accepted_signature.unwrap_or(&file.signature);
+    let identity = signature.identity.as_ref();
     let hash_algorithm = analysis
         .content_hash
         .as_ref()
@@ -699,10 +685,10 @@ fn observation_from_analysis(
         observation_id: Uuid::now_v7().to_string(),
         run_id: run_id.to_owned(),
         path: NativePath::from_path(&file.path),
-        size_bytes: file.size_bytes,
-        modified_unix_ns: file.modified_unix_ns,
-        device_id: file.device_id,
-        inode: file.inode,
+        size_bytes: signature.logical_size_bytes,
+        modified_unix_ns: signature.modified_unix_ns,
+        device_id: identity.and_then(|identity| identity.filesystem_id.parse().ok()),
+        inode: identity.and_then(|identity| identity.file_id.parse().ok()),
         content_type: analysis.content_type,
         media_kind: analysis.media_kind,
         content_hash: analysis.content_hash,

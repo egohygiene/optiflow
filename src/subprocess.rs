@@ -6,6 +6,7 @@
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::fs::File;
 use std::io::{self, Read};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Condvar, Mutex};
@@ -231,9 +232,12 @@ impl PermitPool {
         F: Fn() -> bool,
     {
         let program = command.display_program();
-        let mut active = self.active.lock().map_err(|error| SubprocessError::Internal {
-            message: format!("subprocess permit lock is poisoned: {error}"),
-        })?;
+        let mut active = self
+            .active
+            .lock()
+            .map_err(|error| SubprocessError::Internal {
+                message: format!("subprocess permit lock is poisoned: {error}"),
+            })?;
 
         loop {
             if is_cancelled() {
@@ -250,12 +254,12 @@ impl PermitPool {
             }
             let remaining = deadline.saturating_duration_since(now);
             let wait_for = poll_interval.min(remaining);
-            let (next_active, _) = self
-                .changed
-                .wait_timeout(active, wait_for)
-                .map_err(|error| SubprocessError::Internal {
-                    message: format!("subprocess permit wait is poisoned: {error}"),
-                })?;
+            let (next_active, _) =
+                self.changed
+                    .wait_timeout(active, wait_for)
+                    .map_err(|error| SubprocessError::Internal {
+                        message: format!("subprocess permit wait is poisoned: {error}"),
+                    })?;
             active = next_active;
         }
     }
@@ -399,9 +403,41 @@ impl SubprocessRunner {
         })
     }
 
+    /// Run a JSON-producing command with stdin connected directly to a clone
+    /// of an already-opened file handle.
+    ///
+    /// This allows media adapters to inspect the same filesystem object that
+    /// the caller validated instead of reopening a mutable pathname.
+    pub fn run_json_with_file_stdin<T>(
+        &self,
+        command: &SubprocessCommand,
+        file: &File,
+    ) -> Result<T, SubprocessError>
+    where
+        T: DeserializeOwned,
+    {
+        let output = self.run_with_cancel_and_file(command, Some(file), || false)?;
+        serde_json::from_slice(&output.stdout).map_err(|error| SubprocessError::Parse {
+            program: command.display_program(),
+            message: error.to_string(),
+        })
+    }
+
     pub fn run_with_cancel<F>(
         &self,
         command: &SubprocessCommand,
+        is_cancelled: F,
+    ) -> Result<SubprocessOutput, SubprocessError>
+    where
+        F: Fn() -> bool,
+    {
+        self.run_with_cancel_and_file(command, None, is_cancelled)
+    }
+
+    fn run_with_cancel_and_file<F>(
+        &self,
+        command: &SubprocessCommand,
+        stdin_file: Option<&File>,
         is_cancelled: F,
     ) -> Result<SubprocessOutput, SubprocessError>
     where
@@ -422,9 +458,19 @@ impl SubprocessRunner {
             return Err(SubprocessError::Cancelled { program });
         }
 
+        let stdin = match stdin_file {
+            Some(file) => {
+                Stdio::from(file.try_clone().map_err(|error| SubprocessError::Spawn {
+                    program: program.clone(),
+                    message: format!("failed to clone opened input handle: {error}"),
+                })?)
+            }
+            None => Stdio::null(),
+        };
+
         let mut child = Command::new(command.program())
             .args(command.arguments())
-            .stdin(Stdio::null())
+            .stdin(stdin)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -433,12 +479,18 @@ impl SubprocessRunner {
                 message: error.to_string(),
             })?;
 
-        let stdout = child.stdout.take().ok_or_else(|| SubprocessError::Internal {
-            message: format!("{program} stdout pipe was not created"),
-        })?;
-        let stderr = child.stderr.take().ok_or_else(|| SubprocessError::Internal {
-            message: format!("{program} stderr pipe was not created"),
-        })?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| SubprocessError::Internal {
+                message: format!("{program} stdout pipe was not created"),
+            })?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| SubprocessError::Internal {
+                message: format!("{program} stderr pipe was not created"),
+            })?;
         let stdout_limit = self.limits.max_stdout_bytes;
         let stderr_limit = self.limits.max_stderr_bytes;
         let stdout_reader = thread::spawn(move || read_bounded(stdout, stdout_limit));
@@ -520,8 +572,8 @@ impl SubprocessRunner {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     use serde_json::Value;
 
@@ -552,9 +604,7 @@ mod tests {
     #[test]
     fn returns_typed_exit_error() {
         let runner = SubprocessRunner::new(test_limits()).unwrap();
-        let error = runner
-            .run(&shell("printf denied >&2; exit 7"))
-            .unwrap_err();
+        let error = runner.run(&shell("printf denied >&2; exit 7")).unwrap_err();
         assert!(matches!(
             error,
             SubprocessError::Exit {
@@ -617,10 +667,28 @@ mod tests {
     }
 
     #[test]
+    fn connects_an_opened_file_to_child_stdin() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("input.txt");
+        std::fs::write(&path, b"handle-bound").unwrap();
+        let file = File::open(&path).unwrap();
+        let runner = SubprocessRunner::new(test_limits()).unwrap();
+
+        let output = runner
+            .run_with_cancel_and_file(&shell("cat"), Some(&file), || false)
+            .unwrap();
+
+        assert_eq!(output.stdout, b"handle-bound");
+    }
+
+    #[test]
     fn rejects_invalid_limits() {
         let mut limits = test_limits();
         limits.max_concurrent_children = 0;
         let error = SubprocessRunner::new(limits).unwrap_err();
-        assert!(matches!(error, SubprocessError::InvalidConfiguration { .. }));
+        assert!(matches!(
+            error,
+            SubprocessError::InvalidConfiguration { .. }
+        ));
     }
 }

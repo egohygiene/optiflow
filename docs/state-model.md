@@ -28,17 +28,23 @@ ownership conflicts.
 
 ## Cache identity and invalidation
 
-The initial cache key is:
+The cache key is:
 
 ```text
-path + size_bytes + modified_unix_ns
+native path + filesystem id + file id + size_bytes + modified_unix_ns + changed_unix_ns
 ```
 
-Any mismatch causes re-analysis. If a cached file previously had no full hash
-but becomes a size-based duplicate candidate, optiflow calculates and stores its
-full hash during the new scan.
+Any mismatch causes re-analysis. Missing filesystem identity or metadata-change
+time disables cache lookup and insertion for that observation. Cache rows from
+older migrations have null handle-signature fields and are therefore not
+reused. A cache hit is accepted only inside a fresh, stable
+[handle-bound observation window](observation-protocol.md).
 
-The current cache recognizes unchanged paths. Content-addressed recognition
+If a cached file previously had no full hash but becomes a size-based duplicate
+candidate, OptiFlow calculates and stores its full hash during the new scan.
+
+The cache recognizes unchanged filesystem objects at unchanged native paths.
+Content-addressed recognition
 after arbitrary moves is a later enhancement because non-candidate files are
 not all hashed in the MVP.
 
