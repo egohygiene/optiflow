@@ -568,6 +568,13 @@ fn scan_consumes_policy_and_persists_historical_evidence() {
             .iter()
             .any(|artifact| artifact["kind"] == "effective_policy")
     );
+    assert!(
+        report_document["artifacts"]
+            .as_array()
+            .expect("report artifacts")
+            .iter()
+            .any(|artifact| artifact["kind"] == "artifact_set")
+    );
 
     let plan_path = workspace.path().join("review-plan.json");
     let mut plan = command(workspace.path());
@@ -586,6 +593,13 @@ fn scan_consumes_policy_and_persists_historical_evidence() {
             .iter()
             .any(|artifact| artifact["kind"] == "effective_policy")
     );
+    assert!(
+        plan_document["artifacts"]
+            .as_array()
+            .expect("plan artifacts")
+            .iter()
+            .any(|artifact| artifact["kind"] == "artifact_set")
+    );
 
     fs::remove_file(&policy_path).expect("remove policy fixture");
     let mut historical = command(workspace.path());
@@ -595,10 +609,10 @@ fn scan_consumes_policy_and_persists_historical_evidence() {
         .arg(&config)
         .args(["report", run_id]);
     let (historical_status, historical_document, _) = json_output(historical);
-    assert_eq!(historical_status.code(), Some(0));
+    assert_eq!(historical_status.code(), Some(5));
     assert_eq!(
         historical_document["diagnostics"][0]["code"],
-        "historical_policy_unknown"
+        "artifact_set_incomplete"
     );
 }
 

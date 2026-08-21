@@ -231,9 +231,12 @@ impl PermitPool {
         F: Fn() -> bool,
     {
         let program = command.display_program();
-        let mut active = self.active.lock().map_err(|error| SubprocessError::Internal {
-            message: format!("subprocess permit lock is poisoned: {error}"),
-        })?;
+        let mut active = self
+            .active
+            .lock()
+            .map_err(|error| SubprocessError::Internal {
+                message: format!("subprocess permit lock is poisoned: {error}"),
+            })?;
 
         loop {
             if is_cancelled() {
@@ -250,12 +253,12 @@ impl PermitPool {
             }
             let remaining = deadline.saturating_duration_since(now);
             let wait_for = poll_interval.min(remaining);
-            let (next_active, _) = self
-                .changed
-                .wait_timeout(active, wait_for)
-                .map_err(|error| SubprocessError::Internal {
-                    message: format!("subprocess permit wait is poisoned: {error}"),
-                })?;
+            let (next_active, _) =
+                self.changed
+                    .wait_timeout(active, wait_for)
+                    .map_err(|error| SubprocessError::Internal {
+                        message: format!("subprocess permit wait is poisoned: {error}"),
+                    })?;
             active = next_active;
         }
     }
@@ -433,12 +436,18 @@ impl SubprocessRunner {
                 message: error.to_string(),
             })?;
 
-        let stdout = child.stdout.take().ok_or_else(|| SubprocessError::Internal {
-            message: format!("{program} stdout pipe was not created"),
-        })?;
-        let stderr = child.stderr.take().ok_or_else(|| SubprocessError::Internal {
-            message: format!("{program} stderr pipe was not created"),
-        })?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| SubprocessError::Internal {
+                message: format!("{program} stdout pipe was not created"),
+            })?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| SubprocessError::Internal {
+                message: format!("{program} stderr pipe was not created"),
+            })?;
         let stdout_limit = self.limits.max_stdout_bytes;
         let stderr_limit = self.limits.max_stderr_bytes;
         let stdout_reader = thread::spawn(move || read_bounded(stdout, stdout_limit));
@@ -520,8 +529,8 @@ impl SubprocessRunner {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     use serde_json::Value;
 
@@ -552,9 +561,7 @@ mod tests {
     #[test]
     fn returns_typed_exit_error() {
         let runner = SubprocessRunner::new(test_limits()).unwrap();
-        let error = runner
-            .run(&shell("printf denied >&2; exit 7"))
-            .unwrap_err();
+        let error = runner.run(&shell("printf denied >&2; exit 7")).unwrap_err();
         assert!(matches!(
             error,
             SubprocessError::Exit {
@@ -621,6 +628,9 @@ mod tests {
         let mut limits = test_limits();
         limits.max_concurrent_children = 0;
         let error = SubprocessRunner::new(limits).unwrap_err();
-        assert!(matches!(error, SubprocessError::InvalidConfiguration { .. }));
+        assert!(matches!(
+            error,
+            SubprocessError::InvalidConfiguration { .. }
+        ));
     }
 }

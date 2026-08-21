@@ -2,6 +2,7 @@
 
 pub mod adapters;
 pub mod app;
+pub mod artifact_set;
 pub mod cli;
 pub mod configuration;
 pub mod contracts;

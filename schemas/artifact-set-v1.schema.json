@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/artifact-set-v1.schema.json",
+  "title": "optiflow artifact set v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "set_id",
+    "set_kind",
+    "run_id",
+    "created_at",
+    "state",
+    "source_set_id",
+    "members"
+  ],
+  "properties": {
+    "schema": { "const": "optiflow.artifact-set.v1" },
+    "set_id": { "type": "string", "format": "uuid" },
+    "set_kind": { "enum": ["scan", "plan"] },
+    "run_id": { "type": "string", "format": "uuid" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "state": { "const": "committed" },
+    "source_set_id": {
+      "oneOf": [
+        { "type": "string", "format": "uuid" },
+        { "type": "null" }
+      ]
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/member" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "member": {
+      "type": "object",
+      "required": ["kind", "schema", "path", "size_bytes", "digest"],
+      "properties": {
+        "kind": { "enum": ["effective_policy", "run", "report", "plan"] },
+        "schema": { "type": "string", "minLength": 1 },
+        "path": { "$ref": "#/$defs/native_path" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "digest": {
+          "type": "object",
+          "required": ["algorithm", "value"],
+          "properties": {
+            "algorithm": { "const": "blake3-256" },
+            "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "native_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["encoding", "value"],
+          "properties": {
+            "encoding": { "const": "utf8" },
+            "value": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["encoding", "base64"],
+          "properties": {
+            "encoding": { "const": "unix_bytes" },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

@@ -77,10 +77,10 @@ documents.
 
 ### Infrastructure Layer
 
-Implements operating-system, SQLite, filesystem, external-adapter, and atomic
-artifact ports.
+Implements operating-system, SQLite, filesystem, external-adapter, and
+artifact-set publication ports.
 
-- Modules: `filesystem`, `state`, `reports`, `adapters::ffprobe`.
+- Modules: `artifact_set`, `filesystem`, `state`, `adapters::ffprobe`.
 - Migrations live in `migrations/` and move forward explicitly.
 - External output is treated as untrusted until parsed and normalized.
 
@@ -142,7 +142,8 @@ permission.
 | `duplicates` | Domain | Derive exact groups from equal size and complete hash evidence |
 | `state` | Infrastructure | Persist lifecycle, observations, groups, and cache in SQLite |
 | `planning` | Domain | Create non-mutating actions and future preconditions |
-| `reports` | Infrastructure | Validate and atomically commit immutable JSON artifacts |
+| `artifact_set` | Infrastructure | Stage, seal, publish, inspect, and recover related JSON artifacts |
+| `reports` | Interface | Render typed reports and plans for human or JSON output |
 | `contracts` | Evidence | Compile and enforce checked-in JSON Schemas at runtime |
 
 ## Boundary Rules
@@ -156,7 +157,8 @@ permission.
 4. Path observations remain distinct from content identity.
 5. Cache reuse is explicit and must acquire missing evidence when a new claim
    requires it.
-6. A report is committed before another pipeline treats it as source evidence.
+6. A report is accepted as source evidence only when its artifact set is
+   committed, or when its historical contract predates artifact-set markers.
 7. A plan is a new immutable projection and declares that it does not mutate
    files.
 8. Renderers receive typed outcomes; message text never controls exit status.
@@ -233,8 +235,10 @@ semantics satisfy OptiFlow requirements.
 
 - SQLite rollback journal and `FULL` synchronization are used rather than
   assuming WAL behavior on arbitrary scanned filesystems.
-- Generated artifacts are written to sibling temporary files, flushed,
-  synchronized, validated, and renamed.
+- Related scan artifacts are validated, written and synchronized in a sibling
+  staging directory, sealed by a content-addressed marker, and published by one
+  directory rename. Plans use a recoverable file-and-marker handshake to retain
+  their public file-path contract.
 - Handled `SIGINT` and `SIGTERM` never finalize an active run as completed.
 - Full hashes are calculated only when a candidate relationship requires them
   in the current MVP.

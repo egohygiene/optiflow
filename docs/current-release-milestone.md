@@ -34,6 +34,9 @@ Bind evidence to the same opened handle/equivalent platform primitive and reject
 
 Publish run/report/plan related outputs as one coherent set with staging, commit markers, recovery semantics, and explicit durability boundaries.
 
+**Implementation status:** complete on the working hardening branch; pending
+review and merge.
+
 ## Integration proof after #21–#24
 
 ### #26 — adversarial fault and property-test matrix
@@ -72,7 +75,7 @@ flowchart LR
 - [ ] Native paths round-trip losslessly through every supported artifact/state boundary.
 - [ ] Observation evidence cannot silently combine incompatible file states.
 - [ ] External tools cannot produce unbounded output or hang the process indefinitely.
-- [ ] Related artifacts are distinguishable as committed, incomplete, or incompatible sets.
+- [x] Related artifacts are distinguishable as committed, incomplete, or incompatible sets.
 - [ ] Adversarial/fault tests exercise the combined invariants.
 - [ ] Public packages have the agreed dependency/security/provenance evidence.
 - [ ] Installation and supported-platform smoke tests pass from packaged artifacts.

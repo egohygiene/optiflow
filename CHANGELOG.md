@@ -52,6 +52,12 @@ public contracts still receive explicit migration notes.
   marked `interrupted` and are never finalized as complete.
 - Added runtime validation of generated run, report, plan, and command-result
   documents before reporting success.
+- Added `optiflow.artifact-set.v1`, which binds related artifacts to validated
+  schemas, identities, byte lengths, and BLAKE3-256 content digests.
+- Added staged scan-set publication, recoverable plan-marker publication, and
+  startup reconciliation for crashes between filesystem and SQLite commits.
+- Added deterministic crash and disk-exhaustion fault injection for artifact
+  staging, visibility, and recovery boundaries.
 
 ### Changed
 
@@ -66,11 +72,14 @@ public contracts still receive explicit migration notes.
   stderr. JSON stdout is reserved for one buffered machine document.
 - Aligned the `rusqlite` manifest requirement with the already resolved 0.40
   lockfile dependency and its checked integer-conversion behavior.
+- Current run, report, and plan contracts are v5 and carry artifact-set identity
+  bindings. Readers distinguish committed, incomplete, and incompatible sets.
 
 ### Compatibility
 
 - Existing command names and the `--json` alias remain available.
 - Existing database migrations are unchanged.
-- Immutable `optiflow.run.v1`–`v3`, `optiflow.report.v1`–`v3`, and
-  `optiflow.plan.v1`–`v3` contracts are unchanged and remain reviewable.
+- Immutable `optiflow.run.v1`–`v4`, `optiflow.report.v1`–`v4`, and
+  `optiflow.plan.v1`–`v4` contracts are unchanged and remain reviewable without
+  artifact-set markers.
 - No source-file mutation or apply behavior was introduced.

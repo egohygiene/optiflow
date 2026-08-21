@@ -15,6 +15,7 @@ nav = [
   { "Architecture" = "architecture.md" },
   { "Core concepts" = [
     { "Safety model" = "safety-model.md" },
+    { "Artifact-set protocol" = "artifact-set-protocol.md" },
     { "State model" = "state-model.md" },
     { "Development model" = "development-model.md" },
   ] },

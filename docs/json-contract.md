@@ -13,9 +13,10 @@ The current artifact identifiers are:
 | Command result | `optiflow.command-result.v1` | `schemas/command-result.schema.json` |
 | Configuration | `optiflow.config.v1` | `schemas/config-v1.schema.json` |
 | Effective policy | `optiflow.effective-policy.v1` | `schemas/effective-policy-v1.schema.json` |
-| Run | `optiflow.run.v3` | `schemas/run.schema.json` |
-| Report | `optiflow.report.v3` | `schemas/report.schema.json` |
-| Plan | `optiflow.plan.v3` | `schemas/plan.schema.json` |
+| Artifact set | `optiflow.artifact-set.v1` | `schemas/artifact-set-v1.schema.json` |
+| Run | `optiflow.run.v5` | `schemas/run.schema.json` |
+| Report | `optiflow.report.v5` | `schemas/report.schema.json` |
+| Plan | `optiflow.plan.v5` | `schemas/plan.schema.json` |
 
 Within an artifact schema major version:
 
@@ -52,7 +53,13 @@ The renderer buffers the full document before writing it.
 Before this contract, `--json scan`, `report`, and `plan` wrote the domain value
 directly. They now wrap that value in `result`, with committed outputs listed in
 `artifacts`. This is a pre-1.0 machine-output compatibility change. Immutable
-`v1`, `v2`, and `v3` artifact schemas were not changed.
+`v1` through `v4` artifact schemas were not changed.
+
+New v5 run, report, and plan documents are accepted only with a matching
+`optiflow.artifact-set.v1` marker. The marker records member schemas, lossless
+relative paths, byte lengths, and BLAKE3-256 digests. See the
+[artifact-set commit protocol](artifact-set-protocol.md) for reader and
+recovery behavior.
 
 See [CLI Outcome Contract](cli-contract.md) for the exit-code matrix, typed
 diagnostics, partial-run semantics, stream ownership, and signal behavior.

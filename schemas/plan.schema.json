@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/egohygiene/optiflow/schemas/plan.schema.json",
-  "title": "optiflow plan v4",
+  "title": "optiflow plan v5",
   "type": "object",
   "required": [
     "schema_version",
     "plan_id",
     "source_run_id",
+    "source_artifact_set_id",
     "created_at",
     "mode",
     "safety",
@@ -15,7 +16,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "optiflow.plan.v4"
+      "const": "optiflow.plan.v5"
     },
     "plan_id": {
       "type": "string",
@@ -23,6 +24,10 @@
     },
     "source_run_id": {
       "type": "string",
+      "format": "uuid"
+    },
+    "source_artifact_set_id": {
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "created_at": {

@@ -85,6 +85,7 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
         schema_version: PLAN_SCHEMA_VERSION.to_owned(),
         plan_id: Uuid::now_v7().to_string(),
         source_run_id: report.run.run_id.clone(),
+        source_artifact_set_id: report.run.artifact_set_id.clone(),
         created_at: Utc::now().to_rfc3339(),
         mode: "exact_duplicates_review".to_owned(),
         safety: PlanSafety {
@@ -115,7 +116,9 @@ mod tests {
         FileObservation {
             observation_id: path.to_owned(),
             run_id: "run".to_owned(),
-            path: NativePath::Utf8 { value: path.to_owned() },
+            path: NativePath::Utf8 {
+                value: path.to_owned(),
+            },
             size_bytes: 100,
             modified_unix_ns: Some(1),
             device_id: None,
@@ -143,6 +146,7 @@ mod tests {
             run: ScanRun {
                 schema_version: "optiflow.run.v3".to_owned(),
                 run_id: "run".to_owned(),
+                artifact_set_id: None,
                 created_at: "now".to_owned(),
                 completed_at: "now".to_owned(),
                 inputs: Vec::new(),
@@ -197,12 +201,16 @@ mod tests {
                 },
                 members: vec![
                     DuplicateMember {
-                        path: NativePath::Utf8 { value: "/z".to_owned() },
+                        path: NativePath::Utf8 {
+                            value: "/z".to_owned(),
+                        },
                         observation_id: "/z".to_owned(),
                         alias_paths: Vec::new(),
                     },
                     DuplicateMember {
-                        path: NativePath::Utf8 { value: "/a".to_owned() },
+                        path: NativePath::Utf8 {
+                            value: "/a".to_owned(),
+                        },
                         observation_id: "/a".to_owned(),
                         alias_paths: Vec::new(),
                     },
@@ -219,11 +227,15 @@ mod tests {
         assert!(!plan.safety.mutates_files);
         assert_eq!(
             plan.actions[0].keep_path,
-            NativePath::Utf8 { value: "/a".to_owned() }
+            NativePath::Utf8 {
+                value: "/a".to_owned()
+            }
         );
         assert_eq!(
             plan.actions[0].candidate_paths,
-            vec![NativePath::Utf8 { value: "/z".to_owned() }]
+            vec![NativePath::Utf8 {
+                value: "/z".to_owned()
+            }]
         );
     }
 }

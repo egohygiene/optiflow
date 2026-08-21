@@ -65,7 +65,7 @@ fn one_valid_and_one_missing_input_is_partial_success() {
     assert_eq!(document["outcome"]["class"], "partial_success");
     assert_eq!(document["coverage"]["status"], "partial");
     assert_eq!(document["diagnostics"][0]["code"], "partial_inventory");
-    assert_eq!(document["artifacts"].as_array().map(Vec::len), Some(3));
+    assert_eq!(document["artifacts"].as_array().map(Vec::len), Some(4));
     assert!(stderr.is_empty());
 }
 
@@ -237,7 +237,85 @@ fn malformed_and_unsupported_report_files_are_distinct() {
 }
 
 #[test]
-fn historical_v1_and_v2_reports_remain_reviewable() {
+fn current_readers_distinguish_incompatible_artifact_sets() {
+    let workspace = tempdir().expect("workspace");
+    let input = workspace.path().join("media");
+    let state = workspace.path().join("state");
+    fs::create_dir_all(&input).expect("input");
+    fs::write(input.join("unique.bin"), b"unique").expect("fixture");
+
+    let mut scan = command(&state);
+    scan.args(["scan", "--no-probe", input.to_str().expect("input path")]);
+    let (_, document, _) = json_output(scan);
+    let run_id = document["result"]["run"]["run_id"]
+        .as_str()
+        .expect("run identifier");
+    fs::write(
+        state.join("runs").join(run_id).join("artifact-set.json"),
+        br#"{"schema":"optiflow.artifact-set.v99"}"#,
+    )
+    .expect("corrupt marker");
+
+    let mut report = command(&state);
+    report.args(["report", run_id]);
+    let (status, document, _) = json_output(report);
+
+    assert_eq!(status.code(), Some(5));
+    assert_eq!(
+        document["diagnostics"][0]["code"],
+        "artifact_set_incompatible"
+    );
+}
+
+#[test]
+fn committed_scan_set_recovers_a_running_database_row() {
+    let workspace = tempdir().expect("workspace");
+    let input = workspace.path().join("media");
+    let state = workspace.path().join("state");
+    fs::create_dir_all(&input).expect("input");
+    fs::write(input.join("unique.bin"), b"unique").expect("fixture");
+
+    let mut scan = command(&state);
+    scan.args(["scan", "--no-probe", input.to_str().expect("input path")]);
+    let (_, document, _) = json_output(scan);
+    let run_id = document["result"]["run"]["run_id"]
+        .as_str()
+        .expect("run identifier");
+
+    let connection = rusqlite::Connection::open(state.join("state.sqlite3")).expect("state DB");
+    connection
+        .execute("DELETE FROM observations WHERE run_id = ?1", [run_id])
+        .expect("remove promoted observations");
+    connection
+        .execute("DELETE FROM duplicate_groups WHERE run_id = ?1", [run_id])
+        .expect("remove promoted groups");
+    connection
+        .execute(
+            "UPDATE scan_runs SET status = 'running', completed_at = NULL, manifest_json = NULL, report_json = NULL WHERE run_id = ?1",
+            [run_id],
+        )
+        .expect("simulate crash before database finalization");
+    drop(connection);
+
+    let mut report = command(&state);
+    report.args(["report", run_id]);
+    let (status, document, _) = json_output(report);
+
+    assert_eq!(status.code(), Some(0));
+    assert_eq!(document["result"]["run"]["run_id"], run_id);
+    let connection = rusqlite::Connection::open(state.join("state.sqlite3")).expect("state DB");
+    let recovered: String = connection
+        .query_row(
+            "SELECT status FROM scan_runs WHERE run_id = ?1",
+            [run_id],
+            |row| row.get(0),
+        )
+        .expect("recovered status");
+    assert_eq!(recovered, "completed");
+}
+
+#[test]
+fn historical_v1_v2_and_v4_reports_remain_reviewable_without_markers() {
     let workspace = tempdir().expect("workspace");
     let input = workspace.path().join("media");
     let state = workspace.path().join("state");
@@ -250,10 +328,14 @@ fn historical_v1_and_v2_reports_remain_reviewable() {
     assert_eq!(scan_status.code(), Some(0));
     assert_eq!(current["result"]["summary"]["exact_duplicate_groups"], 0);
 
-    for version in [1, 2] {
+    for version in [1, 2, 4] {
         let mut historical = current["result"].clone();
         historical["schema_version"] = serde_json::json!(format!("optiflow.report.v{version}"));
         historical["run"]["schema_version"] = serde_json::json!(format!("optiflow.run.v{version}"));
+        historical["run"]
+            .as_object_mut()
+            .expect("run")
+            .remove("artifact_set_id");
         historical["summary"]
             .as_object_mut()
             .expect("summary")

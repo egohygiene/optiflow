@@ -6,6 +6,8 @@ use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use rusqlite::{Connection, OptionalExtension, params};
 
+use crate::artifact_set::{self, ArtifactSetStatus};
+use crate::contracts::{self, Contract};
 use crate::domain::{
     CacheStatus, CachedAnalysis, DuplicateGroup, FileObservation, MediaDescriptor, MediaKind,
     NativePath, ObservationStatus, ScanReport, ScanRun,
@@ -46,11 +48,15 @@ impl StateStore {
         // Apply migration 0004 exactly once.
         apply_migration_0004(&mut connection).context("failed to apply migration 0004")?;
 
-        Ok(Self {
+        let mut store = Self {
             connection,
             state_directory: state_directory.to_path_buf(),
             database_path,
-        })
+        };
+        store
+            .recover_scan_artifact_sets()
+            .context("failed to recover committed scan artifact sets")?;
+        Ok(store)
     }
 
     pub fn begin_scan(&self, run_id: &str, created_at: &str) -> Result<()> {
@@ -91,6 +97,19 @@ impl StateStore {
         let manifest_json = serde_json::to_string(run)?;
         let report_json = serde_json::to_string(report)?;
         let transaction = self.connection.transaction()?;
+        let status = transaction
+            .query_row(
+                "SELECT status FROM scan_runs WHERE run_id = ?1",
+                [&run.run_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+        match status.as_deref() {
+            Some("completed") => return Ok(()),
+            Some("running") => {}
+            Some(other) => bail!("scan run cannot be finalized from status {other}"),
+            None => bail!("scan run was not registered before finalization"),
+        }
 
         for observation in observations {
             let (
@@ -137,13 +156,67 @@ impl StateStore {
             )?;
         }
 
-        transaction.execute(
+        let updated = transaction.execute(
             "UPDATE scan_runs
              SET completed_at = ?2, status = 'completed', manifest_json = ?3, report_json = ?4
-             WHERE run_id = ?1",
+             WHERE run_id = ?1 AND status = 'running'",
             params![run.run_id, run.completed_at, manifest_json, report_json],
         )?;
+        if updated != 1 {
+            bail!("scan run status changed during finalization");
+        }
         transaction.commit()?;
+        Ok(())
+    }
+
+    fn recover_scan_artifact_sets(&mut self) -> Result<()> {
+        let runs_directory = self.state_directory.join("runs");
+        artifact_set::recover_scan_staging(&runs_directory)?;
+        if !runs_directory.exists() {
+            return Ok(());
+        }
+
+        for entry in fs::read_dir(&runs_directory)? {
+            let entry = entry?;
+            if !entry.file_type()?.is_dir() {
+                continue;
+            }
+            let Some(run_id) = entry.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+            if self.load_run_status(&run_id)?.as_deref() != Some("running") {
+                continue;
+            }
+            let directory = entry.path();
+            let inspection = artifact_set::inspect_scan_set(&directory);
+            if inspection.status != ArtifactSetStatus::Committed {
+                continue;
+            }
+            let Some(manifest) = inspection.manifest else {
+                continue;
+            };
+            if run_id != manifest.run_id {
+                continue;
+            }
+
+            let run: ScanRun = serde_json::from_slice(&fs::read(directory.join("run.json"))?)
+                .context("committed run artifact is incompatible")?;
+            let report: ScanReport =
+                serde_json::from_slice(&fs::read(directory.join("report.json"))?)
+                    .context("committed report artifact is incompatible")?;
+            contracts::validate(Contract::Run, &run)?;
+            contracts::validate(Contract::Report, &report)?;
+            if run.run_id != manifest.run_id
+                || report.run.run_id != manifest.run_id
+                || run.artifact_set_id.as_deref() != Some(manifest.set_id.as_str())
+                || report.run.artifact_set_id.as_deref() != Some(manifest.set_id.as_str())
+            {
+                bail!("committed artifact-set identities do not agree");
+            }
+            let observations = report.observations.clone();
+            let groups = report.duplicate_groups.clone();
+            self.finalize_scan(&run, &report, &observations, &groups)?;
+        }
         Ok(())
     }
 
@@ -533,10 +606,7 @@ mod tests {
         // Pre-inject the column that migration 0004 adds so it fails with a
         // duplicate-column error.
         connection
-            .execute(
-                "ALTER TABLE observations ADD COLUMN path_encoding TEXT",
-                [],
-            )
+            .execute("ALTER TABLE observations ADD COLUMN path_encoding TEXT", [])
             .expect("inject conflicting column");
 
         assert!(apply_migration_0004(&mut connection).is_err());
