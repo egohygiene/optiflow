@@ -6,6 +6,7 @@
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
+use std::fs::File;
 use std::io::{self, Read};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Condvar, Mutex};
@@ -402,9 +403,41 @@ impl SubprocessRunner {
         })
     }
 
+    /// Run a JSON-producing command with stdin connected directly to a clone
+    /// of an already-opened file handle.
+    ///
+    /// This allows media adapters to inspect the same filesystem object that
+    /// the caller validated instead of reopening a mutable pathname.
+    pub fn run_json_with_file_stdin<T>(
+        &self,
+        command: &SubprocessCommand,
+        file: &File,
+    ) -> Result<T, SubprocessError>
+    where
+        T: DeserializeOwned,
+    {
+        let output = self.run_with_cancel_and_file(command, Some(file), || false)?;
+        serde_json::from_slice(&output.stdout).map_err(|error| SubprocessError::Parse {
+            program: command.display_program(),
+            message: error.to_string(),
+        })
+    }
+
     pub fn run_with_cancel<F>(
         &self,
         command: &SubprocessCommand,
+        is_cancelled: F,
+    ) -> Result<SubprocessOutput, SubprocessError>
+    where
+        F: Fn() -> bool,
+    {
+        self.run_with_cancel_and_file(command, None, is_cancelled)
+    }
+
+    fn run_with_cancel_and_file<F>(
+        &self,
+        command: &SubprocessCommand,
+        stdin_file: Option<&File>,
         is_cancelled: F,
     ) -> Result<SubprocessOutput, SubprocessError>
     where
@@ -425,9 +458,19 @@ impl SubprocessRunner {
             return Err(SubprocessError::Cancelled { program });
         }
 
+        let stdin = match stdin_file {
+            Some(file) => {
+                Stdio::from(file.try_clone().map_err(|error| SubprocessError::Spawn {
+                    program: program.clone(),
+                    message: format!("failed to clone opened input handle: {error}"),
+                })?)
+            }
+            None => Stdio::null(),
+        };
+
         let mut child = Command::new(command.program())
             .args(command.arguments())
-            .stdin(Stdio::null())
+            .stdin(stdin)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -621,6 +664,21 @@ mod tests {
             .run_json::<Value>(&shell("printf not-json"))
             .unwrap_err();
         assert!(matches!(error, SubprocessError::Parse { .. }));
+    }
+
+    #[test]
+    fn connects_an_opened_file_to_child_stdin() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("input.txt");
+        std::fs::write(&path, b"handle-bound").unwrap();
+        let file = File::open(&path).unwrap();
+        let runner = SubprocessRunner::new(test_limits()).unwrap();
+
+        let output = runner
+            .run_with_cancel_and_file(&shell("cat"), Some(&file), || false)
+            .unwrap();
+
+        assert_eq!(output.stdout, b"handle-bound");
     }
 
     #[test]

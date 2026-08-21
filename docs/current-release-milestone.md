@@ -30,6 +30,9 @@ These two issues can proceed in parallel because their core contracts are indepe
 
 Bind evidence to the same opened handle/equivalent platform primitive and reject races where guarantees cannot be established.
 
+**Implementation status:** complete on the working hardening branch; pending
+review and merge.
+
 ### #24 — artifact-set commit protocol
 
 Publish run/report/plan related outputs as one coherent set with staging, commit markers, recovery semantics, and explicit durability boundaries.
@@ -73,7 +76,7 @@ flowchart LR
 ## Milestone exit checklist
 
 - [ ] Native paths round-trip losslessly through every supported artifact/state boundary.
-- [ ] Observation evidence cannot silently combine incompatible file states.
+- [x] Observation evidence cannot silently combine incompatible file states.
 - [ ] External tools cannot produce unbounded output or hang the process indefinitely.
 - [x] Related artifacts are distinguishable as committed, incomplete, or incompatible sets.
 - [ ] Adversarial/fault tests exercise the combined invariants.

@@ -12,6 +12,7 @@ use crate::domain::{
     CacheStatus, CachedAnalysis, DuplicateGroup, FileObservation, MediaDescriptor, MediaKind,
     NativePath, ObservationStatus, ScanReport, ScanRun,
 };
+use crate::filesystem::identity::FileStateSignature;
 
 pub struct StateStore {
     connection: Connection,
@@ -47,6 +48,9 @@ impl StateStore {
 
         // Apply migration 0004 exactly once.
         apply_migration_0004(&mut connection).context("failed to apply migration 0004")?;
+
+        // Apply migration 0005 exactly once.
+        apply_migration_0005(&mut connection).context("failed to apply migration 0005")?;
 
         let mut store = Self {
             connection,
@@ -223,12 +227,12 @@ impl StateStore {
     pub fn lookup_cache(
         &self,
         path: &Path,
-        size_bytes: u64,
-        modified_unix_ns: Option<i64>,
+        signature: &FileStateSignature,
         required_probe_signature: Option<&str>,
     ) -> Result<Option<CachedAnalysis>> {
         let path_key = NativePath::from_path(path);
         let path_key = path_key.sqlite_key();
+        let identity = signature.identity.as_ref();
         let row = self
             .connection
             .query_row(
@@ -236,11 +240,18 @@ impl StateStore {
                         probe_signature, status_json, warnings_json
                  FROM file_cache
                  WHERE path = ?1 AND size_bytes = ?2 AND modified_unix_ns IS ?3
-                   AND (?4 IS NULL OR probe_signature = ?4)",
+                   AND filesystem_id IS ?4 AND file_id IS ?5
+                   AND changed_unix_ns IS ?6
+                   AND filesystem_id IS NOT NULL AND file_id IS NOT NULL
+                   AND changed_unix_ns IS NOT NULL
+                   AND (?7 IS NULL OR probe_signature = ?7)",
                 params![
                     path_key.as_ref(),
-                    to_database_integer(size_bytes, "file size")?,
-                    modified_unix_ns,
+                    to_database_integer(signature.logical_size_bytes, "file size")?,
+                    signature.modified_unix_ns,
+                    identity.map(|identity| identity.filesystem_id.as_str()),
+                    identity.map(|identity| identity.file_id.as_str()),
+                    signature.changed_unix_ns,
                     required_probe_signature,
                 ],
                 |row| {
@@ -283,15 +294,20 @@ impl StateStore {
     pub fn upsert_cache(
         &self,
         path: &Path,
-        size_bytes: u64,
-        modified_unix_ns: Option<i64>,
+        signature: &FileStateSignature,
         analysis: &CachedAnalysis,
     ) -> Result<()> {
+        let (Some(identity), Some(changed_unix_ns)) =
+            (signature.identity.as_ref(), signature.changed_unix_ns)
+        else {
+            return Ok(());
+        };
         self.connection.execute(
             "INSERT INTO file_cache (
                 path, size_bytes, modified_unix_ns, content_type, media_kind_json,
-                content_hash, media_json, probe_signature, status_json, warnings_json, analyzed_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                content_hash, media_json, probe_signature, status_json, warnings_json, analyzed_at,
+                filesystem_id, file_id, changed_unix_ns
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
              ON CONFLICT(path) DO UPDATE SET
                 size_bytes = excluded.size_bytes,
                 modified_unix_ns = excluded.modified_unix_ns,
@@ -302,11 +318,14 @@ impl StateStore {
                 probe_signature = excluded.probe_signature,
                 status_json = excluded.status_json,
                 warnings_json = excluded.warnings_json,
-                analyzed_at = excluded.analyzed_at",
+                analyzed_at = excluded.analyzed_at,
+                filesystem_id = excluded.filesystem_id,
+                file_id = excluded.file_id,
+                changed_unix_ns = excluded.changed_unix_ns",
             params![
                 NativePath::from_path(path).sqlite_key().as_ref(),
-                to_database_integer(size_bytes, "file size")?,
-                modified_unix_ns,
+                to_database_integer(signature.logical_size_bytes, "file size")?,
+                signature.modified_unix_ns,
                 analysis.content_type,
                 serde_json::to_string(&analysis.media_kind)?,
                 analysis.content_hash,
@@ -319,6 +338,9 @@ impl StateStore {
                 serde_json::to_string(&analysis.status)?,
                 serde_json::to_string(&analysis.warnings)?,
                 Utc::now().to_rfc3339(),
+                identity.filesystem_id,
+                identity.file_id,
+                changed_unix_ns,
             ],
         )?;
         Ok(())
@@ -511,6 +533,47 @@ fn apply_migration_0004(connection: &mut Connection) -> Result<()> {
     Ok(())
 }
 
+/// Apply migration 0005 exactly once (handle-bound cache signatures).
+fn apply_migration_0005(connection: &mut Connection) -> Result<()> {
+    let already_applied: bool = connection
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 5",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .context("failed to check schema_migrations for migration 0005")?
+        > 0;
+
+    if already_applied {
+        return Ok(());
+    }
+
+    let transaction = connection
+        .transaction()
+        .context("failed to begin migration 0005 transaction")?;
+    transaction
+        .execute_batch(include_str!("../migrations/0005_handle_bound_cache.sql"))
+        .context("failed to execute migration 0005 SQL")?;
+
+    let recorded: bool = transaction
+        .query_row(
+            "SELECT COUNT(*) FROM schema_migrations WHERE version = 5",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .context("failed to verify migration 0005 was recorded")?
+        > 0;
+
+    if !recorded {
+        bail!("migration 0005 executed but was not recorded in schema_migrations");
+    }
+
+    transaction
+        .commit()
+        .context("failed to commit migration 0005 transaction")?;
+    Ok(())
+}
+
 /// Extract structured identity/allocation columns from an observation.
 ///
 /// Returns `(filesystem_id, file_id, reported_link_count, allocated_size_bytes,
@@ -611,6 +674,75 @@ mod tests {
 
         assert!(apply_migration_0004(&mut connection).is_err());
         assert_eq!(migration_count(&connection, 4), 0);
+    }
+
+    #[test]
+    fn migration_0005_rolls_back_its_version_marker_on_failure() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        connection
+            .execute_batch(include_str!("../migrations/0001_initial.sql"))
+            .expect("initial schema");
+        connection
+            .execute("ALTER TABLE file_cache ADD COLUMN filesystem_id TEXT", [])
+            .expect("inject conflicting column");
+
+        assert!(apply_migration_0005(&mut connection).is_err());
+        assert_eq!(migration_count(&connection, 5), 0);
+    }
+
+    #[test]
+    fn cache_reuse_requires_the_complete_handle_signature() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("observed.bin");
+        fs::write(&path, b"stable cache bytes").expect("cache fixture");
+        let metadata = fs::symlink_metadata(&path).expect("fixture metadata");
+        let signature = FileStateSignature::from_symlink_metadata(&metadata);
+        let store = StateStore::open(&directory.path().join("state")).expect("state store");
+        let analysis = CachedAnalysis {
+            content_type: Some("application/octet-stream".to_owned()),
+            media_kind: MediaKind::Other,
+            content_hash: None,
+            media: None,
+            probe_signature: None,
+            status: ObservationStatus::Unsupported,
+            warnings: Vec::new(),
+            observation_stability: crate::domain::ObservationStability::Stable,
+            evidence_validity: crate::domain::EvidenceValidity::Current,
+            attempt_count: 1,
+        };
+
+        store
+            .upsert_cache(&path, &signature, &analysis)
+            .expect("cache insert");
+        assert!(
+            store
+                .lookup_cache(&path, &signature, None)
+                .expect("cache lookup")
+                .is_some()
+        );
+
+        let mut changed = signature.clone();
+        changed.changed_unix_ns = changed.changed_unix_ns.map(|value| value.saturating_add(1));
+        assert!(
+            store
+                .lookup_cache(&path, &changed, None)
+                .expect("changed-signature lookup")
+                .is_none()
+        );
+
+        store
+            .connection
+            .execute(
+                "UPDATE file_cache SET filesystem_id = NULL, file_id = NULL, changed_unix_ns = NULL",
+                [],
+            )
+            .expect("simulate a pre-migration cache row");
+        assert!(
+            store
+                .lookup_cache(&path, &signature, None)
+                .expect("legacy-row lookup")
+                .is_none()
+        );
     }
 
     fn migration_count(connection: &Connection, version: i64) -> i64 {

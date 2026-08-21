@@ -16,6 +16,7 @@ nav = [
   { "Core concepts" = [
     { "Safety model" = "safety-model.md" },
     { "Artifact-set protocol" = "artifact-set-protocol.md" },
+    { "Observation protocol" = "observation-protocol.md" },
     { "State model" = "state-model.md" },
     { "Development model" = "development-model.md" },
   ] },

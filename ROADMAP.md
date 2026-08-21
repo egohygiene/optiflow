@@ -314,6 +314,8 @@ enough to install before mutation is introduced.
 - [x] Refuse to claim exact reclaimable physical bytes when the filesystem does
   not expose enough information.
 - [x] Detect files that change during hashing and mark their evidence stale.
+- [x] Bind content, identity, allocation, and optional probe evidence to one
+  opened handle with bounded whole-attempt retries.
 - [ ] Define duplicate path normalization for case-insensitive filesystems,
   relative paths, Unicode, and repeated inputs.
 - [ ] Add structured warnings for unsupported filesystem metadata.

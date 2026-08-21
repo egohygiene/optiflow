@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::path::Path;
 use std::sync::OnceLock;
 
@@ -53,8 +54,48 @@ pub fn inspect(path: &Path) -> Result<MediaDescriptor> {
         .run_json(&command)
         .with_context(|| format!("ffprobe inspection failed for {}", path.display()))?;
 
+    Ok(descriptor_from_probe(parsed))
+}
+
+/// Inspect the exact object represented by an opened file handle.
+///
+/// Linux and macOS expose child stdin as `/dev/fd/0`. The subprocess runner
+/// attaches a cloned handle directly, so `ffprobe` never resolves the original
+/// mutable pathname.
+#[cfg(unix)]
+pub fn inspect_file(file: &File, display_path: &Path) -> Result<MediaDescriptor> {
+    let command = SubprocessCommand::new("ffprobe").args([
+        "-v",
+        "error",
+        "-show_entries",
+        "format=format_name,duration,bit_rate:stream=index,codec_type,codec_name,width,height,sample_rate,channels",
+        "-of",
+        "json",
+        "/dev/fd/0",
+    ]);
+    let parsed: ProbeOutput = runner()
+        .run_json_with_file_stdin(&command, file)
+        .with_context(|| {
+            format!(
+                "ffprobe handle inspection failed for {}",
+                display_path.display()
+            )
+        })?;
+
+    Ok(descriptor_from_probe(parsed))
+}
+
+#[cfg(not(unix))]
+pub fn inspect_file(_file: &File, display_path: &Path) -> Result<MediaDescriptor> {
+    anyhow::bail!(
+        "ffprobe handle inspection is unavailable for {} on this platform",
+        display_path.display()
+    )
+}
+
+fn descriptor_from_probe(parsed: ProbeOutput) -> MediaDescriptor {
     let format = parsed.format;
-    Ok(MediaDescriptor {
+    MediaDescriptor {
         format_name: format.as_ref().and_then(|value| value.format_name.clone()),
         duration_seconds: format
             .as_ref()
@@ -77,7 +118,7 @@ pub fn inspect(path: &Path) -> Result<MediaDescriptor> {
                 channels: stream.channels,
             })
             .collect(),
-    })
+    }
 }
 
 pub fn status(name: &str, required_for: &str) -> ToolStatus {

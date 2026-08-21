@@ -26,13 +26,26 @@ impl FileStateSignature {
     /// `symlink_metadata` (i.e., without following the link).
     #[cfg(unix)]
     pub fn from_symlink_metadata(metadata: &std::fs::Metadata) -> Self {
+        Self::from_metadata_inner(metadata, metadata.file_type().is_symlink())
+    }
+
+    /// Capture a signature from metadata obtained from an opened file handle.
+    /// Unlike path metadata, this remains bound to the opened filesystem object
+    /// even if its directory entry is renamed or replaced.
+    #[cfg(unix)]
+    pub fn from_file_metadata(metadata: &std::fs::Metadata) -> Self {
+        Self::from_metadata_inner(metadata, false)
+    }
+
+    #[cfg(unix)]
+    fn from_metadata_inner(metadata: &std::fs::Metadata, is_symlink: bool) -> Self {
         use std::os::unix::fs::MetadataExt;
         let platform = if cfg!(target_os = "macos") {
             "macos"
         } else {
             "linux"
         };
-        let identity = if !metadata.file_type().is_symlink() {
+        let identity = if !is_symlink {
             Some(FilesystemIdentity {
                 platform: platform.to_owned(),
                 filesystem_id: metadata.dev().to_string(),
@@ -57,7 +70,7 @@ impl FileStateSignature {
 
         Self {
             identity,
-            is_symlink: metadata.file_type().is_symlink(),
+            is_symlink,
             logical_size_bytes: metadata.len(),
             modified_unix_ns,
             changed_unix_ns,
@@ -72,6 +85,21 @@ impl FileStateSignature {
             is_symlink: metadata.file_type().is_symlink(),
             logical_size_bytes: metadata.len(),
             modified_unix_ns: None,
+            changed_unix_ns: None,
+        }
+    }
+
+    #[cfg(not(unix))]
+    pub fn from_file_metadata(metadata: &std::fs::Metadata) -> Self {
+        Self {
+            identity: None,
+            is_symlink: false,
+            logical_size_bytes: metadata.len(),
+            modified_unix_ns: metadata
+                .modified()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .and_then(|duration| i64::try_from(duration.as_nanos()).ok()),
             changed_unix_ns: None,
         }
     }

@@ -21,6 +21,8 @@ paths are preferred where they do not weaken the filesystem model.
 - Content classification is independent of filename extension.
 - Optional media probing uses structured `ffprobe` JSON.
 - Repeated scans reuse unchanged path analysis from SQLite.
+- Accepted evidence is derived through one opened handle and rejected when the
+  path or handle changes during observation.
 - Exact candidates are narrowed by byte length.
 - Complete candidate identity uses BLAKE3-256.
 - Reports include exact groups and reclaimable bytes.
@@ -58,6 +60,8 @@ paths are preferred where they do not weaken the filesystem model.
 - A plan contains size, modification-time, and complete-hash preconditions for
   every group member.
 - A second unchanged scan reports cache hits.
+- Rename replacement, truncation, growth, and metadata races cannot produce
+  current exact-duplicate evidence.
 - Missing `ffprobe` does not prevent hashing or duplicate reporting.
 - Inaccessible files are reported rather than silently treated as duplicates.
 - Current readers distinguish committed, incomplete, and incompatible artifact

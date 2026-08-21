@@ -166,6 +166,8 @@ requires optiflow to:
 See [Safety Model](docs/safety-model.md) for the complete invariant set.
 The [artifact-set commit protocol](docs/artifact-set-protocol.md) defines
 coherent scan/plan publication, marker validation, and crash recovery.
+The [handle-bound observation protocol](docs/observation-protocol.md) documents
+how OptiFlow rejects replacement and in-read races without mixing evidence.
 
 ## Ecosystem integration
 
@@ -224,6 +226,7 @@ schemas, repository intelligence, and release guidance.
 - [MVP specification](docs/mvp-spec.md)
 - [Safety model](docs/safety-model.md)
 - [Artifact-set commit protocol](docs/artifact-set-protocol.md)
+- [Handle-bound observation protocol](docs/observation-protocol.md)
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
 - [CLI outcome contract](docs/cli-contract.md)

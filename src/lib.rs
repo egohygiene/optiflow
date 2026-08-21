@@ -12,6 +12,7 @@ pub mod duplicates;
 pub mod filesystem;
 pub mod hashing;
 pub mod inventory;
+pub mod observation;
 pub mod outcome;
 pub mod planning;
 pub mod render;
