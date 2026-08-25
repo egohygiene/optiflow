@@ -8,7 +8,7 @@ status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-24
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,156 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+<!-- BEGIN ROADMAP EXECUTION SNAPSHOT -->
+<!-- roadmap-manifest
+schema: hygiene.roadmap/v1alpha1
+repository: egohygiene/optiflow
+visibility: public
+publication: composed
+route: /roadmap/
+updated: 2026-08-24
+-->
+## 2026-08-24 execution snapshot
+
+> This evidence-reconciled snapshot is the issue-generation and visual-roadmap handoff. The longer-horizon strategy below remains canonical context; generated HTML, JSON, progress, issue plans, and commit lists are projections.
+
+**Lifecycle:** read-only v0.1 alpha  
+**Current gate:** Resolve remaining v0.1 contradictions, complete adversarial testing, and publish a signed release.  
+**North-star outcome:** A trustworthy optimization protocol that begins read-only, binds observations to native handles, and advances to reviewed transactions.
+
+### Visual roadmap publication
+
+**Mode:** `composed`  
+**Route:** `/roadmap/`  
+**Current publication evidence:** Green documentation and site publication with a custom-domain target; metadata still uses HTTP and no GitHub release was observed.
+
+Compose dist/roadmap/ into the repository's existing final site artifact at /roadmap/. The current Pages workflow remains the only deployer.
+
+### Quest line
+
+<!-- roadmap-step
+id: OPT-Q01
+status: complete
+depends_on: []
+issues: []
+-->
+#### OPT-Q01 — Complete the read-only protocol
+
+**State:** `complete`  
+**Depends on:** None
+
+**Outcome:** NativePath, handle-bound observations, and artifact-set protocol provide a strong read-only alpha.
+
+**Exit criteria:**
+
+- [x] Observation identity remains bound to native handles.
+- [x] Artifact sets validate deterministically in CI.
+
+**Current evidence:**
+
+- PR #38 merged at 64c7b3f5fc46c0437b83e66be14d0b74ed179079.
+- PR #39 merged at 908cc2d3cc25a9a1d928335b6520c92b33d1c061 on 2026-08-21; CI, docs, and site were green.
+
+<!-- roadmap-step
+id: OPT-Q02
+status: active
+depends_on: [OPT-Q01]
+issues: [26, 28]
+-->
+#### OPT-Q02 — Close v0.1 contradictions and adversarial gaps
+
+**State:** `active`  
+**Depends on:** `OPT-Q01`
+
+**Outcome:** The read-only alpha withstands adversarial inputs and documentation matches deployed behavior.
+
+**Exit criteria:**
+
+- [ ] Issue #26 closes with adversarial fixtures.
+- [ ] Issue #28 records the live deployment and all canonical metadata uses HTTPS.
+
+**Current evidence:**
+
+- Issues #26 and #28 opened on 2026-08-19.
+- Pages works, but metadata still uses HTTP and #28 is partly stale.
+
+<!-- roadmap-step
+id: OPT-Q03
+status: planned
+depends_on: [OPT-Q02]
+issues: [27]
+-->
+#### OPT-Q03 — Publish a signed v0.1 release
+
+**State:** `planned`  
+**Depends on:** `OPT-Q02`
+
+**Outcome:** Issue #27 provides immutable, verifiable release artifacts for the read-only protocol.
+
+**Exit criteria:**
+
+- [ ] Artifacts are signed or attested with documented verification.
+- [ ] A tagged release passes clean-room installation and protocol fixtures.
+
+**Current evidence:**
+
+- Issue #27 tracks signed releases.
+- No GitHub release was observed.
+
+<!-- roadmap-step
+id: OPT-Q04
+status: planned
+depends_on: [OPT-Q03]
+issues: [29]
+-->
+#### OPT-Q04 — Add CLI, performance, and media profiles
+
+**State:** `planned`  
+**Depends on:** `OPT-Q03`
+
+**Outcome:** Issue #29 and representative profiles make the protocol usable and measurable without weakening safety.
+
+**Exit criteria:**
+
+- [ ] CLI behavior and performance budgets are tested.
+- [ ] Media profiles retain read-only evidence and stable artifact identity.
+
+**Current evidence:**
+
+- Issue #29 tracks CLI and performance work.
+
+<!-- roadmap-step
+id: OPT-Q05
+status: planned
+depends_on: [OPT-Q03, OPT-Q04]
+issues: []
+-->
+#### OPT-Q05 — Introduce reviewed transactions and stabilize
+
+**State:** `planned`  
+**Depends on:** `OPT-Q03`, `OPT-Q04`
+
+**Outcome:** A v0.2 transactional protocol advances through beta to v1 only with preview, approval, and rollback guarantees.
+
+**Exit criteria:**
+
+- [ ] Every mutation is previewable, attributable, and reversible.
+- [ ] Compatibility, migration, and failure recovery are proven before v1.
+
+**Current evidence:**
+
+- Transactional v0.2 and stable beta/v1 remain roadmap work.
+
+### Roadmap-to-issue handoff
+
+- A step is complete only when its exit criteria and required evidence are satisfied; commit count never determines progress.
+- Ready steps without an issue are candidates for the private, duplicate-aware roadmap.issue-plan.json dry run. Planned steps remain preview-only unless a reviewer explicitly opts them in with issue_policy: propose.
+- Issue creation or reconciliation requires human approval or an explicitly authorized Pace operation and returns issue references through a reviewable roadmap pull request.
+- Pull requests and commits should include Roadmap-Step: <ID>; historical evidence may be linked through existing issue and pull-request relationships.
+- Public rendering uses only allowlisted build-time evidence and never places a GitHub token or private issue plan in the browser artifact.
+
+<!-- END ROADMAP EXECUTION SNAPSHOT -->
 
 > Observe first. Prove relationships. Plan explicitly. Mutate transactionally.
 
