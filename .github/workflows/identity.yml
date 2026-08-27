@@ -1,0 +1,66 @@
+---
+name: Validate Identity v1 consumer
+
+on:
+  pull_request:
+    paths:
+      - ".config/identity/**"
+      - ".gitmodules"
+      - ".identity/**"
+      - ".github/workflows/identity.yml"
+      - "Taskfile.yml"
+      - "docs/IDENTITY.md"
+      - "identity"
+      - "identity/**"
+      - "tests/identity_integration.py"
+  push:
+    branches: [main]
+    paths:
+      - ".config/identity/**"
+      - ".gitmodules"
+      - ".identity/**"
+      - ".github/workflows/identity.yml"
+      - "Taskfile.yml"
+      - "docs/IDENTITY.md"
+      - "identity"
+      - "identity/**"
+      - "tests/identity_integration.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate immutable source and generated package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository and pinned Identity source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+      - name: Verify immutable gitlink and lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(python3 -c 'import json; print(json.load(open(".config/identity/consumer-lock.json", encoding="utf-8"))["revision"])')"
+          test "$(git ls-tree HEAD identity | awk '{print $3}')" = "${expected}"
+          test "$(git -C identity rev-parse HEAD)" = "${expected}"
+      - name: Validate v1 source contract
+        run: python3 identity/scripts/validate_identity.py --repository-root . --format json
+      - name: Generate and verify selected immutable package
+        run: |
+          set -euo pipefail
+          cargo run --quiet --manifest-path identity/Cargo.toml -- v1-generate --repository-root .
+          cargo run --quiet --manifest-path identity/Cargo.toml -- v1-verify --repository-root .
+          python3 -m unittest tests.identity_integration --verbose
+      - name: Upload generated Identity package evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: optiflow-identity-v1-${{ github.sha }}
+          path: assets/identity/
+          if-no-files-found: error
+          retention-days: 30

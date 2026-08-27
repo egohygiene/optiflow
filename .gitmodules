@@ -1,0 +1,3 @@
+[submodule "identity"]
+	path = identity
+	url = https://github.com/egohygiene/identity.git

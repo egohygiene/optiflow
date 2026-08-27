@@ -1,0 +1,24 @@
+{
+  "$schema": "https://egohygiene.github.io/identity/contracts/v1/project.schema.json",
+  "schema": "identity.project/v1",
+  "project": {
+    "id": "optiflow",
+    "displayName": "OptiFlow",
+    "repository": "https://github.com/egohygiene/optiflow",
+    "tagline": "A local-first review tool for exact duplicate-media evidence.",
+    "kind": "product"
+  },
+  "layers": [
+    { "id": "egohygiene-organization", "kind": "organization-defaults", "priority": 0, "tokens": ".identity/defaults/organization.tokens.json", "sha256": "6098e60eaab67887c597327e55da646685443eeddc1e27188beab4a1311e36aa" },
+    { "id": "optiflow-product", "kind": "product-override", "priority": 10, "tokens": ".identity/overrides/product.tokens.json", "sha256": "0d42948d8ff58f92cdd0b49c983c2cf268ef61fb05c9b0da3d80b088abce8ed0" }
+  ],
+  "documents": {
+    "brief": ".identity/brief.md",
+    "targets": ".identity/targets/profiles.json",
+    "provenance": ".identity/governance/provenance.json",
+    "approvals": ".identity/governance/approvals.json",
+    "guidance": { "voice": ".identity/guidance/voice.json", "usage": ".identity/guidance/usage.json" }
+  },
+  "directories": { "sources": ".identity/sources", "candidates": ".identity/candidates", "references": ".identity/references" },
+  "compatibility": { "acceptedSchemaMajor": 1, "migrationFrom": [] }
+}

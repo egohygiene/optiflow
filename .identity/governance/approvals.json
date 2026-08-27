@@ -1,0 +1,10 @@
+{
+  "$schema": "https://egohygiene.github.io/identity/contracts/v1/approvals.schema.json",
+  "schema": "identity.approvals/v1",
+  "decisions": [
+    { "id": "approve-optiflow-mark", "subject": "mark", "candidate": ".identity/sources/mark.svg", "status": "approved", "reviewedBy": "Ego Hygiene maintainers", "reviewedAt": "2026-08-27T12:10:00Z", "evidence": "https://github.com/egohygiene/identity/issues/17", "supersedes": null, "notes": "Approved canonical OptiFlow evidence mark." },
+    { "id": "approve-optiflow-primary", "subject": "token:color.brand.primary", "candidate": "token:color.brand.primary@optiflow-product", "status": "approved", "reviewedBy": "Ego Hygiene maintainers", "reviewedAt": "2026-08-27T12:11:00Z", "evidence": "https://github.com/egohygiene/identity/issues/17", "supersedes": null, "notes": "Approved technical cyan distinction." },
+    { "id": "approve-optiflow-voice", "subject": "voice:optiflow", "candidate": "guidance:optiflow-voice/v1", "status": "approved", "reviewedBy": "Ego Hygiene maintainers", "reviewedAt": "2026-08-27T12:12:00Z", "evidence": "https://github.com/egohygiene/identity/issues/17", "supersedes": null, "notes": "Approved structured OptiFlow voice." },
+    { "id": "approve-optiflow-usage", "subject": "usage:optiflow", "candidate": "guidance:optiflow-usage/v1", "status": "approved", "reviewedBy": "Ego Hygiene maintainers", "reviewedAt": "2026-08-27T12:13:00Z", "evidence": "https://github.com/egohygiene/identity/issues/17", "supersedes": null, "notes": "Approved evidence-oriented usage guidance." }
+  ]
+}
