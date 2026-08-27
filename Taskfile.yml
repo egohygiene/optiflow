@@ -55,6 +55,21 @@ tasks:
           jq empty "$schema"
         done
 
+  identity:v1:check:
+    desc: Validate OptiFlow's pinned Identity v1 source contract.
+    cmds:
+      - python3 identity/scripts/validate_identity.py --repository-root . --format json
+
+  identity:v1:generate:
+    desc: Generate OptiFlow's selected Identity v1 package from reviewed source.
+    cmds:
+      - cargo run --quiet --manifest-path identity/Cargo.toml -- v1-generate --repository-root .
+
+  identity:v1:verify:
+    desc: Verify OptiFlow's selected Identity v1 package has no missing or drifted files.
+    cmds:
+      - cargo run --quiet --manifest-path identity/Cargo.toml -- v1-verify --repository-root .
+
   docs:sync:
     desc: Synchronize the pinned documentation environment.
     cmds:

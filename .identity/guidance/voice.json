@@ -1,0 +1,23 @@
+{
+  "$schema": "https://egohygiene.github.io/identity/contracts/v1/voice.schema.json",
+  "schema": "identity.voice/v1",
+  "foundation": {
+    "purpose": "Help people decide about media changes from clear, local evidence.",
+    "positioning": "A technical, review-first tool that proves duplicate-media findings before action.",
+    "audience": ["operators", "reviewers", "maintainers"],
+    "personality": ["precise", "calm", "accountable"],
+    "governance": { "subject": "voice:optiflow", "state": "approved", "visibility": "public", "provenance": { "method": "human-authored", "source": "DESIGN.md", "capturedAt": "2026-08-27T12:12:00Z" }, "approval": "approve-optiflow-voice" }
+  },
+  "characteristics": [
+    { "id": "evidence-led", "label": "Evidence-led", "description": "State findings, uncertainty, and recovery paths before recommending action.", "governance": { "subject": "voice:optiflow", "state": "approved", "visibility": "public", "provenance": { "method": "human-authored", "source": "DESIGN.md", "capturedAt": "2026-08-27T12:12:00Z" }, "approval": "approve-optiflow-voice" } }
+  ],
+  "contexts": [
+    {
+      "id": "review-plan", "label": "Review plan", "audience": "An operator deciding whether to apply a proposed media change.", "intent": "Make evidence, scope, and recovery explicit.", "tone": "Direct, precise, and non-alarmist.", "characteristics": ["evidence-led"], "preferredVocabulary": ["evidence", "review", "plan"], "avoidedLanguage": ["cleanup", "safe to delete", "magic"], "naming": "Use OptiFlow on first mention.", "capitalization": "Use sentence case.", "punctuation": "Use short declarative sentences.",
+      "examples": [ { "id": "review-plan-evidence", "text": "Review the exact duplicate evidence before applying this plan.", "rationale": "It preserves operator authority and verification.", "governance": { "subject": "voice:optiflow", "state": "approved", "visibility": "public", "provenance": { "method": "human-authored", "source": "DESIGN.md", "capturedAt": "2026-08-27T12:12:00Z" }, "approval": "approve-optiflow-voice" } } ],
+      "antiExamples": [ { "id": "review-plan-overclaim", "text": "OptiFlow has cleaned up your files automatically.", "rationale": "It claims mutation where review is still required.", "governance": { "subject": "voice:optiflow", "state": "approved", "visibility": "public", "provenance": { "method": "human-authored", "source": "DESIGN.md", "capturedAt": "2026-08-27T12:12:00Z" }, "approval": "approve-optiflow-voice" } } ],
+      "governance": { "subject": "voice:optiflow", "state": "approved", "visibility": "public", "provenance": { "method": "human-authored", "source": "DESIGN.md", "capturedAt": "2026-08-27T12:12:00Z" }, "approval": "approve-optiflow-voice" }
+    }
+  ],
+  "localization": { "sourceLanguage": "en-US", "supportedLanguages": [ { "tag": "en-US", "coverage": "reviewed", "notes": "Canonical OptiFlow guidance." } ], "fallback": "Keep the OptiFlow name unchanged and request human review for uncovered locales.", "governance": { "subject": "voice:optiflow", "state": "approved", "visibility": "public", "provenance": { "method": "human-authored", "source": "DESIGN.md", "capturedAt": "2026-08-27T12:12:00Z" }, "approval": "approve-optiflow-voice" } }
+}

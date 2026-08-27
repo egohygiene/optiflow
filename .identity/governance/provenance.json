@@ -1,0 +1,17 @@
+{
+  "$schema": "https://egohygiene.github.io/identity/contracts/v1/provenance.schema.json",
+  "schema": "identity.provenance/v1",
+  "assets": [
+    {
+      "id": "mark",
+      "path": ".identity/sources/mark.svg",
+      "kind": "mark",
+      "sha256": "76e9c7811799800605d29d6fb22176427a79ef05568a8212aa983b9ace2f25b3",
+      "license": { "spdx": "MIT", "status": "approved", "attribution": "Copyright 2026 Ego Hygiene" },
+      "origin": { "creator": "Ego Hygiene", "method": "first-party", "source": "https://github.com/egohygiene/optiflow/tree/main/.identity/sources/mark.svg", "capturedAt": "2026-08-27T12:10:00Z" },
+      "accessibility": { "altText": "Two directed paths turn toward a shared review point." },
+      "usage": { "safeZone": "Keep one quarter of the mark width clear on every side.", "minimumSize": "16 CSS pixels.", "restrictions": ["Do not stretch, rotate, or recolor outside approved tokens."] },
+      "approval": "approve-optiflow-mark"
+    }
+  ]
+}

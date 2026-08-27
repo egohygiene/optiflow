@@ -1,0 +1,26 @@
+{
+  "$schema": "https://egohygiene.github.io/identity/contracts/v1/tokens.schema.json",
+  "$description": "OptiFlow's intentional evidence-oriented technical expression.",
+  "$extensions": {
+    "org.egohygiene.identity": {
+      "schema": "identity.tokens/v1",
+      "layer": { "id": "optiflow-product", "kind": "product-override", "priority": 10 }
+    }
+  },
+  "color": {
+    "$type": "color",
+    "brand": {
+      "primary": {
+        "$value": { "colorSpace": "srgb", "components": [0, 0.51, 0.62], "alpha": 1 },
+        "$description": "Precise cyan for verifiable flow and review states.",
+        "$extensions": {
+          "org.egohygiene.identity": {
+            "override": { "reason": "OptiFlow needs an energetic but restrained technical signal for evidence and review actions.", "approval": "approve-optiflow-primary" },
+            "contrast": { "intent": "decorative", "pairedWith": [], "minimumRatio": 1 }
+          }
+        }
+      }
+    },
+    "action": { "primary": { "$value": "{color.brand.primary}" } }
+  }
+}

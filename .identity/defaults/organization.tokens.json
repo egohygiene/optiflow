@@ -1,0 +1,47 @@
+{
+  "$schema": "https://egohygiene.github.io/identity/contracts/v1/tokens.schema.json",
+  "$description": "Ego Hygiene family defaults pinned for product pilots.",
+  "$extensions": {
+    "org.egohygiene.identity": {
+      "schema": "identity.tokens/v1",
+      "layer": { "id": "egohygiene-organization", "kind": "organization-defaults", "priority": 0 }
+    }
+  },
+  "color": {
+    "$type": "color",
+    "brand": {
+      "primary": {
+        "$value": { "colorSpace": "srgb", "components": [0.247, 0.373, 0.749], "alpha": 1 },
+        "$description": "Shared Ego Hygiene family accent.",
+        "$extensions": { "org.egohygiene.identity": { "contrast": { "intent": "decorative", "pairedWith": [], "minimumRatio": 1 } } }
+      }
+    },
+    "canvas": {
+      "$value": { "colorSpace": "srgb", "components": [0.973, 0.973, 0.988], "alpha": 1 },
+      "$extensions": { "org.egohygiene.identity": { "contrast": { "intent": "background", "pairedWith": ["color.text"], "minimumRatio": 7 } } }
+    },
+    "text": {
+      "$value": { "colorSpace": "srgb", "components": [0.067, 0.082, 0.149], "alpha": 1 },
+      "$extensions": { "org.egohygiene.identity": { "contrast": { "intent": "foreground", "pairedWith": ["color.canvas"], "minimumRatio": 7 } } }
+    }
+  },
+  "typography": {
+    "body": {
+      "family": {
+        "$type": "fontFamily",
+        "$value": ["Inter", "system-ui", "sans-serif"],
+        "$extensions": { "org.egohygiene.identity": { "typography": { "license": "OFL-1.1", "languages": ["en"], "legibility": "Use open counters and a minimum 16px body size." } } }
+      }
+    }
+  },
+  "motion": {
+    "$type": "duration",
+    "duration": {
+      "standard": {
+        "$value": { "value": 180, "unit": "ms" },
+        "$extensions": { "org.egohygiene.identity": { "motion": { "reducedMotion": "motion.duration.reduced" } } }
+      },
+      "reduced": { "$value": { "value": 0, "unit": "ms" } }
+    }
+  }
+}
