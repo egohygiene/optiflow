@@ -4,7 +4,7 @@
   "repository": "egohygiene/identity",
   "url": "https://github.com/egohygiene/identity.git",
   "path": "identity",
-  "revision": "0b7686fcb50c7c79ee4cd53a17b33a74a9e0e444",
+  "revision": "481e284a77e0a7cc3bf25f40dc91a71120d036ef",
   "revision_kind": "git-commit",
   "governing_issue": "https://github.com/egohygiene/identity/issues/17",
   "updated": "2026-08-27"

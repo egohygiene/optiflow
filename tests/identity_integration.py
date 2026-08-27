@@ -66,6 +66,16 @@ class IdentityIntegrationTests(unittest.TestCase):
         self.assertEqual(profiles["inapplicable"], ["web", "pwa", "social"])
         self.assertTrue(all(profile["version"] == "1.0.0" for profile in profiles["enabled"]))
 
+    @unittest.skipUnless(
+        (REPOSITORY_ROOT / "assets/identity/packages/tokens/tokens.css").is_file(),
+        "Identity package has not been generated",
+    )
+    def test_generated_package_snapshot_preserves_the_reviewed_technical_cyan(self) -> None:
+        css = (
+            REPOSITORY_ROOT / "assets/identity/packages/tokens/tokens.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--identity-color-brand-primary: #00829e;", css)
+
     @unittest.skipUnless((IDENTITY_ROOT / "Cargo.toml").is_file(), "Identity submodule is not initialized")
     def test_pinned_v1_validator_and_compiler_detect_no_generated_state_drift(self) -> None:
         validator = IDENTITY_ROOT / "scripts/validate_identity.py"
