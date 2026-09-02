@@ -34,7 +34,7 @@ jobs:
 
       - name: Generate public repository intelligence
         # relay v1.0.0
-        uses: egohygiene/relay/actions/repository-intelligence@aaadf940c3470bd6beb2266619c3b95295635145
+        uses: egohygiene/relay/actions/repository-intelligence@55587de4ff322931d401e964f5af0716633dd675
         with:
           output-directory: ".site/producers/intelligence"
           work-directory: ".cache/repository-intelligence"
