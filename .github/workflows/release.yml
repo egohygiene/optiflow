@@ -54,6 +54,10 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     needs: authorize
+    env:
+      # Override rust-toolchain.toml so every release command uses the same
+      # toolchain that receives the matrix target below.
+      RUSTUP_TOOLCHAIN: "1.85.0"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -94,6 +98,7 @@ jobs:
           else
             printf "cross-compiled %s on %s; native smoke test not applicable\n" \
               "${TARGET}" "${host}"
+          fi
 
       - name: Upload raw release binary
         # actions/upload-artifact v7.0.1
@@ -108,6 +113,10 @@ jobs:
   bundle:
     name: Build, sign, and verify release evidence
     needs: build
+    env:
+      # Keep SBOM generation aligned with the minimum supported toolchain used
+      # to compile the release artifacts.
+      RUSTUP_TOOLCHAIN: "1.85.0"
     permissions:
       contents: read
       id-token: write
