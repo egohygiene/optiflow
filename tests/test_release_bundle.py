@@ -18,6 +18,7 @@ RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 SOURCE_REVISION = "a" * 40
 CREATED_AT = "2026-09-12T00:00:00Z"
 MINIMUM_SUPPORTED_RUST = "1.85.0"
+RELAY_RELEASE_REVISION = "1eada5142f7fc7da7862f335589e3b8f5884ffaf"
 TARGETS = (
     "x86_64-unknown-linux-gnu",
     "x86_64-apple-darwin",
@@ -95,6 +96,22 @@ def workflow_step_script(workflow: str, step_name: str) -> str:
 
 
 class ReleaseBundleTests(unittest.TestCase):
+    def test_publish_job_pins_the_released_relay_contract(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        policy = (REPOSITORY_ROOT / "docs/release-policy.md").read_text(
+            encoding="utf-8"
+        )
+
+        reference = (
+            "egohygiene/relay/.github/workflows/release-artifact.yml@"
+            f"{RELAY_RELEASE_REVISION}  # v1.5.0"
+        )
+        self.assertIn(reference, workflow)
+        self.assertIn(
+            f"Relay `v1.5.0`, pinned to `{RELAY_RELEASE_REVISION}`",
+            policy,
+        )
+
     def test_release_jobs_pin_the_installed_rust_toolchain(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
         for job_name in ("build", "bundle"):
