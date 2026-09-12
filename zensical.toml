@@ -28,6 +28,7 @@ nav = [
   ] },
   { "Engineering" = [
     { "MVP specification" = "mvp-spec.md" },
+    { "Release and dependency policy" = "release-policy.md" },
     { "Cloud-native placement" = "cloud-native-placement.md" },
     { "Site publication" = "site-publication.md" },
   ] },

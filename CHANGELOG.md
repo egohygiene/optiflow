@@ -61,6 +61,14 @@ public contracts still receive explicit migration notes.
 - Added a cross-platform adversarial fault matrix, property-based serialization
   and planning checks, bounded parser/artifact-reader fuzz targets, and retained
   CI evidence logs.
+- Added an enforced dependency admission policy, scheduled license,
+  vulnerability, secret, and supply-chain checks, and deterministic release
+  evidence contract tests.
+- Added a full-SHA-pinned Relay binary release path for reproducible Linux and
+  macOS archives with complete checksums, an artifact-bound SPDX SBOM, SLSA v1
+  provenance, and a keyless Sigstore signature.
+- Documented supported release targets, private security reporting,
+  independent verification, release operations, and immutable rollback.
 
 ### Changed
 
