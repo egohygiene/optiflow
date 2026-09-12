@@ -197,6 +197,11 @@ The end-to-end test uses synthetic files in a temporary directory, includes
 spaces and Unicode in paths, and verifies that both duplicate inputs remain
 unchanged after scanning and planning.
 
+Dependency admission, security reporting, supported binary targets, signed
+release verification, and immutable rollback are defined in the
+[release and dependency policy](docs/release-policy.md) and [security
+policy](SECURITY.md).
+
 ### Documentation
 
 The product documentation is built with Zensical from the checked-in Markdown
@@ -232,6 +237,8 @@ schemas, repository intelligence, and release guidance.
 - [CLI outcome contract](docs/cli-contract.md)
 - [Configuration and effective policy](docs/configuration.md)
 - [Development model](docs/development-model.md)
+- [Release and dependency policy](docs/release-policy.md)
+- [Security policy](SECURITY.md)
 - [Site publication architecture](docs/site-publication.md)
 - [Cloud-native placement](docs/cloud-native-placement.md)
 - [Roadmap](ROADMAP.md)

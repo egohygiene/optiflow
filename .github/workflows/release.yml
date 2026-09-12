@@ -1,0 +1,198 @@
+---
+name: Publish signed binary release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: Exact unused vMAJOR.MINOR.PATCH matching Cargo.toml.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "optiflow-release-${{ inputs.release-version }}"
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Authorize default-branch release request
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out exact source revision
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Require default branch and manifest version authority
+        env:
+          DEFAULT_BRANCH: "${{ github.event.repository.default_branch }}"
+          RELEASE_VERSION: "${{ inputs.release-version }}"
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" != "branch" || \
+                "${GITHUB_REF_NAME}" != "${DEFAULT_BRANCH}" ]]; then
+            printf "release dispatch requires the default branch\n" >&2
+            exit 2
+          fi
+          if [[ ! "${RELEASE_VERSION}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            printf "release-version must be an exact vMAJOR.MINOR.PATCH value\n" >&2
+            exit 2
+          fi
+          manifest_version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
+          if [[ "${RELEASE_VERSION}" != "v${manifest_version}" ]]; then
+            printf "release %s does not match Cargo.toml version %s\n" \
+              "${RELEASE_VERSION}" "${manifest_version}" >&2
+            exit 2
+          fi
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: authorize
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+
+    steps:
+      - name: Check out exact source revision
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install minimum supported Rust toolchain
+        # dtolnay/rust-toolchain v1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: "1.85.0"
+          targets: "${{ matrix.target }}"
+
+      - name: Build locked release binary
+        env:
+          TARGET: "${{ matrix.target }}"
+        run: cargo build --locked --release --target "${TARGET}"
+
+      - name: Smoke-test native release binary
+        env:
+          TARGET: "${{ matrix.target }}"
+        run: |
+          host="$(rustc --version --verbose | sed -n 's/^host: //p')"
+          if [[ "${TARGET}" == "${host}" ]]; then
+            "target/${TARGET}/release/optiflow" --version
+          else
+            printf "cross-compiled %s on %s; native smoke test not applicable\n" \
+              "${TARGET}" "${host}"
+
+      - name: Upload raw release binary
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: "optiflow-${{ matrix.target }}"
+          path: "target/${{ matrix.target }}/release/optiflow"
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  bundle:
+    name: Build, sign, and verify release evidence
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact source revision
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install minimum supported Rust toolchain
+        # dtolnay/rust-toolchain v1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: "1.85.0"
+
+      - name: Download every supported binary
+        # actions/download-artifact v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: "optiflow-*"
+          path: "dist/raw"
+
+      - name: Prepare deterministic archives, SBOM, and provenance
+        env:
+          RELEASE_VERSION: "${{ inputs.release-version }}"
+          SOURCE_REVISION: "${{ github.sha }}"
+        run: |
+          created_at="$(git show --no-patch --format=%cI "${SOURCE_REVISION}")"
+          python3 scripts/release_bundle.py prepare \
+            --repository-root "." \
+            --input-directory "dist/raw" \
+            --output-directory "dist/release" \
+            --release-version "${RELEASE_VERSION}" \
+            --source-revision "${SOURCE_REVISION}" \
+            --created-at "${created_at}"
+
+      - name: Install pinned Cosign
+        # sigstore/cosign-installer v4.1.2; installs Cosign v3.0.6.
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+        with:
+          cosign-release: "v3.0.6"
+
+      - name: Sign the immutable release-subject manifest
+        run: |
+          cosign sign-blob \
+            --yes \
+            --bundle "dist/release/signature.json" \
+            "dist/release/release-subjects.sha256"
+
+      - name: Finalize and verify the complete bundle
+        env:
+          RELEASE_VERSION: "${{ inputs.release-version }}"
+          SOURCE_REVISION: "${{ github.sha }}"
+        run: |
+          python3 scripts/release_bundle.py finalize \
+            --bundle-directory "dist/release"
+          python3 scripts/release_bundle.py verify \
+            --repository-root "." \
+            --bundle-directory "dist/release" \
+            --release-version "${RELEASE_VERSION}" \
+            --source-revision "${SOURCE_REVISION}"
+
+      - name: Upload signed release bundle
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: "optiflow-release-${{ inputs.release-version }}"
+          path: "dist/release"
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+
+  publish:
+    name: Publish immutable GitHub Release through Relay
+    needs: bundle
+    permissions:
+      actions: read
+      contents: write
+    uses: egohygiene/relay/.github/workflows/release-artifact.yml@b71b090406a3a9e4cd9f107e9d14a623bbecb127  # v1.4.0
+    with:
+      artifact-name: "optiflow-release-${{ inputs.release-version }}"
+      expected-source-revision: "${{ github.sha }}"
+      profile: "binary"
+      release-version: "${{ inputs.release-version }}"
+      update-major-alias: false
+      artifact-retention-days: 30

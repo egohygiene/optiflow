@@ -3,6 +3,7 @@ name = "optiflow-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
+license = "MIT"
 
 [package.metadata]
 cargo-fuzz = true
@@ -15,6 +16,7 @@ toml = "1.1"
 
 [dependencies.optiflow]
 path = ".."
+version = "=0.1.0"
 
 [[bin]]
 name = "artifact-set-reader"

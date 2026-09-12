@@ -5,7 +5,11 @@ description: Build optiflow, inspect its environment, and run a first read-only 
 
 # Getting started
 
-The current release supports macOS and Linux. Rust is required when building
+The binary release contract supports three Linux and macOS targets. Every
+published archive must be checksum-bound, signed, and accompanied by an
+artifact SBOM and provenance. Follow the
+[independent verification procedure](release-policy.md#independent-verification)
+before installing a downloaded binary. Rust is required only when building
 from source, and `ffprobe` is optional for stream-level media metadata.
 
 ## Build from source
@@ -74,4 +78,5 @@ result fields.
 - Review the [configuration precedence](configuration.md).
 - Learn which claims are guaranteed by the [safety model](safety-model.md).
 - Read the [state model](state-model.md) before moving or sharing state.
-
+- Review supported platforms, security reporting, and rollback in the
+  [release and dependency policy](release-policy.md).
