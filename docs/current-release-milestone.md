@@ -79,7 +79,7 @@ flowchart LR
 - [x] Observation evidence cannot silently combine incompatible file states.
 - [ ] External tools cannot produce unbounded output or hang the process indefinitely.
 - [x] Related artifacts are distinguishable as committed, incomplete, or incompatible sets.
-- [ ] Adversarial/fault tests exercise the combined invariants.
+- [x] Adversarial/fault tests exercise the combined invariants.
 - [ ] Public packages have the agreed dependency/security/provenance evidence.
 - [ ] Installation and supported-platform smoke tests pass from packaged artifacts.
 - [ ] Documentation and product-site claims match the actual release contract.

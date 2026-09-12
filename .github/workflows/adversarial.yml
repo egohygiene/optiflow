@@ -1,0 +1,87 @@
+---
+name: Adversarial tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  properties-and-faults:
+    name: Properties and faults (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run bounded property and fault suites
+        run: ./scripts/run-adversarial-tests.sh properties faults
+
+      - name: Upload adversarial evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: adversarial-${{ runner.os }}
+          path: target/adversarial-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  fuzz:
+    name: Bounded parser and reader fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RUSTUP_TOOLCHAIN: nightly
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install nightly Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz -> target
+
+      - name: Install pinned cargo-fuzz
+        run: cargo install cargo-fuzz --locked --version "0.13.2"
+
+      - name: Run bounded fuzz targets
+        run: ./scripts/run-adversarial-tests.sh fuzz
+
+      - name: Upload fuzz evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: adversarial-fuzz-Linux
+          path: |
+            target/adversarial-evidence/
+            fuzz/artifacts/
+          if-no-files-found: warn
+          retention-days: 30

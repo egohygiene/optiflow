@@ -1,0 +1,10 @@
+schema = "optiflow.config.v1"
+
+[state]
+directory = "line\n\u001b[31m"
+
+[scan]
+follow_symlinks = false
+include_hidden = true
+cross_filesystems = false
+probe_media = true
