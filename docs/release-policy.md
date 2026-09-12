@@ -16,7 +16,7 @@ waits for a successful public release and organization ruleset evidence.
 | Class | `R2` versioned distributable software |
 | Accountable owner | `szmyty` |
 | Organization policy | `egohygiene/.github` trust policy at `b415c8029bf2fb5d474f367e7129791588ba3860` |
-| Relay profile | `binary` from Relay `v1.4.0`, pinned to `b71b090406a3a9e4cd9f107e9d14a623bbecb127` |
+| Relay profile | `binary` from Relay `v1.5.0`, pinned to `1eada5142f7fc7da7862f335589e3b8f5884ffaf` |
 | Effective state | `piloting` from 2026-09-12 |
 | Bot exemptions | Dependabot-authored lockfile and immutable action-pin updates; review and checks remain required |
 | Active exceptions | None |

@@ -197,7 +197,7 @@ jobs:
     permissions:
       actions: read
       contents: write
-    uses: egohygiene/relay/.github/workflows/release-artifact.yml@b71b090406a3a9e4cd9f107e9d14a623bbecb127  # v1.4.0
+    uses: egohygiene/relay/.github/workflows/release-artifact.yml@1eada5142f7fc7da7862f335589e3b8f5884ffaf  # v1.5.0
     with:
       artifact-name: "optiflow-release-${{ inputs.release-version }}"
       expected-source-revision: "${{ github.sha }}"
