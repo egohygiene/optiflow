@@ -19,7 +19,11 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
         let mut all_member_paths: Vec<(NativePath, Vec<NativePath>)> = group
             .members
             .iter()
-            .map(|member| (member.path.clone(), member.alias_paths.clone()))
+            .map(|member| {
+                let mut aliases = member.alias_paths.clone();
+                aliases.sort();
+                (member.path.clone(), aliases)
+            })
             .collect();
         all_member_paths.sort_by(|(a, _), (b, _)| a.cmp(b));
 
@@ -39,7 +43,7 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
             .collect();
 
         // Preconditions for all observed paths (primary + aliases of all members).
-        let preconditions = group
+        let mut precondition_paths: Vec<NativePath> = group
             .members
             .iter()
             .flat_map(|member| {
@@ -47,6 +51,10 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
                 paths.extend_from_slice(&member.alias_paths);
                 paths
             })
+            .collect();
+        precondition_paths.sort();
+        let preconditions = precondition_paths
+            .into_iter()
             .filter_map(|path| observations.get(path.sqlite_key().as_ref()))
             .map(|observation| FilePrecondition {
                 path: observation.path.clone(),

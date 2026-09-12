@@ -58,6 +58,9 @@ public contracts still receive explicit migration notes.
   startup reconciliation for crashes between filesystem and SQLite commits.
 - Added deterministic crash and disk-exhaustion fault injection for artifact
   staging, visibility, and recovery boundaries.
+- Added a cross-platform adversarial fault matrix, property-based serialization
+  and planning checks, bounded parser/artifact-reader fuzz targets, and retained
+  CI evidence logs.
 
 ### Changed
 

@@ -42,6 +42,16 @@ tasks:
     cmds:
       - cargo test --locked --all-targets
 
+  test:adversarial:
+    desc: Run bounded property and deterministic fault suites with evidence logs.
+    cmds:
+      - ./scripts/run-adversarial-tests.sh properties faults
+
+  fuzz:bounded:
+    desc: Run bounded configuration-parser and artifact-reader fuzz targets.
+    cmds:
+      - ./scripts/run-adversarial-tests.sh fuzz
+
   smoke:
     desc: Run the synthetic read-only end-to-end test.
     cmds:

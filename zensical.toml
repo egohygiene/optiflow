@@ -19,6 +19,7 @@ nav = [
     { "Observation protocol" = "observation-protocol.md" },
     { "State model" = "state-model.md" },
     { "Development model" = "development-model.md" },
+    { "Adversarial testing" = "adversarial-testing.md" },
   ] },
   { "Contracts" = [
     { "CLI outcomes" = "cli-contract.md" },

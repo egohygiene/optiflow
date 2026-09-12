@@ -217,14 +217,26 @@ fn should_descend(
     }
 
     if !options.cross_filesystems && entry.file_type().is_dir() {
-        if let (Some(root_device), Ok(metadata)) = (root_device, entry.metadata()) {
-            if device_id(&metadata).is_some_and(|candidate| candidate != root_device) {
+        if let Ok(metadata) = entry.metadata() {
+            if !device_boundary_allows(false, root_device, device_id(&metadata)) {
                 return false;
             }
         }
     }
 
     true
+}
+
+fn device_boundary_allows(
+    cross_filesystems: bool,
+    root_device: Option<u64>,
+    candidate_device: Option<u64>,
+) -> bool {
+    cross_filesystems
+        || !matches!(
+            (root_device, candidate_device),
+            (Some(root), Some(candidate)) if root != candidate
+        )
 }
 
 fn is_hidden(path: &Path, root: &Path) -> bool {
@@ -276,5 +288,87 @@ mod tests {
 
         assert_eq!(result.files.len(), 1);
         assert!(result.files[0].path.ends_with("visible.txt"));
+    }
+
+    #[test]
+    fn mount_boundary_requires_an_explicit_cross_filesystem_policy() {
+        assert!(!device_boundary_allows(false, Some(1), Some(2)));
+        assert!(device_boundary_allows(true, Some(1), Some(2)));
+        assert!(device_boundary_allows(false, Some(1), Some(1)));
+        assert!(device_boundary_allows(false, None, Some(2)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symbolic_link_input_is_excluded_by_default() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempdir().expect("temporary directory");
+        let target = directory.path().join("target.bin");
+        let link = directory.path().join("link.bin");
+        fs::write(&target, "content").expect("target fixture");
+        symlink(&target, &link).expect("symbolic-link fixture");
+
+        let result = discover(
+            &[link],
+            &ScanOptions {
+                follow_symlinks: false,
+                include_hidden: false,
+                cross_filesystems: false,
+                probe_media: false,
+            },
+            &directory.path().join("state"),
+            &SignalState::default(),
+        )
+        .expect("discovery succeeds");
+
+        assert!(result.files.is_empty());
+        assert_eq!(result.issues.len(), 1);
+        assert_eq!(
+            result.issues[0].kind,
+            DiscoveryIssueKind::InputExcludedByPolicy
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unreadable_directory_is_reported_as_incomplete_traversal() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempdir().expect("temporary directory");
+        let restricted = directory.path().join("restricted");
+        fs::create_dir(&restricted).expect("restricted directory fixture");
+        fs::write(restricted.join("hidden.bin"), "content").expect("restricted file fixture");
+        fs::set_permissions(&restricted, fs::Permissions::from_mode(0o000))
+            .expect("restrict fixture");
+
+        if fs::read_dir(&restricted).is_ok() {
+            fs::set_permissions(&restricted, fs::Permissions::from_mode(0o700))
+                .expect("restore fixture permissions");
+            return;
+        }
+
+        let result = discover(
+            std::slice::from_ref(&restricted),
+            &ScanOptions {
+                follow_symlinks: false,
+                include_hidden: false,
+                cross_filesystems: false,
+                probe_media: false,
+            },
+            &directory.path().join("state"),
+            &SignalState::default(),
+        )
+        .expect("discovery returns bounded issues");
+        fs::set_permissions(&restricted, fs::Permissions::from_mode(0o700))
+            .expect("restore fixture permissions");
+
+        assert!(result.files.is_empty());
+        assert!(
+            result
+                .issues
+                .iter()
+                .any(|issue| issue.kind == DiscoveryIssueKind::TraversalIncomplete)
+        );
     }
 }
