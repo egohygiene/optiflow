@@ -9,6 +9,7 @@ pub mod contracts;
 pub mod discovery;
 pub mod domain;
 pub mod duplicates;
+pub mod extensions;
 pub mod filesystem;
 pub mod hashing;
 pub mod inventory;

@@ -237,6 +237,11 @@ impl Diagnostic {
         self.context.run_id = Some(run_id.into());
         self
     }
+
+    pub fn with_count(mut self, count: u64) -> Self {
+        self.context.count = Some(count);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

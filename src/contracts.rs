@@ -12,6 +12,10 @@ pub enum Contract {
     CommandResult,
     Config,
     EffectivePolicy,
+    ExtensionManifest,
+    ExtensionLock,
+    ExtensionInvocation,
+    ExtensionResult,
 }
 
 pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
@@ -53,6 +57,12 @@ pub fn schema(contract: Contract) -> Result<Value> {
         Contract::CommandResult => include_str!("../schemas/command-result.schema.json"),
         Contract::Config => include_str!("../schemas/config-v1.schema.json"),
         Contract::EffectivePolicy => include_str!("../schemas/effective-policy-v1.schema.json"),
+        Contract::ExtensionManifest => include_str!("../schemas/extension-manifest-v1.schema.json"),
+        Contract::ExtensionLock => include_str!("../schemas/extension-lock-v1.schema.json"),
+        Contract::ExtensionInvocation => {
+            include_str!("../schemas/extension-invocation-v1.schema.json")
+        }
+        Contract::ExtensionResult => include_str!("../schemas/extension-result-v1.schema.json"),
     };
     serde_json::from_str(source).context("checked-in JSON Schema is invalid JSON")
 }

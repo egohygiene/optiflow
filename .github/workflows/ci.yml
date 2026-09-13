@@ -85,5 +85,16 @@ jobs:
       - name: Run tests
         run: cargo test --locked --all-targets
 
+      - name: Verify extension examples and generated reference
+        run: |
+          python3 scripts/generate-extension-docs.py --check
+          generated_manifest="$(mktemp)"
+          generated_embedded_manifest="$(mktemp)"
+          trap 'rm -f "${generated_manifest}" "${generated_embedded_manifest}"' EXIT
+          cargo run --quiet --locked --example process_extension -- --print-manifest > "${generated_manifest}"
+          diff --unified examples/extensions/reference-inspector.manifest.json "${generated_manifest}"
+          cargo run --quiet --locked --example embedded_roles -- --print-manifest > "${generated_embedded_manifest}"
+          diff --unified examples/extensions/reference-embedded-roles.manifest.json "${generated_embedded_manifest}"
+
       - name: Run synthetic end-to-end test
         run: ./scripts/smoke-test.sh

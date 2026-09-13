@@ -8,7 +8,7 @@ status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-09-13
 governed_by:
   - architecture-decisions
 depends_on:
@@ -73,6 +73,7 @@ without changing IDs or history. This document will retain the index.
 | OFD-008 | Accepted | Compose one static site from isolated producers |
 | OFD-009 | Accepted | Treat cloud-native systems as replaceable platform capabilities |
 | OFD-010 | Accepted | Adopt the Aether architecture-document metadata contract manually |
+| OFD-011 | Accepted | Separate extension declaration, operator trust, and core acceptance |
 
 ## Active Decisions
 
@@ -202,6 +203,34 @@ without changing IDs or history. This document will retain the index.
   the repository may later replace manual copies with a pinned Aether/Holon
   projection without changing document meaning.
 - **Revisit when:** Aether publishes the installation and migration contract.
+
+### OFD-011 — Separate extension declaration, operator trust, and core acceptance
+
+- **Status:** Accepted
+- **Context:** The Flow suite roadmap now needs a native OptiFlow provider
+  boundary before transactional work, while OptiFlow must remain read-only and
+  independently releasable. A declaration alone cannot safely confer runtime
+  authority, and a plugin result cannot be allowed to bypass core evidence or
+  planning gates.
+- **Decision:** Publish `optiflow.extension-sdk.v1` as additive typed Rust and
+  bounded JSON contracts. Provider manifests declare capabilities and effects;
+  operator locks pin bytes and grant trust, configuration, effects, precedence,
+  replacement, and fallback. Embedded handlers use role-specific registration.
+  Process handlers require an absolute pinned executable and bounded direct
+  invocation. Every result is revalidated by the core, planners only describe
+  operations that retain all core preconditions, and lifecycle observers return
+  no contributions. No SDK v1 extension receives mutation, destructive,
+  signing, or publication authority.
+- **Consequences:** OptiFlow can host inspectors, analyzers, normalization and
+  policy contributors, planners, validators, report/export providers, and
+  read-only observers without sibling source coupling or executable discovery.
+  Process providers are explicitly trusted and bounded but are not represented
+  as OS-sandboxed. Flow may adapt released contracts without importing OptiFlow
+  source. Existing CLI and artifact contracts remain unchanged; four new wire
+  identifiers and three inspection commands are additive.
+- **Revisit when:** A real containment backend can enforce declared network,
+  filesystem, and resource effects, or a semantic SDK change requires new wire
+  identifiers and a migration.
 
 ## Deprecated and Superseded Decisions
 

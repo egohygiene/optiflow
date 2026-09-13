@@ -69,12 +69,26 @@ tasks:
       - ./scripts/smoke-test.sh
 
   contracts:
-    desc: Verify checked-in JSON Schemas are syntactically valid.
+    desc: Verify schemas and generated extension contract documentation.
     cmds:
       - |
         for schema in schemas/*.schema.json; do
           jq empty "$schema"
         done
+      - python3 scripts/generate-extension-docs.py --check
+      - |
+        generated_manifest="$(mktemp)"
+        generated_embedded_manifest="$(mktemp)"
+        trap 'rm -f "${generated_manifest}" "${generated_embedded_manifest}"' EXIT
+        cargo run --quiet --locked --example process_extension -- --print-manifest > "${generated_manifest}"
+        diff --unified examples/extensions/reference-inspector.manifest.json "${generated_manifest}"
+        cargo run --quiet --locked --example embedded_roles -- --print-manifest > "${generated_embedded_manifest}"
+        diff --unified examples/extensions/reference-embedded-roles.manifest.json "${generated_embedded_manifest}"
+
+  extensions:examples:
+    desc: Compile and test extension SDK examples.
+    cmds:
+      - cargo test --locked --examples
 
   identity:v1:check:
     desc: Validate OptiFlow's pinned Identity v1 source contract.
@@ -136,5 +150,6 @@ tasks:
       - task: lint
       - task: test
       - task: contracts
+      - task: extensions:examples
       - task: smoke
       - task: site:build

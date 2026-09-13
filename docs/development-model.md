@@ -29,6 +29,7 @@ Each artifact is authoritative for a different concern:
 | Database evolution | `migrations/*.sql` |
 | Executable behavioral proof | Rust unit and integration tests |
 | End-to-end user proof | `scripts/smoke-test.sh` |
+| Extension declaration and trust boundary | `docs/plugin-sdk.md` plus the four `extension-*-v1` schemas |
 
 No artifact silently overrides another. A disagreement is a defect that must be
 resolved explicitly.
@@ -105,4 +106,5 @@ A change is complete only when:
 - Local and CI commands exercise the same validation path.
 - User-facing documentation describes shipped behavior only.
 - Compatibility and migration consequences are recorded.
+- Generated extension references match their executable examples exactly.
 - No safety invariant was weakened implicitly.

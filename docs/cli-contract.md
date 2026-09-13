@@ -95,6 +95,23 @@ in `artifacts`.
 The JSON renderer serializes the complete envelope before writing it, so a
 serialization failure cannot leave a truncated JSON prefix on stdout.
 
+## Extension inspection outcomes
+
+`extensions list`, `extensions inspect`, and `extensions doctor` consume only
+the exact manifest and operator-lock files named by repeated `--manifest` and
+`--lock` selectors. They do not discover providers from directories, `$PATH`,
+the environment, or sibling repositories.
+
+`list` and `inspect` report the availability of the selected manifest/lock
+pairs. An unavailable provider remains visible in a valid result with partial
+coverage and exit code `3`. `doctor` additionally resolves every declared
+capability; an unavailable provider or equal-precedence conflict is therefore
+partial with exit code `3`. An unreadable, unstable, unpaired, malformed, or
+contract-invalid declaration blocks every command as invalid input with exit
+code `2`. Human and JSON output present the same conclusion; automation should
+read typed availability and resolution fields, not parse reason text. See the
+[safe extension SDK](plugin-sdk.md) for the selection and trust contract.
+
 ## Signals and recoverability
 
 On Linux and macOS, OptiFlow handles `SIGINT` and `SIGTERM` cooperatively. It

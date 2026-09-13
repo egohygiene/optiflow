@@ -7,6 +7,14 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added the independently versioned `optiflow.extension-sdk.v1` boundary with
+  closed manifest, operator-lock, invocation, and result schemas; typed roles
+  cover inspectors, analyzers, normalization/policy contributors, planners,
+  validators, report/export providers, and read-only lifecycle observers.
+- Added deterministic explicit provider selection, byte-pinned trusted process
+  invocation, typed registration, result/provenance revalidation, honest
+  partial coverage, `extensions list|inspect|doctor`, runnable SDK examples,
+  generated capability reference checks, and adversarial failure fixtures.
 - Added a deterministic `/architecture/` portal generated from the complete
   canonical document corpus, including an interactive dependency graph,
   system boundaries, structural layers, filtered document inventory, and a
@@ -88,6 +96,9 @@ public contracts still receive explicit migration notes.
 
 ### Compatibility
 
+- Existing CLI, configuration, run, report, plan, command-result, database, and
+  artifact-set contracts are unchanged. The extension commands and four
+  extension wire identifiers are additive; no new crate dependency was added.
 - Existing command names and the `--json` alias remain available.
 - Existing database migrations are unchanged.
 - Immutable `optiflow.run.v1`–`v4`, `optiflow.report.v1`–`v4`, and

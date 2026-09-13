@@ -7,7 +7,8 @@ use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
@@ -48,6 +49,8 @@ impl Default for SubprocessLimits {
 pub struct SubprocessCommand {
     program: OsString,
     arguments: Vec<OsString>,
+    clear_environment: bool,
+    current_directory: Option<PathBuf>,
 }
 
 impl SubprocessCommand {
@@ -55,6 +58,8 @@ impl SubprocessCommand {
         Self {
             program: program.into(),
             arguments: Vec::new(),
+            clear_environment: false,
+            current_directory: None,
         }
     }
 
@@ -69,6 +74,18 @@ impl SubprocessCommand {
         S: Into<OsString>,
     {
         self.arguments.extend(arguments.into_iter().map(Into::into));
+        self
+    }
+
+    /// Remove the inherited environment before spawning the command.
+    pub fn clear_environment(mut self) -> Self {
+        self.clear_environment = true;
+        self
+    }
+
+    /// Select an explicit working directory for the command.
+    pub fn current_directory(mut self, path: impl Into<PathBuf>) -> Self {
+        self.current_directory = Some(path.into());
         self
     }
 
@@ -151,6 +168,10 @@ pub enum SubprocessError {
         stream: OutputStream,
         message: String,
     },
+    InputWrite {
+        program: String,
+        message: String,
+    },
     Internal {
         message: String,
     },
@@ -197,6 +218,9 @@ impl fmt::Display for SubprocessError {
                 stream,
                 message,
             } => write!(formatter, "failed reading {program} {stream}: {message}"),
+            Self::InputWrite { program, message } => {
+                write!(formatter, "failed writing {program} stdin: {message}")
+            }
             Self::Internal { message } => write!(formatter, "subprocess runner failure: {message}"),
         }
     }
@@ -331,6 +355,77 @@ fn join_reader(
     })
 }
 
+fn wait_for_thread<T>(
+    program: &str,
+    handle: &thread::JoinHandle<T>,
+    deadline: Instant,
+    timeout: Duration,
+    poll_interval: Duration,
+) -> Result<(), SubprocessError> {
+    while !handle.is_finished() {
+        let now = Instant::now();
+        if now >= deadline {
+            return Err(SubprocessError::Timeout {
+                program: program.to_owned(),
+                timeout,
+            });
+        }
+        thread::sleep(poll_interval.min(deadline - now));
+    }
+    Ok(())
+}
+
+fn join_reader_before_deadline(
+    program: &str,
+    stream: OutputStream,
+    handle: thread::JoinHandle<io::Result<BoundedRead>>,
+    deadline: Instant,
+    timeout: Duration,
+    poll_interval: Duration,
+) -> Result<BoundedRead, SubprocessError> {
+    wait_for_thread(program, &handle, deadline, timeout, poll_interval)?;
+    join_reader(program, stream, handle)
+}
+
+fn join_writer(
+    program: &str,
+    handle: Option<thread::JoinHandle<io::Result<()>>>,
+) -> Result<(), SubprocessError> {
+    let Some(handle) = handle else {
+        return Ok(());
+    };
+    let result = handle.join().map_err(|_| SubprocessError::InputWrite {
+        program: program.to_owned(),
+        message: "writer thread panicked".to_owned(),
+    })?;
+    result.map_err(|error| SubprocessError::InputWrite {
+        program: program.to_owned(),
+        message: error.to_string(),
+    })
+}
+
+fn join_writer_before_deadline(
+    program: &str,
+    handle: Option<thread::JoinHandle<io::Result<()>>>,
+    deadline: Instant,
+    timeout: Duration,
+    poll_interval: Duration,
+) -> Result<(), SubprocessError> {
+    if let Some(handle) = handle {
+        wait_for_thread(program, &handle, deadline, timeout, poll_interval)?;
+        join_writer(program, Some(handle))
+    } else {
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+enum SubprocessInput<'a> {
+    Null,
+    File(&'a File),
+    Bytes(&'a [u8]),
+}
+
 /// Reusable bounded runner. Clones share the same concurrency permit pool.
 #[derive(Debug, Clone)]
 pub struct SubprocessRunner {
@@ -431,13 +526,57 @@ impl SubprocessRunner {
     where
         F: Fn() -> bool,
     {
-        self.run_with_cancel_and_file(command, None, is_cancelled)
+        self.run_with_cancel_and_input(command, SubprocessInput::Null, is_cancelled)
+    }
+
+    /// Run a command with a bounded caller-owned byte document on stdin.
+    pub fn run_with_input_and_cancel<F>(
+        &self,
+        command: &SubprocessCommand,
+        input: &[u8],
+        is_cancelled: F,
+    ) -> Result<SubprocessOutput, SubprocessError>
+    where
+        F: Fn() -> bool,
+    {
+        self.run_with_cancel_and_input(command, SubprocessInput::Bytes(input), is_cancelled)
+    }
+
+    /// Run a JSON-producing command with a caller-owned byte document on stdin.
+    pub fn run_json_with_input_and_cancel<T, F>(
+        &self,
+        command: &SubprocessCommand,
+        input: &[u8],
+        is_cancelled: F,
+    ) -> Result<T, SubprocessError>
+    where
+        T: DeserializeOwned,
+        F: Fn() -> bool,
+    {
+        let output = self.run_with_input_and_cancel(command, input, is_cancelled)?;
+        serde_json::from_slice(&output.stdout).map_err(|error| SubprocessError::Parse {
+            program: command.display_program(),
+            message: error.to_string(),
+        })
     }
 
     fn run_with_cancel_and_file<F>(
         &self,
         command: &SubprocessCommand,
         stdin_file: Option<&File>,
+        is_cancelled: F,
+    ) -> Result<SubprocessOutput, SubprocessError>
+    where
+        F: Fn() -> bool,
+    {
+        let input = stdin_file.map_or(SubprocessInput::Null, SubprocessInput::File);
+        self.run_with_cancel_and_input(command, input, is_cancelled)
+    }
+
+    fn run_with_cancel_and_input<F>(
+        &self,
+        command: &SubprocessCommand,
+        input: SubprocessInput<'_>,
         is_cancelled: F,
     ) -> Result<SubprocessOutput, SubprocessError>
     where
@@ -458,26 +597,50 @@ impl SubprocessRunner {
             return Err(SubprocessError::Cancelled { program });
         }
 
-        let stdin = match stdin_file {
-            Some(file) => {
+        let stdin = match input {
+            SubprocessInput::File(file) => {
                 Stdio::from(file.try_clone().map_err(|error| SubprocessError::Spawn {
                     program: program.clone(),
                     message: format!("failed to clone opened input handle: {error}"),
                 })?)
             }
-            None => Stdio::null(),
+            SubprocessInput::Bytes(_) => Stdio::piped(),
+            SubprocessInput::Null => Stdio::null(),
         };
 
-        let mut child = Command::new(command.program())
+        let mut process = Command::new(command.program());
+        process
             .args(command.arguments())
             .stdin(stdin)
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|error| SubprocessError::Spawn {
-                program: program.clone(),
-                message: error.to_string(),
-            })?;
+            .stderr(Stdio::piped());
+        if command.clear_environment {
+            process.env_clear();
+        }
+        if let Some(directory) = &command.current_directory {
+            process.current_dir(directory);
+        }
+        let mut child = process.spawn().map_err(|error| SubprocessError::Spawn {
+            program: program.clone(),
+            message: error.to_string(),
+        })?;
+
+        let stdin_writer = match input {
+            SubprocessInput::Bytes(bytes) => {
+                let mut stdin = child
+                    .stdin
+                    .take()
+                    .ok_or_else(|| SubprocessError::Internal {
+                        message: format!("{program} stdin pipe was not created"),
+                    })?;
+                let bytes = bytes.to_vec();
+                Some(thread::spawn(move || {
+                    stdin.write_all(&bytes)?;
+                    stdin.flush()
+                }))
+            }
+            SubprocessInput::File(_) | SubprocessInput::Null => None,
+        };
 
         let stdout = child
             .stdout
@@ -500,8 +663,6 @@ impl SubprocessRunner {
             if is_cancelled() {
                 let _ = child.kill();
                 let _ = child.wait();
-                let _ = stdout_reader.join();
-                let _ = stderr_reader.join();
                 return Err(SubprocessError::Cancelled { program });
             }
 
@@ -511,8 +672,6 @@ impl SubprocessRunner {
                 Err(error) => {
                     let _ = child.kill();
                     let _ = child.wait();
-                    let _ = stdout_reader.join();
-                    let _ = stderr_reader.join();
                     return Err(SubprocessError::Wait {
                         program,
                         message: error.to_string(),
@@ -524,8 +683,6 @@ impl SubprocessRunner {
             if now >= deadline {
                 let _ = child.kill();
                 let _ = child.wait();
-                let _ = stdout_reader.join();
-                let _ = stderr_reader.join();
                 return Err(SubprocessError::Timeout {
                     program,
                     timeout: self.limits.timeout,
@@ -534,8 +691,37 @@ impl SubprocessRunner {
             thread::sleep(self.limits.poll_interval.min(deadline - now));
         };
 
-        let stdout = join_reader(&program, OutputStream::Stdout, stdout_reader)?;
-        let stderr = join_reader(&program, OutputStream::Stderr, stderr_reader)?;
+        let stdout = join_reader_before_deadline(
+            &program,
+            OutputStream::Stdout,
+            stdout_reader,
+            deadline,
+            self.limits.timeout,
+            self.limits.poll_interval,
+        )?;
+        let stderr = join_reader_before_deadline(
+            &program,
+            OutputStream::Stderr,
+            stderr_reader,
+            deadline,
+            self.limits.timeout,
+            self.limits.poll_interval,
+        )?;
+
+        if exit_status.success() {
+            join_writer_before_deadline(
+                &program,
+                stdin_writer,
+                deadline,
+                self.limits.timeout,
+                self.limits.poll_interval,
+            )?;
+        } else if stdin_writer
+            .as_ref()
+            .is_some_and(thread::JoinHandle::is_finished)
+        {
+            let _ = join_writer(&program, stdin_writer);
+        }
 
         if stdout.truncated {
             return Err(SubprocessError::Truncated {
@@ -642,6 +828,20 @@ mod tests {
     }
 
     #[test]
+    fn output_drain_honors_deadline_after_parent_exit() {
+        let mut limits = test_limits();
+        limits.timeout = Duration::from_millis(75);
+        let runner = SubprocessRunner::new(limits).unwrap();
+        let started = Instant::now();
+        let error = runner
+            .run(&shell("sleep 1 & printf inherited-pipe"))
+            .unwrap_err();
+
+        assert!(matches!(error, SubprocessError::Timeout { .. }));
+        assert!(started.elapsed() < Duration::from_millis(500));
+    }
+
+    #[test]
     fn cancellation_terminates_running_child() {
         let runner = SubprocessRunner::new(test_limits()).unwrap();
         let cancelled = Arc::new(AtomicBool::new(false));
@@ -655,6 +855,20 @@ mod tests {
             .unwrap_err();
         setter.join().unwrap();
         assert!(matches!(error, SubprocessError::Cancelled { .. }));
+    }
+
+    #[test]
+    fn cancellation_does_not_wait_for_descendant_held_pipes() {
+        let runner = SubprocessRunner::new(test_limits()).unwrap();
+        let started = Instant::now();
+        let error = runner
+            .run_with_cancel(&shell("sleep 1 & wait"), || {
+                started.elapsed() > Duration::from_millis(25)
+            })
+            .unwrap_err();
+
+        assert!(matches!(error, SubprocessError::Cancelled { .. }));
+        assert!(started.elapsed() < Duration::from_millis(500));
     }
 
     #[test]
@@ -679,6 +893,27 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.stdout, b"handle-bound");
+    }
+
+    #[test]
+    fn writes_caller_owned_bytes_to_child_stdin() {
+        let runner = SubprocessRunner::new(test_limits()).unwrap();
+        let output = runner
+            .run_with_input_and_cancel(&shell("cat"), b"bounded-input", || false)
+            .unwrap();
+
+        assert_eq!(output.stdout, b"bounded-input");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn can_clear_the_inherited_environment() {
+        let runner = SubprocessRunner::new(test_limits()).unwrap();
+        let command = SubprocessCommand::new("/bin/sh")
+            .args(["-c", "test -z \"${HOME+x}\" && printf clean"])
+            .clear_environment();
+
+        assert_eq!(runner.run(&command).unwrap().stdout, b"clean");
     }
 
     #[test]
