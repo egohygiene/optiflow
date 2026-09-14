@@ -59,21 +59,78 @@ REQUIRED_ARCHITECTURE_COPY = (
     "The page is an output, not another authority.",
 )
 
+PUBLIC_ENTRYPOINTS = {
+    "index.html": "https://optiflow.egohygiene.io/",
+    "architecture/index.html": "https://optiflow.egohygiene.io/architecture/",
+    "docs/index.html": "https://optiflow.egohygiene.io/docs/",
+}
+
+OPEN_GRAPH_ENTRYPOINTS = {
+    "index.html",
+    "architecture/index.html",
+}
+
+REDUCED_MOTION_STYLESHEETS = (
+    "assets/site.css",
+    "architecture/assets/architecture.css",
+)
+
 
 class LinkCollector(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.links: list[str] = []
         self.identifiers: list[str] = []
+        self.canonical_links: list[str] = []
+        self.descriptions: list[str] = []
+        self.html_languages: list[str] = []
+        self.open_graph_urls: list[str] = []
+        self.viewports: list[str] = []
+        self.h1_count = 0
+        self.main_count = 0
+        self.skip_links: list[str] = []
 
     def handle_starttag(
         self,
         tag: str,
         attributes: list[tuple[str, str | None]],
     ) -> None:
+        attribute_values = {
+            name: value for name, value in attributes if value is not None
+        }
+
         for name, value in attributes:
             if name == "id" and value:
                 self.identifiers.append(value)
+
+        if tag == "html" and attribute_values.get("lang"):
+            self.html_languages.append(attribute_values["lang"])
+        elif tag == "h1":
+            self.h1_count += 1
+        elif tag == "main":
+            self.main_count += 1
+        elif tag == "meta":
+            name = attribute_values.get("name", "").lower()
+            property_name = attribute_values.get("property", "").lower()
+            content = attribute_values.get("content", "")
+            if name == "description":
+                self.descriptions.append(content)
+            elif name == "viewport":
+                self.viewports.append(content)
+            if property_name == "og:url":
+                self.open_graph_urls.append(content)
+
+        if tag == "link":
+            relationships = attribute_values.get("rel", "").lower().split()
+            if "canonical" in relationships and attribute_values.get("href"):
+                self.canonical_links.append(attribute_values["href"])
+
+        if tag == "a":
+            classes = attribute_values.get("class", "").split()
+            if {"skip-link", "md-skip"}.intersection(classes):
+                href = attribute_values.get("href")
+                if href:
+                    self.skip_links.append(href)
 
         if tag not in {"a", "link", "script", "img"}:
             return
@@ -187,6 +244,45 @@ def verify_architecture(site_root: Path) -> list[str]:
     return errors
 
 
+def verify_public_entrypoint(
+    site_root: Path,
+    relative_path: str,
+    canonical_url: str,
+) -> list[str]:
+    page_path = site_root / relative_path
+    if not page_path.is_file():
+        return []
+
+    parser = LinkCollector()
+    parser.feed(page_path.read_text(encoding="utf-8"))
+    errors: list[str] = []
+
+    if parser.html_languages != ["en"]:
+        errors.append(f"{relative_path}: expected exactly one html lang='en'")
+    if len(parser.descriptions) != 1 or not parser.descriptions[0].strip():
+        errors.append(f"{relative_path}: expected exactly one non-empty meta description")
+    if len(parser.viewports) != 1:
+        errors.append(f"{relative_path}: expected exactly one viewport declaration")
+    if parser.canonical_links != [canonical_url]:
+        errors.append(
+            f"{relative_path}: expected canonical URL {canonical_url!r}, "
+            f"found {parser.canonical_links!r}"
+        )
+    if relative_path in OPEN_GRAPH_ENTRYPOINTS and parser.open_graph_urls != [canonical_url]:
+        errors.append(
+            f"{relative_path}: expected Open Graph URL {canonical_url!r}, "
+            f"found {parser.open_graph_urls!r}"
+        )
+    if parser.main_count != 1:
+        errors.append(f"{relative_path}: expected exactly one main landmark")
+    if parser.h1_count != 1:
+        errors.append(f"{relative_path}: expected exactly one h1")
+    if len(parser.skip_links) != 1:
+        errors.append(f"{relative_path}: expected exactly one skip link")
+
+    return errors
+
+
 def verify(site_root: Path, *, allow_missing_intelligence: bool = False) -> list[str]:
     errors: list[str] = []
     resolved_root = site_root.resolve()
@@ -225,6 +321,16 @@ def verify(site_root: Path, *, allow_missing_intelligence: bool = False) -> list
         for forbidden in FORBIDDEN_COPY:
             if forbidden in landing:
                 errors.append(f"landing page contains template copy: {forbidden!r}")
+
+    for relative_path, canonical_url in PUBLIC_ENTRYPOINTS.items():
+        errors.extend(verify_public_entrypoint(site_root, relative_path, canonical_url))
+
+    for relative_path in REDUCED_MOTION_STYLESHEETS:
+        stylesheet_path = site_root / relative_path
+        if stylesheet_path.is_file() and "@media (prefers-reduced-motion: reduce)" not in (
+            stylesheet_path.read_text(encoding="utf-8")
+        ):
+            errors.append(f"{relative_path}: missing reduced-motion override")
 
     errors.extend(verify_architecture(site_root))
 

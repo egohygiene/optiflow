@@ -56,7 +56,12 @@ Requires the bounded subprocess foundation plus organization trust/release autom
 
 ### #28 — production optiflow.egohygiene.io deployment
 
-The site composition itself is already implemented and validated. Final domain/TLS/redirect/rollback work waits on organization domain and Relay publication dependencies. It can proceed without changing the CLI safety milestone, but the public site must not advertise unsupported mutation/release guarantees.
+The composed site is live at `https://optiflow.egohygiene.io/` through the
+repository-owned Pages workflow. REL-04 and HOL-03 are complete; #28 now owns
+the final canonical metadata, preview-artifact, live-validation, and rollback
+evidence. ORG-03 retains the organization-wide hostname and DNS governance
+record. This track does not change the CLI safety milestone, and the public
+site must not advertise unsupported mutation or release guarantees.
 
 ## Dependency graph
 
