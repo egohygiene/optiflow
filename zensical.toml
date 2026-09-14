@@ -25,6 +25,8 @@ nav = [
     { "CLI outcomes" = "cli-contract.md" },
     { "Configuration" = "configuration.md" },
     { "JSON artifacts" = "json-contract.md" },
+    { "Extension SDK" = "plugin-sdk.md" },
+    { "Extension capabilities" = "extension-capabilities.md" },
   ] },
   { "Engineering" = [
     { "MVP specification" = "mvp-spec.md" },

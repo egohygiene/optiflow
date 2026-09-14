@@ -1,0 +1,84 @@
+{
+  "schema": "optiflow.extension-manifest.v1",
+  "extension_id": "example.reference-inspector",
+  "version": "1.0.0",
+  "publisher": {
+    "id": "example.publisher",
+    "display_name": "Example Publisher"
+  },
+  "sdk_contract": "optiflow.extension-sdk.v1",
+  "configuration_schemas": [
+    {
+      "schema_id": "optiflow.example.reference-inspector.config.v1",
+      "schema_digest": {
+        "algorithm": "blake3-256",
+        "value": "8e859c48fe4b9f119a45bbe0f30214179e57040e5c5647ec21cf41bb37834465"
+      },
+      "document": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "type": "object"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "optiflow/inspect/reference-count",
+      "capability_version": "1.0.0",
+      "kind": "inspector",
+      "configuration_schema": "optiflow.example.reference-inspector.config.v1",
+      "accepts": [
+        "optiflow.artifact-reference.v1"
+      ],
+      "produces": [
+        "optiflow.example.reference-count.v1"
+      ],
+      "preconditions": [
+        "immutable-input-digests"
+      ],
+      "postconditions": [
+        "fingerprinted-evidence"
+      ],
+      "determinism": "deterministic",
+      "cacheability": "cacheable",
+      "coverage": {
+        "mode": "complete",
+        "dimensions": []
+      },
+      "resource_needs": {
+        "cpu_threads": 1,
+        "memory_bytes": 16777216,
+        "temporary_storage_bytes": 0,
+        "gpu": false
+      },
+      "locality": {
+        "local_only": true,
+        "network_hosts": []
+      },
+      "content_changes": false,
+      "effects": []
+    }
+  ],
+  "execution_modes": [
+    {
+      "kind": "process",
+      "name": "json-stdio-v1",
+      "protocol": "optiflow.extension-invocation.v1",
+      "arguments": [],
+      "limits": {
+        "timeout_ms": 5000,
+        "max_stdin_bytes": 1048576,
+        "max_stdout_bytes": 1048576,
+        "max_stderr_bytes": 65536
+      }
+    }
+  ],
+  "requested_effects": [
+    "subprocess"
+  ],
+  "replacement": {
+    "replaces": [],
+    "fallbacks_for": []
+  },
+  "observer_hooks": []
+}

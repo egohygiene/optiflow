@@ -1,0 +1,183 @@
+{
+  "schema": "optiflow.extension-manifest.v1",
+  "extension_id": "example.embedded-roles",
+  "version": "1.0.0",
+  "publisher": {
+    "id": "example.publisher",
+    "display_name": "Example Publisher"
+  },
+  "sdk_contract": "optiflow.extension-sdk.v1",
+  "configuration_schemas": [
+    {
+      "schema_id": "optiflow.example.embedded-roles.config.v1",
+      "schema_digest": {
+        "algorithm": "blake3-256",
+        "value": "8e859c48fe4b9f119a45bbe0f30214179e57040e5c5647ec21cf41bb37834465"
+      },
+      "document": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "type": "object"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "optiflow/inspect/example",
+      "capability_version": "1.0.0",
+      "kind": "inspector",
+      "configuration_schema": "optiflow.example.embedded-roles.config.v1",
+      "accepts": [
+        "optiflow.artifact-reference.v1"
+      ],
+      "produces": [
+        "optiflow.example.inspection.v1"
+      ],
+      "preconditions": [
+        "immutable-input-digests"
+      ],
+      "postconditions": [
+        "fingerprinted-contribution"
+      ],
+      "determinism": "deterministic",
+      "cacheability": "cacheable",
+      "coverage": {
+        "mode": "complete",
+        "dimensions": []
+      },
+      "resource_needs": {
+        "cpu_threads": 1,
+        "memory_bytes": 16777216,
+        "temporary_storage_bytes": 0,
+        "gpu": false
+      },
+      "locality": {
+        "local_only": true,
+        "network_hosts": []
+      },
+      "content_changes": false,
+      "effects": []
+    },
+    {
+      "capability_id": "optiflow/analyze/example",
+      "capability_version": "1.0.0",
+      "kind": "analyzer",
+      "configuration_schema": "optiflow.example.embedded-roles.config.v1",
+      "accepts": [
+        "optiflow.artifact-reference.v1"
+      ],
+      "produces": [
+        "optiflow.example.analysis.v1"
+      ],
+      "preconditions": [
+        "immutable-input-digests"
+      ],
+      "postconditions": [
+        "fingerprinted-contribution"
+      ],
+      "determinism": "deterministic",
+      "cacheability": "cacheable",
+      "coverage": {
+        "mode": "complete",
+        "dimensions": []
+      },
+      "resource_needs": {
+        "cpu_threads": 1,
+        "memory_bytes": 16777216,
+        "temporary_storage_bytes": 0,
+        "gpu": false
+      },
+      "locality": {
+        "local_only": true,
+        "network_hosts": []
+      },
+      "content_changes": false,
+      "effects": []
+    },
+    {
+      "capability_id": "optiflow/plan/example",
+      "capability_version": "1.0.0",
+      "kind": "planner",
+      "configuration_schema": "optiflow.example.embedded-roles.config.v1",
+      "accepts": [
+        "optiflow.artifact-reference.v1"
+      ],
+      "produces": [
+        "optiflow.example.planned-artifact.v1"
+      ],
+      "preconditions": [
+        "immutable-input-digests"
+      ],
+      "postconditions": [
+        "fingerprinted-contribution"
+      ],
+      "determinism": "deterministic",
+      "cacheability": "cacheable",
+      "coverage": {
+        "mode": "complete",
+        "dimensions": []
+      },
+      "resource_needs": {
+        "cpu_threads": 1,
+        "memory_bytes": 16777216,
+        "temporary_storage_bytes": 0,
+        "gpu": false
+      },
+      "locality": {
+        "local_only": true,
+        "network_hosts": []
+      },
+      "content_changes": true,
+      "effects": []
+    },
+    {
+      "capability_id": "optiflow/validate/example",
+      "capability_version": "1.0.0",
+      "kind": "validator",
+      "configuration_schema": "optiflow.example.embedded-roles.config.v1",
+      "accepts": [
+        "optiflow.artifact-reference.v1"
+      ],
+      "produces": [
+        "optiflow.example.validation.v1"
+      ],
+      "preconditions": [
+        "immutable-input-digests"
+      ],
+      "postconditions": [
+        "fingerprinted-contribution"
+      ],
+      "determinism": "deterministic",
+      "cacheability": "cacheable",
+      "coverage": {
+        "mode": "complete",
+        "dimensions": []
+      },
+      "resource_needs": {
+        "cpu_threads": 1,
+        "memory_bytes": 16777216,
+        "temporary_storage_bytes": 0,
+        "gpu": false
+      },
+      "locality": {
+        "local_only": true,
+        "network_hosts": []
+      },
+      "content_changes": false,
+      "effects": []
+    }
+  ],
+  "execution_modes": [
+    {
+      "kind": "embedded",
+      "name": "embedded-v1",
+      "entrypoint": "embedded_roles"
+    }
+  ],
+  "requested_effects": [],
+  "replacement": {
+    "replaces": [],
+    "fallbacks_for": []
+  },
+  "observer_hooks": []
+}

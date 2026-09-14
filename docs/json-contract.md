@@ -17,6 +17,10 @@ The current artifact identifiers are:
 | Run | `optiflow.run.v5` | `schemas/run.schema.json` |
 | Report | `optiflow.report.v5` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v5` | `schemas/plan.schema.json` |
+| Extension manifest | `optiflow.extension-manifest.v1` | `schemas/extension-manifest-v1.schema.json` |
+| Extension lock | `optiflow.extension-lock.v1` | `schemas/extension-lock-v1.schema.json` |
+| Extension invocation | `optiflow.extension-invocation.v1` | `schemas/extension-invocation-v1.schema.json` |
+| Extension result | `optiflow.extension-result.v1` | `schemas/extension-result-v1.schema.json` |
 
 Within an artifact schema major version:
 
@@ -65,6 +69,8 @@ See [CLI Outcome Contract](cli-contract.md) for the exit-code matrix, typed
 diagnostics, partial-run semantics, stream ownership, and signal behavior.
 See [Configuration and Effective Policy](configuration.md) for policy
 canonicalization, provenance, fingerprints, and historical sidecars.
+See the [safe extension SDK](plugin-sdk.md) for exact provider identity,
+operator locks, effect grants, result acceptance, and compatibility behavior.
 
 ## Reports
 

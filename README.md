@@ -26,6 +26,9 @@ move, quarantine, or optimization command.
   marker-sealed sets.
 - Generate deterministic review plans with apply-time safety preconditions.
 - Emit human-readable or stable JSON output for `flow` and other pipelines.
+- Load explicitly selected, operator-locked extension manifests for typed
+  inspectors, analyzers, policy contributors, planners, validators,
+  report/export providers, and read-only lifecycle observers.
 
 ## Requirements
 
@@ -82,6 +85,9 @@ optiflow cache status
 optiflow config validate
 optiflow config show
 optiflow config explain <setting>
+optiflow extensions list --manifest <FILE> --lock <FILE>
+optiflow extensions inspect <EXTENSION_ID> --manifest <FILE> --lock <FILE>
+optiflow extensions doctor --manifest <FILE> --lock <FILE>
 ```
 
 Global options:
@@ -134,6 +140,10 @@ Machine results and committed domain artifacts have independent identifiers:
 | Run | `optiflow.run.v5` | `schemas/run.schema.json` |
 | Report | `optiflow.report.v5` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v5` | `schemas/plan.schema.json` |
+| Extension manifest | `optiflow.extension-manifest.v1` | `schemas/extension-manifest-v1.schema.json` |
+| Extension lock | `optiflow.extension-lock.v1` | `schemas/extension-lock-v1.schema.json` |
+| Extension invocation | `optiflow.extension-invocation.v1` | `schemas/extension-invocation-v1.schema.json` |
+| Extension result | `optiflow.extension-result.v1` | `schemas/extension-result-v1.schema.json` |
 
 Use `--output-format json` (or `--json`) for subprocess integration. JSON owns
 stdout; human primary output uses stdout and human diagnostics use stderr.
@@ -164,6 +174,10 @@ requires optiflow to:
 5. Refuse mutation if any precondition fails.
 
 See [Safety Model](docs/safety-model.md) for the complete invariant set.
+The [safe extension SDK](docs/plugin-sdk.md) defines the separate provider
+declaration, operator trust, deterministic resolution, and core result-
+acceptance boundaries. Extensions receive no source mutation, destructive,
+signing, or publication authority.
 The [artifact-set commit protocol](docs/artifact-set-protocol.md) defines
 coherent scan/plan publication, marker validation, and crash recovery.
 The [handle-bound observation protocol](docs/observation-protocol.md) documents
@@ -190,6 +204,7 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --all-targets
 task contracts
+task extensions:examples
 ./scripts/smoke-test.sh
 ```
 
@@ -236,6 +251,8 @@ schemas, repository intelligence, and release guidance.
 - [JSON contract](docs/json-contract.md)
 - [CLI outcome contract](docs/cli-contract.md)
 - [Configuration and effective policy](docs/configuration.md)
+- [Safe extension SDK](docs/plugin-sdk.md)
+- [Generated extension capability reference](docs/extension-capabilities.md)
 - [Development model](docs/development-model.md)
 - [Release and dependency policy](docs/release-policy.md)
 - [Security policy](SECURITY.md)

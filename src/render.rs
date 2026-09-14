@@ -44,7 +44,7 @@ fn render_human(result: &CommandResult) -> Result<()> {
             artifact.path.display()
         )?;
     }
-    if result.command.starts_with("config ") {
+    if result.command.starts_with("config ") || result.command.starts_with("extensions ") {
         if let Some(value) = &result.result {
             writeln!(
                 stdout,

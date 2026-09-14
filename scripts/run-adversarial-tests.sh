@@ -35,6 +35,7 @@ run_faults() {
   run_case "fault-observation" cargo test --locked --lib "observation::tests::"
   run_case "fault-state" cargo test --locked --lib "state::tests::"
   run_case "fault-subprocess" cargo test --locked --lib "subprocess::tests::"
+  run_case "fault-extensions" cargo test --locked --test extensions
 }
 
 run_fuzz() {

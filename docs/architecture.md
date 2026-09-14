@@ -58,6 +58,13 @@ Specialized tools remain behind typed adapters. The current media probe invokes
 `ffprobe` without a shell; future encoders, optimizers, quality metrics, and
 fingerprinters must follow the same explicit capability boundary.
 
+The [safe extension SDK](plugin-sdk.md) adds a second, explicit boundary for
+provider contributions. A manifest declares; an operator lock pins and grants;
+the host resolves and revalidates. Embedded roles are registered by type, while
+process providers use bounded JSON stdio with an absolute byte-pinned
+executable. Neither path can execute plans, publish artifacts, or receive
+source-media mutation authority.
+
 ## Verification loop
 
 ```text

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/extension-lock-v1.schema.json",
+  "title": "optiflow extension operator lock v1",
+  "type": "object",
+  "required": [
+    "schema", "lock_id", "extension_id", "extension_version", "manifest_digest",
+    "enabled", "trust", "granted_effects", "grants_digest", "precedence",
+    "allowed_replacements", "allowed_fallbacks", "selected_execution_mode", "configurations"
+  ],
+  "properties": {
+    "schema": { "const": "optiflow.extension-lock.v1" },
+    "lock_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "extension_id": { "$ref": "#/$defs/qualifiedId" },
+    "extension_version": { "$ref": "#/$defs/version" },
+    "manifest_digest": { "$ref": "#/$defs/digest" },
+    "enabled": { "type": "boolean" },
+    "trust": { "enum": ["trusted_embedded", "trusted_process", "disabled"] },
+    "granted_effects": { "$ref": "#/$defs/effects" },
+    "grants_digest": { "$ref": "#/$defs/digest" },
+    "precedence": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 },
+    "allowed_replacements": { "type": "array", "items": { "$ref": "#/$defs/qualifiedId" }, "uniqueItems": true },
+    "allowed_fallbacks": { "type": "array", "items": { "$ref": "#/$defs/qualifiedId" }, "uniqueItems": true },
+    "selected_execution_mode": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "process": {
+      "type": "object", "required": ["executable", "executable_digest", "working_directory"],
+      "properties": {
+        "executable": { "$ref": "#/$defs/nativePath" },
+        "executable_digest": { "$ref": "#/$defs/digest" },
+        "working_directory": { "$ref": "#/$defs/nativePath" }
+      },
+      "additionalProperties": false
+    },
+    "configurations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "required": ["values", "fingerprint"],
+        "properties": {
+          "values": true,
+          "fingerprint": { "$ref": "#/$defs/digest" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "qualifiedId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$", "maxLength": 200 },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "digest": {
+      "type": "object", "required": ["algorithm", "value"],
+      "properties": { "algorithm": { "const": "blake3-256" }, "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+      "additionalProperties": false
+    },
+    "effects": {
+      "type": "array", "uniqueItems": true,
+      "items": { "enum": ["artifact-read", "isolated-workspace-write", "subprocess", "network", "gpu", "source-mutation", "destructive", "sign", "publish"] }
+    },
+    "nativePath": {
+      "oneOf": [
+        { "type": "object", "required": ["encoding", "value"], "properties": { "encoding": { "const": "utf8" }, "value": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+        { "type": "object", "required": ["encoding", "base64"], "properties": { "encoding": { "const": "unix_bytes" }, "base64": { "type": "string", "minLength": 4, "pattern": "^[A-Za-z0-9+/]*={0,2}$" } }, "additionalProperties": false }
+      ]
+    }
+  }
+}

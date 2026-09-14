@@ -66,6 +66,11 @@ impl Cli {
                 ConfigCommand::Show => "config show",
                 ConfigCommand::Explain(_) => "config explain",
             },
+            Command::Extensions(arguments) => match &arguments.command {
+                ExtensionsCommand::List(_) => "extensions list",
+                ExtensionsCommand::Inspect(_) => "extensions inspect",
+                ExtensionsCommand::Doctor(_) => "extensions doctor",
+            },
         }
     }
 }
@@ -89,6 +94,9 @@ pub enum Command {
 
     /// Validate and inspect the deterministic effective policy.
     Config(ConfigArgs),
+
+    /// Inspect explicitly selected, operator-locked extension providers.
+    Extensions(ExtensionsArgs),
 }
 
 #[derive(Debug, Args)]
@@ -221,4 +229,43 @@ pub struct ConfigExplainArgs {
     /// Canonical setting path, such as output.format.
     #[arg(value_name = "SETTING")]
     pub setting: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ExtensionsArgs {
+    #[command(subcommand)]
+    pub command: ExtensionsCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ExtensionsCommand {
+    /// List explicitly selected providers and their availability.
+    List(ExtensionSourcesArgs),
+
+    /// Inspect one explicitly selected provider, manifest, and operator lock.
+    Inspect(ExtensionInspectArgs),
+
+    /// Diagnose compatibility, authorization, and precedence resolution.
+    Doctor(ExtensionSourcesArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct ExtensionSourcesArgs {
+    /// Add one exact extension manifest file; no directory or PATH discovery occurs.
+    #[arg(long = "manifest", required = true, action = clap::ArgAction::Append, value_name = "FILE")]
+    pub manifests: Vec<PathBuf>,
+
+    /// Add the matching operator-owned lock file.
+    #[arg(long = "lock", required = true, action = clap::ArgAction::Append, value_name = "FILE")]
+    pub locks: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct ExtensionInspectArgs {
+    /// Qualified extension identifier to inspect.
+    #[arg(value_name = "EXTENSION_ID")]
+    pub extension_id: String,
+
+    #[command(flatten)]
+    pub sources: ExtensionSourcesArgs,
 }

@@ -8,7 +8,7 @@ status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-09-13
 governed_by:
   - architecture-architecture
 depends_on:
@@ -138,6 +138,8 @@ permission.
 | `discovery` | Application/infrastructure boundary | Traverse explicit inputs under conservative policy |
 | `inventory` | Domain | Normalize filesystem and media observations |
 | `adapters::ffprobe` | Infrastructure | Invoke and parse `ffprobe` directly without a shell |
+| `extensions` | Application/contract boundary | Validate explicit provider declarations and locks, resolve precedence, register typed embedded roles, and reject unsafe contributions |
+| `extensions::process` | Infrastructure | Invoke one absolute, byte-pinned trusted provider with bounded JSON stdio and no inherited environment |
 | `hashing` | Evidence | Stream complete BLAKE3-256 hashes with cancellation checkpoints |
 | `duplicates` | Domain | Derive exact groups from equal size and complete hash evidence |
 | `state` | Infrastructure | Persist lifecycle, observations, groups, and cache in SQLite |
@@ -168,6 +170,11 @@ permission.
 11. Generated architecture projections remain disposable; canonical meaning
     changes only in the root architecture documents or their declared local
     presentation configuration.
+12. Extension manifests only declare. Operator locks grant trust, effects,
+    precedence, configuration, and fallback for exact provider bytes.
+13. Extension results are proposed evidence. They cannot publish artifacts,
+    execute plans, mutate source media, or bypass core revalidation,
+    authorization, hashing, byte confirmation, provenance, and recovery.
 
 ## Dependency Direction
 
@@ -198,6 +205,8 @@ no demonstrated boundary value.
 - In-process components exchange typed Rust values.
 - External adapters exchange bounded subprocess arguments and structured
   output.
+- Embedded extensions register role-specific Rust traits; trusted process
+  extensions exchange closed, bounded, independently versioned JSON documents.
 - Local persistence uses transactional SQLite plus immutable JSON artifacts.
 - Automation exchanges `optiflow.command-result.v1` and referenced artifacts.
 - `flow` invokes the binary as a subprocess and branches on complete schema
@@ -243,6 +252,9 @@ semantics satisfy OptiFlow requirements.
 - Full hashes are calculated only when a candidate relationship requires them
   in the current MVP.
 - Direct byte confirmation remains deferred to the future destructive gate.
+- The extension SDK grants no mutation, destructive, signing, or publication
+  effect. Process trust is explicit but does not claim operating-system
+  sandboxing; unknown or hostile binaries require external containment.
 - OCI or cloud packaging must not introduce implicit source upload or telemetry
   containing paths or media content.
 

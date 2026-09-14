@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/extension-invocation-v1.schema.json",
+  "title": "optiflow extension invocation v1",
+  "type": "object",
+  "required": [
+    "schema", "invocation_id", "extension", "capability_id", "capability_kind",
+    "input_artifacts", "input_evidence", "configuration", "authorization", "limits", "cancellation_id",
+    "checkpoint_references"
+  ],
+  "properties": {
+    "schema": { "const": "optiflow.extension-invocation.v1" },
+    "invocation_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "extension": { "$ref": "#/$defs/extension" },
+    "capability_id": { "type": "string", "pattern": "^optiflow/[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$", "maxLength": 200 },
+    "capability_kind": { "$ref": "#/$defs/capabilityKind" },
+    "input_artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" }, "maxItems": 100000 },
+    "input_evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" }, "maxItems": 100000 },
+    "configuration": {
+      "type": "object", "required": ["schema_id", "values", "fingerprint"],
+      "properties": {
+        "schema_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "values": true,
+        "fingerprint": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "authorization": {
+      "type": "object", "required": ["lock_id", "lock_digest", "grants_digest", "granted_effects"],
+      "properties": {
+        "lock_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "lock_digest": { "$ref": "#/$defs/digest" },
+        "grants_digest": { "$ref": "#/$defs/digest" },
+        "granted_effects": { "$ref": "#/$defs/effects" }
+      },
+      "additionalProperties": false
+    },
+    "limits": { "$ref": "#/$defs/limits" },
+    "cancellation_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "checkpoint_references": { "type": "array", "items": { "$ref": "#/$defs/artifact" }, "maxItems": 10000 },
+    "lifecycle_event": { "$ref": "#/$defs/lifecycleEvent" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "qualifiedId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$", "maxLength": 200 },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "digest": {
+      "type": "object", "required": ["algorithm", "value"],
+      "properties": { "algorithm": { "const": "blake3-256" }, "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+      "additionalProperties": false
+    },
+    "extension": {
+      "type": "object", "required": ["extension_id", "version", "manifest_digest"],
+      "properties": {
+        "extension_id": { "$ref": "#/$defs/qualifiedId" },
+        "version": { "$ref": "#/$defs/version" },
+        "manifest_digest": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "capabilityKind": { "enum": ["inspector", "analyzer", "policy_contributor", "planner", "validator", "report_provider", "lifecycle_observer"] },
+    "artifact": {
+      "type": "object", "required": ["artifact_id", "schema", "content_digest"],
+      "properties": {
+        "artifact_id": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "schema": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "content_digest": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object", "required": ["evidence_id", "schema", "value", "fingerprint"],
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "schema": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "value": true,
+        "fingerprint": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "effects": {
+      "type": "array", "uniqueItems": true,
+      "items": { "enum": ["artifact-read", "isolated-workspace-write", "subprocess", "network", "gpu", "source-mutation", "destructive", "sign", "publish"] }
+    },
+    "limits": {
+      "type": "object", "required": ["timeout_ms", "max_stdin_bytes", "max_stdout_bytes", "max_stderr_bytes"],
+      "properties": {
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000 },
+        "max_stdin_bytes": { "type": "integer", "minimum": 1, "maximum": 4194304 },
+        "max_stdout_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "max_stderr_bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 }
+      },
+      "additionalProperties": false
+    },
+    "lifecycleEvent": {
+      "type": "object",
+      "required": ["event_id", "invocation_id", "sequence", "phase", "state", "artifact_references", "diagnostics"],
+      "properties": {
+        "event_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "invocation_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "phase": { "enum": ["discover", "inspect", "plan", "authorize", "execute", "validate", "commit-evidence"] },
+        "state": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "artifact_references": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+        "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+      },
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object", "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 200 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "retryable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

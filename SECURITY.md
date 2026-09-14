@@ -31,5 +31,14 @@ usable.
 
 Security reports include unsafe source-media mutation, path or artifact
 identity confusion, unbounded external processes, release-integrity failures,
-and dependency or credential exposure. General bugs and feature requests belong
-in the public issue tracker when they do not contain sensitive information.
+extension manifest/lock identity confusion, acceptance of malformed extension
+evidence, and dependency or credential exposure. General bugs and feature
+requests belong in the public issue tracker when they do not contain sensitive
+information.
+
+An extension lock marked `trusted_process` is an explicit operator trust
+decision, not a claim of OS sandboxing. OptiFlow bounds stdio, time, identity,
+and selection and clears inherited environment, but a process still has the
+ambient access of its OS account. Do not lock an unknown binary as trusted;
+contain untrusted providers outside OptiFlow and never place secrets in an
+extension configuration.
