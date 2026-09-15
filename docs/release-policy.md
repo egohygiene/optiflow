@@ -99,6 +99,11 @@ architectures, libc implementations, package managers, installers, and code
 signing/notarization channels are unsupported until they appear in this table
 and in the release workflow.
 
+When present, `ffprobe` media evidence records the exact discovered executable
+path, version, and binary digest. The release does not claim compatibility with
+every `ffprobe` build merely because the executable starts; each bounded result
+must also satisfy the current semantic evidence contract.
+
 Each platform archive contains one executable named `optiflow` plus `LICENSE`. The signed
 bundle also contains:
 

@@ -2,10 +2,11 @@
 
 ## Publication contract
 
-New v5 scan and plan documents are not considered published merely because a
-JSON file exists. Publication requires a valid `optiflow.artifact-set.v1`
-marker whose member list, schemas, byte lengths, BLAKE3-256 digests, run
-identity, and artifact-set identity all agree with the files on disk.
+New v5 run and plan documents and v5-v6 report documents are not considered
+published merely because a JSON file exists. Publication requires a valid
+`optiflow.artifact-set.v1` marker whose member list, schemas, byte lengths,
+BLAKE3-256 digests, run identity, and artifact-set identity all agree with the
+files on disk.
 
 Readers classify a set as exactly one of:
 
@@ -16,7 +17,8 @@ Readers classify a set as exactly one of:
 | `incompatible` | The marker schema, structure, kind, member schema, or identity binding is unsupported or contradictory | Refuse the set with `artifact_set_incompatible` |
 
 Historical v1-v4 reports predate this protocol and remain readable without a
-marker. Newly emitted v5 reports fail closed when their marker is absent.
+marker. Report v5 and newly emitted report v6 documents fail closed when their
+marker is absent.
 
 ## Scan sets
 
@@ -106,6 +108,6 @@ overstates that boundary.
 | --- | --- | --- | --- |
 | Related outputs publish together | Scan set has three required members and one marker | Staging plus directory rename | Remove staging or reconcile committed set |
 | Marker describes exact bytes | Size and BLAKE3-256 for every member | Verification before every current-set read | `incomplete` on mismatch |
-| Schemas and identities agree | v5 document IDs and member schemas bind to marker | Contract and semantic validation | `incompatible` on contradiction |
+| Schemas and identities agree | Current document IDs and member schemas bind to marker | Contract and semantic validation | `incompatible` on contradiction |
 | Plan output remains file-compatible | Plan plus sidecar marker at existing path | Pending-marker handshake | Promote verified pending marker |
 | No silent overwrite | Committed and unknown destinations are refused | Create-new staging and destination checks | Caller selects a new output |

@@ -10,7 +10,8 @@ use crate::artifact_set::{self, ArtifactSetStatus};
 use crate::contracts::{self, Contract};
 use crate::domain::{
     CacheStatus, CachedAnalysis, DuplicateGroup, FileObservation, MediaDescriptor, MediaKind,
-    NativePath, ObservationStatus, ScanReport, ScanRun,
+    NativePath, ObservationStatus, REPORT_SCHEMA_VERSION, REPORT_SCHEMA_VERSION_V5, ScanReport,
+    ScanRun,
 };
 use crate::filesystem::identity::FileStateSignature;
 
@@ -209,7 +210,11 @@ impl StateStore {
                 serde_json::from_slice(&fs::read(directory.join("report.json"))?)
                     .context("committed report artifact is incompatible")?;
             contracts::validate(Contract::Run, &run)?;
-            contracts::validate(Contract::Report, &report)?;
+            if report.schema_version == REPORT_SCHEMA_VERSION {
+                contracts::validate(Contract::Report, &report)?;
+            } else if report.schema_version != REPORT_SCHEMA_VERSION_V5 {
+                bail!("committed report artifact declares an unsupported schema");
+            }
             if run.run_id != manifest.run_id
                 || report.run.run_id != manifest.run_id
                 || run.artifact_set_id.as_deref() != Some(manifest.set_id.as_str())
@@ -244,7 +249,8 @@ impl StateStore {
                    AND changed_unix_ns IS ?6
                    AND filesystem_id IS NOT NULL AND file_id IS NOT NULL
                    AND changed_unix_ns IS NOT NULL
-                   AND (?7 IS NULL OR probe_signature = ?7)",
+                   AND ((?7 IS NULL AND probe_signature IS NULL)
+                        OR probe_signature = ?7)",
                 params![
                     path_key.as_ref(),
                     to_database_integer(signature.logical_size_bytes, "file size")?,
@@ -268,27 +274,52 @@ impl StateStore {
             )
             .optional()?;
 
-        row.map(
-            |(content_type, media_kind, content_hash, media, probe_signature, status, warnings)| {
-                Ok(CachedAnalysis {
+        let analysis = row
+            .map(
+                |(
                     content_type,
-                    media_kind: serde_json::from_str::<MediaKind>(&media_kind)?,
+                    media_kind,
                     content_hash,
-                    media: media
-                        .map(|value| serde_json::from_str::<MediaDescriptor>(&value))
-                        .transpose()?,
+                    media,
                     probe_signature,
-                    status: serde_json::from_str::<ObservationStatus>(&status)?,
-                    warnings: serde_json::from_str::<Vec<String>>(&warnings)?,
-                    // Cache hits are treated as stable; stability is re-checked
-                    // at hash time when the entry is actually used.
-                    observation_stability: crate::domain::ObservationStability::Stable,
-                    evidence_validity: crate::domain::EvidenceValidity::Current,
-                    attempt_count: 1,
-                })
-            },
-        )
-        .transpose()
+                    status,
+                    warnings,
+                )| {
+                    Ok::<CachedAnalysis, serde_json::Error>(CachedAnalysis {
+                        content_type,
+                        media_kind: serde_json::from_str::<MediaKind>(&media_kind)?,
+                        content_hash,
+                        media: media
+                            .map(|value| serde_json::from_str::<MediaDescriptor>(&value))
+                            .transpose()?,
+                        probe_signature,
+                        status: serde_json::from_str::<ObservationStatus>(&status)?,
+                        warnings: serde_json::from_str::<Vec<String>>(&warnings)?,
+                        // Cache hits are treated as stable; stability is re-checked
+                        // at hash time when the entry is actually used.
+                        observation_stability: crate::domain::ObservationStability::Stable,
+                        evidence_validity: crate::domain::EvidenceValidity::Current,
+                        attempt_count: 1,
+                    })
+                },
+            )
+            .transpose()?;
+
+        if required_probe_signature.is_some_and(|signature| signature != "ffprobe-unavailable")
+            && analysis.as_ref().is_some_and(|analysis| {
+                matches!(
+                    analysis.media_kind,
+                    MediaKind::Image | MediaKind::Video | MediaKind::Audio
+                ) && analysis.media.is_none()
+            })
+        {
+            // A transient provider failure must not become durable evidence.
+            // Re-run the bounded probe while the source and provider
+            // signatures remain current.
+            return Ok(None);
+        }
+
+        Ok(analysis)
     }
 
     pub fn upsert_cache(
@@ -718,6 +749,24 @@ mod tests {
             store
                 .lookup_cache(&path, &signature, None)
                 .expect("cache lookup")
+                .is_some()
+        );
+
+        let mut provider_analysis = analysis.clone();
+        provider_analysis.probe_signature = Some("ffprobe-v1:fixture".to_owned());
+        store
+            .upsert_cache(&path, &signature, &provider_analysis)
+            .expect("provider cache insert");
+        assert!(
+            store
+                .lookup_cache(&path, &signature, None)
+                .expect("no-probe cache lookup")
+                .is_none()
+        );
+        assert!(
+            store
+                .lookup_cache(&path, &signature, Some("ffprobe-v1:fixture"))
+                .expect("provider cache lookup")
                 .is_some()
         );
 

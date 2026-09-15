@@ -22,6 +22,12 @@ modification time, metadata-change time, and reported link count. Optional
 `ffprobe` receives a clone of the opened handle through `/dev/fd/0`; it does not
 resolve the original mutable pathname.
 
+One probe-enabled scan resolves `ffprobe` once to a canonical native path and
+binds its exact version line, BLAKE3-256 executable digest, and invocation
+fingerprint. The executable digest is checked before and after each bounded
+inspection. A zero exit status is accepted only when stderr is empty and the
+expected format and stream observations are present and semantically valid.
+
 ## Refusal and retry behavior
 
 OptiFlow retries a failed observation at most once, for a total of two attempts.
@@ -51,6 +57,10 @@ A cache entry is considered only inside a newly validated handle window. Cache
 rows created before the full signature migration have missing identity fields
 and cannot be reused. If the signature cannot be captured, cache lookup and
 cache insertion are disabled for that observation.
+
+Probe-enabled cache reuse additionally requires the exact provider signature.
+A result missing media evidence from an otherwise available provider is not
+reused, so a transient failure is retried on the next observation.
 
 ## Filesystem limits
 

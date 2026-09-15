@@ -13,13 +13,14 @@ use crate::configuration::EffectivePolicyV1;
 use crate::contracts::{self, Contract};
 use crate::discovery::{DiscoveryIssue, DiscoveryIssueKind, discover};
 use crate::domain::{
-    CachedAnalysis, EvidenceValidity, FileObservation, HardLinkGroup, MediaKind, NativePath,
-    ObservationStatus, PhysicalReclaimability, REPORT_SCHEMA_VERSION, RUN_SCHEMA_VERSION,
-    ReclaimabilityReasonCode, ReclaimabilityStatus, ScanOptions, ScanReport, ScanRun, ScanSummary,
-    StorageAllocation, StorageSummary,
+    CachedAnalysis, EvidenceValidity, FileObservation, HardLinkGroup, MediaKind,
+    MediaProfileCoverageStatus, NativePath, ObservationStatus, PhysicalReclaimability,
+    REPORT_SCHEMA_VERSION, RUN_SCHEMA_VERSION, ReclaimabilityReasonCode, ReclaimabilityStatus,
+    ScanOptions, ScanReport, ScanRun, ScanSummary, StorageAllocation, StorageSummary,
 };
 use crate::duplicates::exact_groups;
 use crate::hashing::HASH_ALGORITHM;
+use crate::media_profiles;
 use crate::observation;
 use crate::outcome::{
     ArtifactReference, CoverageStatus, Diagnostic, DiagnosticClassification, DiagnosticCode,
@@ -90,13 +91,14 @@ pub(super) fn run(
         *size_frequency.entry(file.size_bytes).or_default() += 1;
     }
 
-    let ffprobe_signature = options
+    let ffprobe_adapter = options
         .probe_media
-        .then(|| ffprobe::signature("ffprobe"))
-        .flatten();
+        .then(ffprobe::FfprobeAdapter::discover)
+        .and_then(Result::ok);
     let required_probe_signature = options.probe_media.then(|| {
-        ffprobe_signature
-            .as_deref()
+        ffprobe_adapter
+            .as_ref()
+            .map(ffprobe::FfprobeAdapter::cache_signature)
             .unwrap_or("ffprobe-unavailable")
     });
     let mut observations = Vec::with_capacity(discovery.files.len());
@@ -128,7 +130,7 @@ pub(super) fn run(
             cached,
             is_exact_candidate,
             options.probe_media,
-            ffprobe_signature.as_deref(),
+            ffprobe_adapter.as_ref(),
             signals,
         );
         if observed.interrupted {
@@ -412,6 +414,39 @@ pub(super) fn run(
         unstable_observation_count,
     };
 
+    let media_profile_evidence = match media_profiles::lossless_png_evidence(
+        &run_id,
+        &observations,
+        options.probe_media,
+        ffprobe_adapter
+            .as_ref()
+            .map(ffprobe::FfprobeAdapter::evidence),
+        &effective_policy.fingerprints.evidence_policy,
+    ) {
+        Ok(evidence) => evidence,
+        Err(error) => {
+            return fail_active_scan(
+                &store,
+                &run_id,
+                DiagnosticCode::ArtifactValidationFailed,
+                DiagnosticClassification::Artifact,
+                "failed to derive media-profile evidence",
+                &error,
+            );
+        }
+    };
+    if let Err(error) = contracts::validate(Contract::MediaProfileEvidence, &media_profile_evidence)
+    {
+        return fail_active_scan(
+            &store,
+            &run_id,
+            DiagnosticCode::ArtifactValidationFailed,
+            DiagnosticClassification::Artifact,
+            "the generated media-profile evidence failed contract validation",
+            &error,
+        );
+    }
+
     let report = ScanReport {
         schema_version: REPORT_SCHEMA_VERSION.to_owned(),
         generated_at: Utc::now().to_rfc3339(),
@@ -421,6 +456,7 @@ pub(super) fn run(
         observations: observations.clone(),
         hard_link_groups: hard_link_groups.clone(),
         storage: Some(storage),
+        media_profile_evidence: vec![media_profile_evidence.clone()],
     };
 
     if let Err(error) = contracts::validate(Contract::Run, &run) {
@@ -516,7 +552,7 @@ pub(super) fn run(
     }
 
     let mut diagnostics = discovery_diagnostics(&discovery.issues, true);
-    if options.probe_media && ffprobe_signature.is_none() {
+    if options.probe_media && ffprobe_adapter.is_none() {
         diagnostics.push(Diagnostic::new(
             DiagnosticCode::OptionalCapabilityUnavailable,
             DiagnosticSeverity::Warning,
@@ -524,6 +560,21 @@ pub(super) fn run(
             DiagnosticImpact::None,
             "ffprobe is unavailable; optional stream metadata was not collected",
         ));
+    }
+    if matches!(
+        media_profile_evidence.coverage.status,
+        MediaProfileCoverageStatus::Partial | MediaProfileCoverageStatus::Unavailable
+    ) {
+        diagnostics.push(
+            Diagnostic::new(
+                DiagnosticCode::ResultProducedWithExclusions,
+                DiagnosticSeverity::Warning,
+                DiagnosticClassification::Coverage,
+                DiagnosticImpact::DegradesCoverage,
+                "lossless PNG profile evidence was incomplete; affected inputs produced no optimization opportunity",
+            )
+            .with_count(media_profile_evidence.coverage.limited_evidence_count),
+        );
     }
     if unstable_observation_count > 0 {
         let mut diagnostic = Diagnostic::new(

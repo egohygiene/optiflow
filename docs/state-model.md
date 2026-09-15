@@ -43,6 +43,16 @@ reused. A cache hit is accepted only inside a fresh, stable
 If a cached file previously had no full hash but becomes a size-based duplicate
 candidate, OptiFlow calculates and stores its full hash during the new scan.
 
+Probe-enabled cache lookup also binds the resolved provider's version, canonical
+path, binary digest, and invocation fingerprint. A cached missing-media result
+from an available provider is not reused; later scans retry the provider. The
+probe-disabled path does not reuse a provider-bearing cache row, so unrequested
+media facts never lose their provider provenance. The
+derived media-profile document is recomputed from accepted observations and the
+current effective evidence-policy fingerprint, then stored only inside the
+immutable report. No database migration or profile-specific cache table is
+introduced.
+
 The cache recognizes unchanged filesystem objects at unchanged native paths.
 Content-addressed recognition
 after arbitrary moves is a later enhancement because non-candidate files are
@@ -60,8 +70,8 @@ not all hashed in the MVP.
 
 Handled interruptions mark rows `interrupted`; internal failures mark rows
 `failed`; a hard process failure may leave recoverable `running` state. None is
-returned as a completed report. A still-`running` row with a committed v5
-artifact set is recovered idempotently when state is next opened. Stale staging
+returned as a completed report. A still-`running` row with a committed v5 run
+and v6 report artifact set is recovered idempotently when state is next opened. Stale staging
 directories are removed; incomplete or incompatible final sets are never
 promoted.
 

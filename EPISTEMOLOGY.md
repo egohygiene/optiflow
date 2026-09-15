@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-epistemology
 title: OptiFlow Epistemology
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-09-15
 governed_by:
   - architecture-epistemology
 depends_on:
@@ -62,6 +62,11 @@ that every decoder will interpret the file identically. Filesystem metadata is
 an observation from a specific time and platform, not timeless content
 identity.
 
+A lossless-PNG review opportunity is a derived candidate claim: current
+byte-classification and semantically valid provider observations satisfy one
+versioned profile rule. It is not evidence that recompression will be smaller,
+that a future output will validate, or that physical storage will be reclaimed.
+
 ## Provenance
 
 Material claims preserve enough provenance to identify:
@@ -69,7 +74,8 @@ Material claims preserve enough provenance to identify:
 - source run and effective evidence policy;
 - input and path observation;
 - observation time and coverage;
-- detector or adapter identity, version, parameters, and outcome;
+- detector or adapter identity, canonical executable path, exact version,
+  binary digest, invocation fingerprint, parameters, and outcome;
 - complete hash algorithm and value where applicable;
 - schema version and producing OptiFlow version;
 - derivation or planning rule that transformed evidence into a claim.
@@ -86,6 +92,9 @@ must remain scoped to its detector, version, inputs, and calibrated meaning.
 The system represents uncertainty structurally through coverage, diagnostics,
 stability, capability status, evidence completeness, and claim type. Human text
 may summarize those facts but must not replace them.
+
+When no candidate output has been produced and validated, output bytes and
+logical savings remain null and the savings claim is `not_estimated`.
 
 ## Conflict Resolution
 
@@ -131,6 +140,9 @@ claim semantics require a new schema identifier and migration guidance.
   does not erase the historical report.
 - Missing `ffprobe` can leave media descriptors unknown while exact byte
   evidence remains complete.
+- A valid PNG observation may produce a stable review opportunity across
+  reruns, while provider failure, invalid evidence, or stale observation state
+  produces no opportunity.
 
 ## Open Questions
 

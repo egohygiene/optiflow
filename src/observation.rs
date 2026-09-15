@@ -7,6 +7,7 @@
 use std::fs::File;
 use std::path::Path;
 
+use crate::adapters::ffprobe::FfprobeAdapter;
 use crate::discovery::DiscoveredFile;
 use crate::domain::{
     CachedAnalysis, EvidenceValidity, MediaKind, ObservationStability, ObservationStatus,
@@ -50,7 +51,7 @@ pub fn observe(
     cached: Option<CachedAnalysis>,
     needs_hash: bool,
     probe_media: bool,
-    ffprobe_signature: Option<&str>,
+    ffprobe: Option<&FfprobeAdapter>,
     signals: &SignalState,
 ) -> ObservationResult {
     observe_with_hook(
@@ -58,7 +59,7 @@ pub fn observe(
         cached,
         needs_hash,
         probe_media,
-        ffprobe_signature,
+        ffprobe,
         signals,
         &mut |_, _| {},
     )
@@ -69,7 +70,7 @@ fn observe_with_hook<F>(
     cached: Option<CachedAnalysis>,
     needs_hash: bool,
     probe_media: bool,
-    ffprobe_signature: Option<&str>,
+    ffprobe: Option<&FfprobeAdapter>,
     signals: &SignalState,
     hook: &mut F,
 ) -> ObservationResult
@@ -85,7 +86,7 @@ where
             cached.clone(),
             needs_hash,
             probe_media,
-            ffprobe_signature,
+            ffprobe,
             signals,
             hook,
         ) {
@@ -156,7 +157,7 @@ fn attempt_once<F>(
     cached: Option<CachedAnalysis>,
     needs_hash: bool,
     probe_media: bool,
-    ffprobe_signature: Option<&str>,
+    ffprobe: Option<&FfprobeAdapter>,
     signals: &SignalState,
     hook: &mut F,
 ) -> Result<AttemptSuccess, AttemptFailure>
@@ -231,13 +232,8 @@ where
     let cache_hit = cached.is_some();
     let mut analysis = match cached {
         Some(analysis) => analysis,
-        None => crate::inventory::analyze_file(
-            &mut file,
-            &discovered.path,
-            probe_media,
-            ffprobe_signature,
-        )
-        .map_err(|error| AttemptFailure {
+        None => crate::inventory::analyze_file(&mut file, &discovered.path, probe_media, ffprobe)
+            .map_err(|error| AttemptFailure {
             stability: ObservationStability::Unreadable,
             validity: EvidenceValidity::Unavailable,
             message: format!("opened-handle content analysis failed: {error:#}"),

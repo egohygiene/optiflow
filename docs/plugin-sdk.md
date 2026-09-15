@@ -19,6 +19,12 @@ These documents do not replace run, report, plan, artifact-set, effective-policy
 or command-result contracts. A provider result is a proposed contribution. Core
 OptiFlow must validate and incorporate it through the existing typed pipeline.
 
+The built-in lossless-PNG review profile is not an SDK provider. It consumes
+core handle-bound observations from the existing `ffprobe` adapter and is
+embedded in report v6 under `optiflow.media-profile-evidence.v1`. Its addition
+does not grant extensions a source handle, source path, artifact publication,
+optimization execution, or mutation authority.
+
 ## Supported roles
 
 | Role | Rust trait | Permitted contribution |

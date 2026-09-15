@@ -189,6 +189,7 @@ mod tests {
             observations,
             hard_link_groups: Vec::new(),
             storage: None,
+            media_profile_evidence: Vec::new(),
         }
     }
 

@@ -17,6 +17,10 @@ artifacts in its configured state directory, but it cannot change source media.
   exact identity.
 - An exact group requires identical byte length and complete BLAKE3-256 hash.
 - A plan is immutable evidence, not permission to execute.
+- A media-profile opportunity is review evidence, not an output, executable
+  plan action, or promise of physical savings.
+- Missing, stale, partial, contradictory, unavailable, or semantically invalid
+  media evidence never produces an opportunity.
 - New related artifacts are consumable only as a committed, digest-verified
   artifact set; incomplete and incompatible sets fail closed.
 - Configuration cannot enable mutation, apply behavior, shell execution,
@@ -56,6 +60,8 @@ deliberate policy and never the universal default.
 - Crashes and disk exhaustion between related artifact writes
 - Untrusted configuration, shell expansion, and policy-fingerprint mismatch
 - Optional adapter absence or malformed output
+- Optional provider replacement, timeout, non-zero exit, nominal success with
+  stderr, and nominal success with incomplete semantic observations
 - External-volume and network-filesystem SQLite behavior
 
 ## Remaining risks
@@ -75,3 +81,5 @@ See the [artifact-set commit protocol](artifact-set-protocol.md) for staging,
 commit markers, recovery, and durability boundaries.
 See the [handle-bound observation protocol](observation-protocol.md) for the
 stage checks, cache binding, retry behavior, and filesystem limits.
+See [media-profile evidence](media-profiles.md) for the first profile's exact
+claim boundary and required future-output validations.

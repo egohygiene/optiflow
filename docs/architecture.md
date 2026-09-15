@@ -28,9 +28,9 @@ CLI / environment / TOML
           |
           v
  persistent observations
+          +----> media-profile evidence
           |
-          v
- exact relationship evidence
+          +----> exact relationship evidence
           |
           v
  immutable report + plan
@@ -55,7 +55,10 @@ a recoverable plan-and-marker handshake. The
 durability, inspection, and recovery boundaries.
 
 Specialized tools remain behind typed adapters. The current media probe invokes
-`ffprobe` without a shell; future encoders, optimizers, quality metrics, and
+one canonical, digest-bound `ffprobe` executable without a shell and accepts
+only bounded, semantically valid output. The built-in lossless-PNG profile then
+derives review evidence from current observations without producing an output
+or estimating savings. Future encoders, optimizers, quality metrics, and
 fingerprinters must follow the same explicit capability boundary.
 
 The [safe extension SDK](plugin-sdk.md) adds a second, explicit boundary for

@@ -12,6 +12,7 @@ pub enum Contract {
     CommandResult,
     Config,
     EffectivePolicy,
+    MediaProfileEvidence,
     ExtensionManifest,
     ExtensionLock,
     ExtensionInvocation,
@@ -24,10 +25,15 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
     let validator = match contract {
         Contract::Report => {
             let run_schema = schema(Contract::Run)?;
+            let media_profile_schema = schema(Contract::MediaProfileEvidence)?;
             let registry = Registry::new()
                 .add(
                     "https://github.com/egohygiene/optiflow/schemas/run.schema.json",
                     run_schema,
+                )?
+                .add(
+                    "https://github.com/egohygiene/optiflow/schemas/media-profile-evidence-v1.schema.json",
+                    media_profile_schema,
                 )?
                 .prepare()?;
             jsonschema::options()
@@ -57,6 +63,9 @@ pub fn schema(contract: Contract) -> Result<Value> {
         Contract::CommandResult => include_str!("../schemas/command-result.schema.json"),
         Contract::Config => include_str!("../schemas/config-v1.schema.json"),
         Contract::EffectivePolicy => include_str!("../schemas/effective-policy-v1.schema.json"),
+        Contract::MediaProfileEvidence => {
+            include_str!("../schemas/media-profile-evidence-v1.schema.json")
+        }
         Contract::ExtensionManifest => include_str!("../schemas/extension-manifest-v1.schema.json"),
         Contract::ExtensionLock => include_str!("../schemas/extension-lock-v1.schema.json"),
         Contract::ExtensionInvocation => {
@@ -257,5 +266,39 @@ mod tests {
         extended["provenance"]["unrecognized.setting"] =
             json!({ "source": "compiled_default", "detail": "not public" });
         assert!(validate(Contract::EffectivePolicy, &extended).is_err());
+    }
+
+    #[test]
+    fn media_profile_example_is_valid_and_contradictory_claims_fail_closed() {
+        let example: Value =
+            serde_json::from_str(include_str!("../examples/media-profile-evidence-v1.json"))
+                .expect("media-profile example JSON");
+        validate(Contract::MediaProfileEvidence, &example).expect("valid media-profile example");
+
+        let mut estimated = example.clone();
+        estimated["entries"][0]["opportunity"]["estimated_output_bytes"] = json!(64);
+        assert!(validate(Contract::MediaProfileEvidence, &estimated).is_err());
+
+        let mut provider_absent = example.clone();
+        provider_absent["entries"][0]["provider"] = Value::Null;
+        assert!(validate(Contract::MediaProfileEvidence, &provider_absent).is_err());
+
+        let mut limited_opportunity = example;
+        limited_opportunity["entries"][0]["limitations"] = json!(["provider_evidence_invalid"]);
+        assert!(validate(Contract::MediaProfileEvidence, &limited_opportunity).is_err());
+
+        let mut contradictory_partial = limited_opportunity;
+        contradictory_partial["entries"][0]["limitations"] = json!([]);
+        let opportunity_entry = contradictory_partial["entries"][0].clone();
+        contradictory_partial["entries"] = json!([opportunity_entry.clone(), opportunity_entry]);
+        contradictory_partial["coverage"] = json!({
+            "status": "partial",
+            "candidate_media_count": 2,
+            "complete_evidence_count": 1,
+            "limited_evidence_count": 1,
+            "opportunity_count": 1,
+            "limitations": ["provider_result_unavailable"]
+        });
+        assert!(validate(Contract::MediaProfileEvidence, &contradictory_partial).is_err());
     }
 }

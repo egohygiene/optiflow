@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-ontology
 title: OptiFlow Ontology
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-09-15
 governed_by:
   - architecture-ontology
 depends_on:
@@ -28,8 +28,8 @@ supersedes: []
 ## Domain Scope
 
 OptiFlow models filesystem observations, media descriptions, evidence-backed
-content relationships, review plans, and the policy and provenance required to
-interpret them.
+content relationships, media-profile review opportunities, review plans, and
+the policy and provenance required to interpret them.
 
 ## Domain Boundaries
 
@@ -51,6 +51,9 @@ apply boundary is specified and implemented.
 | Path observation | Facts observed for content at one filesystem location during a run. |
 | Filesystem identity hint | Platform facts that help detect aliasing or change but do not replace content evidence. |
 | Media descriptor | Normalized container, stream, format, and media facts reported by an adapter. |
+| Media profile | A named and versioned rule that derives a bounded media-specific claim from accepted evidence. |
+| Media-profile evidence | Deterministic profile results, provider and policy provenance, coverage, limitations, and entries for one source run. |
+| Optimization opportunity | Review-only evidence that a later evaluation may be useful; not an output, plan action, execution request, or savings guarantee. |
 | Content evidence | Size, complete hash, or future detector output used to evaluate a relationship. |
 | Coverage | Whether the requested scope was completely, partially, or not meaningfully observed. |
 | Diagnostic | Typed information about a condition, classification, impact, and context. |
@@ -77,7 +80,11 @@ scan run ──records──> path observation
 path observation ──may include──> media descriptor
 path observation ──contributes──> content evidence
 content evidence ──supports──> exact duplicate group
+path observation ──is evaluated by──> media profile
+media profile ──derives──> media-profile evidence
+media-profile evidence ──may contain──> optimization opportunity
 scan run ──is projected as──> report
+report ──embeds──> media-profile evidence
 report ──may inform──> plan
 plan ──contains──> plan action
 plan action ──requires──> file precondition
@@ -100,6 +107,8 @@ as current facts.
 - Use **stale state** when supplied evidence no longer satisfies a command's
   prerequisites.
 - Use **source media** for files under observation or future action authority.
+- Use **review opportunity** when current evidence supports later evaluation;
+  it does not assert that a smaller valid output exists.
 - Use **state** for queryable local operational data and **artifact** for
   versioned interchange evidence.
 
@@ -112,6 +121,8 @@ as current facts.
   recovery policy.
 - Avoid **optimizer** when describing `v0.1.x` behavior; it inventories and
   plans but does not transform source media.
+- Avoid **savings** for the first PNG profile; it performs no trial encoding or
+  physical-allocation measurement and records `not_estimated`.
 - Avoid **success with warnings** when typed coverage and diagnostic impact can
   express the actual outcome.
 
@@ -122,18 +133,20 @@ as current facts.
 - Equal metadata is not exact content evidence.
 - Historical evidence remains historical after current state changes.
 - Adapter output is normalized before crossing into domain relationships.
+- Profile conclusions preserve exact provider and evidence-policy identity.
 - Every machine document identifies its schema.
 
 ## Open Questions
 
 - When should content identity become independent from a path-based cache key?
 - What canonical concepts are needed for paired assets and compound media?
-- Should policy profiles be domain entities or external configuration packages?
+- Which later profiles belong in the core and which require an explicitly
+  selected extension contract?
 
 ## Migration Notes
 
-The current v1-v3 run, report, and plan artifacts remain authoritative. This
-ontology names their shared concepts but does not rewrite historical schemas.
+Historical run, report, and plan artifacts retain their original authority.
+Report v6 adds media-profile evidence without reinterpreting report v1-v5.
 Future incompatible concepts require new schema identifiers.
 
 ## Validation

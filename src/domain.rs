@@ -23,10 +23,18 @@ pub const RUN_SCHEMA_VERSION_V4: &str = "optiflow.run.v4";
 pub const REPORT_SCHEMA_VERSION_V4: &str = "optiflow.report.v4";
 pub const PLAN_SCHEMA_VERSION_V4: &str = "optiflow.plan.v4";
 
-/// Current v5 constants bind newly published documents to an artifact set.
+/// v5 report constants are retained for reading marker-bound artifacts that
+/// predate media-profile evidence.
+pub const REPORT_SCHEMA_VERSION_V5: &str = "optiflow.report.v5";
+
+/// Current run and plan documents remain v5 and bind to an artifact set.
 pub const RUN_SCHEMA_VERSION: &str = "optiflow.run.v5";
-pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v5";
 pub const PLAN_SCHEMA_VERSION: &str = "optiflow.plan.v5";
+
+/// Current reports add independently versioned read-only media-profile
+/// evidence without changing run, plan, or artifact-set semantics.
+pub const REPORT_SCHEMA_VERSION: &str = "optiflow.report.v6";
+pub const MEDIA_PROFILE_EVIDENCE_SCHEMA: &str = "optiflow.media-profile-evidence.v1";
 
 // ---------------------------------------------------------------------------
 // Scan options and run metadata
@@ -588,6 +596,157 @@ pub struct MediaStream {
 }
 
 // ---------------------------------------------------------------------------
+// Read-only media-profile evidence (report v6)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EvidenceDigest {
+    pub algorithm: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProviderEvidence {
+    pub name: String,
+    pub version: String,
+    pub executable: NativePath,
+    pub binary_digest: EvidenceDigest,
+    pub invocation_fingerprint: EvidenceDigest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProfileDefinition {
+    pub id: String,
+    pub version: String,
+    pub media_kind: MediaKind,
+    pub intent: String,
+    pub configuration_fingerprint: EvidenceDigest,
+    pub guarantees: MediaProfileGuarantees,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProfileGuarantees {
+    pub source_mutation: bool,
+    pub outputs_produced: bool,
+    pub savings_estimate: SavingsClaim,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SavingsClaim {
+    NotEstimated,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MediaProfileCoverageStatus {
+    NotRequested,
+    NotApplicable,
+    Complete,
+    Partial,
+    Unavailable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MediaProfileLimitation {
+    MediaProbeDisabled,
+    ProviderUnavailable,
+    ProviderResultUnavailable,
+    SourceEvidenceNotCurrent,
+    ProviderEvidenceInvalid,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProfileCoverage {
+    pub status: MediaProfileCoverageStatus,
+    pub candidate_media_count: u64,
+    pub complete_evidence_count: u64,
+    pub limited_evidence_count: u64,
+    pub opportunity_count: u64,
+    pub limitations: Vec<MediaProfileLimitation>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MediaProfileEntryStatus {
+    Opportunity,
+    InsufficientEvidence,
+    Excluded,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProfileSource {
+    pub observation_id: String,
+    pub path: NativePath,
+    pub size_bytes: u64,
+    pub modified_unix_ns: Option<i64>,
+    pub fingerprint: EvidenceDigest,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NormalizedPngEvidence {
+    pub content_type: String,
+    pub format_name: Option<String>,
+    pub codec_name: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub stream_count: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OutputValidationRequirement {
+    SourceObservationRevalidated,
+    OutputExists,
+    OutputIsRegularFile,
+    OutputContentTypePng,
+    CompleteDecode,
+    DimensionsPreserved,
+    FrameCountPreserved,
+    AlphaPreserved,
+    ColorProfilePolicySatisfied,
+    MetadataPolicySatisfied,
+    DecodedPixelEquivalence,
+    OutputSmallerThanSource,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaOptimizationOpportunity {
+    pub opportunity_id: String,
+    pub classification: String,
+    pub proposed_operation: String,
+    pub source_logical_bytes: u64,
+    pub estimated_output_bytes: Option<u64>,
+    pub estimated_logical_savings_bytes: Option<u64>,
+    pub savings_claim: SavingsClaim,
+    pub reason: String,
+    pub required_output_validations: Vec<OutputValidationRequirement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProfileEntry {
+    pub entry_id: String,
+    pub source: MediaProfileSource,
+    pub provider: Option<MediaProviderEvidence>,
+    pub status: MediaProfileEntryStatus,
+    pub limitations: Vec<MediaProfileLimitation>,
+    pub observations: NormalizedPngEvidence,
+    pub opportunity: Option<MediaOptimizationOpportunity>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaProfileEvidence {
+    pub schema: String,
+    pub analysis_id: String,
+    pub source_run_id: String,
+    pub profile: MediaProfileDefinition,
+    pub evidence_policy_fingerprint: EvidenceDigest,
+    pub coverage: MediaProfileCoverage,
+    pub entries: Vec<MediaProfileEntry>,
+}
+
+// ---------------------------------------------------------------------------
 // Filesystem identity (v2)
 // ---------------------------------------------------------------------------
 
@@ -797,6 +956,10 @@ pub struct ScanReport {
     /// Detailed storage accounting.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<StorageSummary>,
+    /// Independently versioned, read-only media-profile evidence. Historical
+    /// reports deserialize with an empty collection.
+    #[serde(default)]
+    pub media_profile_evidence: Vec<MediaProfileEvidence>,
 }
 
 // ---------------------------------------------------------------------------

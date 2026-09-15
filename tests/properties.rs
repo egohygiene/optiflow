@@ -195,6 +195,7 @@ fn report(paths: &[String], reversed: bool) -> ScanReport {
         observations,
         hard_link_groups: Vec::new(),
         storage: None,
+        media_profile_evidence: Vec::new(),
     }
 }
 

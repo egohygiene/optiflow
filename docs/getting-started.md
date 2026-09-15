@@ -49,6 +49,12 @@ runs/<run-id>/
 └── report.json
 ```
 
+With the default probe policy and an available `ffprobe`, report v6 includes
+read-only lossless-PNG profile evidence. Pass `--no-probe` to record that this
+analysis was not requested. See [media-profile evidence](media-profiles.md)
+before interpreting a review candidate; it is not an output or savings
+guarantee.
+
 ## Generate a review-only plan
 
 ```bash
@@ -78,5 +84,6 @@ result fields.
 - Review the [configuration precedence](configuration.md).
 - Learn which claims are guaranteed by the [safety model](safety-model.md).
 - Read the [state model](state-model.md) before moving or sharing state.
+- Review the [media-profile evidence boundary](media-profiles.md).
 - Review supported platforms, security reporting, and rollback in the
   [release and dependency policy](release-policy.md).

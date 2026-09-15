@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.1
+version: 0.1.2
 status: draft
 owners:
   - egohygiene
@@ -39,7 +39,8 @@ updated: 2026-09-15
 
 **Lifecycle:** read-only v0.1 alpha
 
-**Current gate:** Define the first read-only media-profile checkpoint after #51 and #29 establish the extension and measurable CLI foundations.
+**Current gate:** Review the completed OPT-Q04 evidence before separately scoping
+the transactional authority required by OPT-Q05.
 
 **North-star outcome:** A trustworthy optimization protocol that begins read-only, binds observations to native handles, and advances to reviewed transactions.
 
@@ -126,23 +127,25 @@ issues: [27]
 
 <!-- roadmap-step
 id: OPT-Q04
-status: active
+status: complete
 depends_on: [OPT-Q03]
-issues: [29, 51]
+issues: [29, 51, 66]
 -->
 #### OPT-Q04 — Add safe extensions, CLI, performance, and media profiles
 
-**State:** `active`
+**State:** `complete`
 
 **Depends on:** `OPT-Q03`
 
-**Outcome:** Issues #51 and #29 add an explicit read-only provider boundary, then make the protocol usable and measurable without weakening safety.
+**Outcome:** Issues #51, #29, and #66 add an explicit read-only provider
+boundary, make the protocol usable and measurable, and publish the first
+versioned media-profile evidence without weakening safety.
 
 **Exit criteria:**
 
 - [x] Issue #51 publishes typed roles, versioned declarations and locks, bounded invocation, deterministic resolution, and adversarial refusal evidence.
 - [x] CLI behavior and performance budgets are tested.
-- [ ] Media profiles retain read-only evidence and stable artifact identity.
+- [x] Media profiles retain read-only evidence and stable artifact identity.
 
 **Current evidence:**
 
@@ -151,7 +154,10 @@ issues: [29, 51]
 - Issue #29 preserves the stable CLI outcome contract, splits scan,
   report/plan, and extension command coordination, and enforces a retained
   synthetic performance baseline without adding mutation authority.
-- The first read-only media-profile issue remains to be scoped separately.
+- Issue #66 adds `optiflow.media-profile-evidence.v1` and the built-in
+  `optiflow.builtin.lossless-png-review@1.0.0` profile. It emits deterministic,
+  provider-bound review opportunities from current PNG observations without
+  creating output files or estimating savings.
 
 <!-- roadmap-step
 id: OPT-Q05

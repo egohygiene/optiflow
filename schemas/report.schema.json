@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/egohygiene/optiflow/schemas/report.schema.json",
-  "title": "optiflow report v5",
+  "title": "optiflow report v6",
   "type": "object",
   "required": [
     "schema_version",
@@ -10,11 +10,12 @@
     "summary",
     "duplicate_groups",
     "observations",
-    "hard_link_groups"
+    "hard_link_groups",
+    "media_profile_evidence"
   ],
   "properties": {
     "schema_version": {
-      "const": "optiflow.report.v5"
+      "const": "optiflow.report.v6"
     },
     "generated_at": {
       "type": "string",
@@ -46,6 +47,14 @@
     },
     "storage": {
       "$ref": "#/$defs/storage_summary"
+    },
+    "media_profile_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "$ref": "media-profile-evidence-v1.schema.json"
+      }
     }
   },
   "$defs": {

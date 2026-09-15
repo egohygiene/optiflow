@@ -104,6 +104,14 @@ Both media inspection and `ffprobe -version` now run through the same bounded
 runner. `ffprobe` remains optional for the read-only exact-duplicate workflow;
 a failed optional probe must not weaken exact byte-identity evidence.
 
+A probe-enabled scan resolves one canonical executable and records its exact
+version line, BLAKE3-256 binary digest, and argument/input-binding fingerprint.
+The digest is checked before and after every handle-fed inspection. Zero exit is
+necessary but insufficient: stderr must be empty, stdout must be valid JSON,
+and the expected format and non-empty, uniquely indexed stream observations
+must pass semantic validation. Any failure leaves media evidence unavailable
+and cannot produce a media-profile opportunity.
+
 Future adapters should reuse this boundary rather than introducing another
 `Command::output()` path.
 
@@ -116,7 +124,10 @@ The runner has unit coverage for:
 - hostile oversized stdout;
 - timeout and child termination;
 - mid-run cancellation;
-- invalid JSON parse behavior; and
+- invalid JSON parse behavior;
+- successful exits with stderr or invalid semantic media evidence;
+- exact provider identity and typed timeout propagation through the adapter;
+  and
 - invalid concurrency configuration.
 
 Repository validation remains:

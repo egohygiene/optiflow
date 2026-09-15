@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-system
 title: OptiFlow System
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-09-15
 governed_by:
   - architecture-system
 depends_on:
@@ -59,7 +59,8 @@ media descriptions returned by specialized tools.
 
 - **Current evidence:** `src/inventory.rs`, `src/adapters/ffprobe.rs`.
 - **Boundary:** adapters are invoked directly without a shell and cannot define
-  domain relationship semantics.
+  domain relationship semantics. The current probe is resolved to one exact
+  canonical executable identity per scan and every result is validated.
 
 ### Evidence and Relationship System
 
@@ -69,6 +70,16 @@ only from compatible current evidence.
 - **Current evidence:** `src/hashing.rs`, `src/duplicates.rs`.
 - **State:** exact byte-identity evidence implemented; perceptual, derivation,
   containment, and quality relationships deferred.
+
+### Media Profile Analysis System
+
+Derives deterministic, policy- and provider-bound review opportunities from
+accepted observations while preserving explicit coverage and limitations.
+
+- **Current evidence:** `src/media_profiles.rs`,
+  `schemas/media-profile-evidence-v1.schema.json`, and report v6.
+- **State:** implemented only for the built-in read-only lossless-PNG review
+  profile; output production, savings estimation, and execution are absent.
 
 ### State and Cache System
 
@@ -150,6 +161,9 @@ until their released interfaces are consumed here.
 - Inventory normalizes observations; adapters do not select plan actions.
 - Relationship derivation consumes evidence; it does not grant execution
   authority.
+- Media-profile analysis may propose a review opportunity only from current,
+  validated observations; it cannot create outputs or estimate guaranteed
+  savings.
 - Reporting preserves source evidence; planning proposes without mutation.
 - Presentation renders typed outcomes; it does not infer status from messages.
 - Infrastructure schedules and observes commands; it does not reinterpret
@@ -165,9 +179,10 @@ until their released interfaces are consumed here.
 4. Observe filesystem and content facts; use optional media adapters.
 5. Reuse cache entries only when their identity remains valid.
 6. Narrow equal-size candidates and collect complete hashes.
-7. Derive exact groups and coverage.
-8. Validate and atomically commit policy, run, and report artifacts.
-9. Resolve and render one typed command result.
+7. Derive exact groups and versioned media-profile evidence.
+8. Resolve honest coverage for unavailable or limited evidence.
+9. Validate and atomically commit policy, run, and report artifacts.
+10. Resolve and render one typed command result.
 
 ### Review Plan Flow
 
@@ -192,7 +207,8 @@ until their released interfaces are consumed here.
 
 - The operating system supplies filesystem and signal behavior.
 - SQLite supplies local durable query state.
-- `ffprobe` supplies optional media-container and stream descriptions.
+- One exact `ffprobe` executable supplies optional media-container and stream
+  descriptions; optiflow validates and owns the resulting claim semantics.
 - GitHub supplies source hosting, review, CI, releases, and future Pages
   deployment.
 - OCI registries and container runtimes may distribute and run packaged
