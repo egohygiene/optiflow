@@ -20,6 +20,8 @@ paths are preferred where they do not weaken the filesystem model.
   boundary crossing.
 - Content classification is independent of filename extension.
 - Optional media probing uses structured `ffprobe` JSON.
+- Byte-classified PNG inputs receive versioned, deterministic read-only profile
+  evidence when current semantically valid probe evidence is available.
 - Repeated scans reuse unchanged path analysis from SQLite.
 - Accepted evidence is derived through one opened handle and rejected when the
   path or handle changes during observation.
@@ -46,7 +48,8 @@ paths are preferred where they do not weaken the filesystem model.
 - Selecting the objectively best duplicate
 - Deleting or moving duplicates
 - Perceptual media similarity
-- Media optimization or format normalization
+- Media optimization execution or format normalization
+- Candidate-output generation or estimated PNG savings
 - Video subsection detection
 - Interactive terminal review UI
 - Cross-run content identity for non-candidate moved files
@@ -63,6 +66,9 @@ paths are preferred where they do not weaken the filesystem model.
 - Rename replacement, truncation, growth, and metadata races cannot produce
   current exact-duplicate evidence.
 - Missing `ffprobe` does not prevent hashing or duplicate reporting.
+- Missing, failed, invalid, or stale PNG probe evidence produces no optimization
+  opportunity and is represented through explicit profile coverage.
+- Profile analysis leaves every source input byte-for-byte unchanged.
 - Inaccessible files are reported rather than silently treated as duplicates.
 - Current readers distinguish committed, incomplete, and incompatible artifact
   sets and never accept a digest-mismatched member.

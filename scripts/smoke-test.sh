@@ -29,6 +29,8 @@ jq --exit-status '.schema == "optiflow.command-result.v1"' "$report_path" >/dev/
 jq --exit-status '.outcome.exit_code == 0' "$report_path" >/dev/null
 jq --exit-status '.result.summary.exact_duplicate_groups == 1' "$report_path" >/dev/null
 jq --exit-status '.result.summary.reclaimable_bytes == 23' "$report_path" >/dev/null
+jq --exit-status '.result.schema_version == "optiflow.report.v6"' "$report_path" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].coverage.status == "not_applicable"' "$report_path" >/dev/null
 
 run_id="$(jq --raw-output '.result.run.run_id' "$report_path")"
 plan_path="$temporary_root/plan.json"
@@ -43,6 +45,31 @@ jq --exit-status '.safety.mutates_files == false' "$plan_path" >/dev/null
 jq --exit-status '.summary.action_count == 1' "$plan_path" >/dev/null
 test -f "$input_directory/first-🌌.bin"
 test -f "$input_directory/second.bin"
+
+png_directory="$temporary_root/png media"
+png_state_directory="$temporary_root/png state"
+png_source="$png_directory/one pixel.png"
+png_before="$temporary_root/one-pixel.before.png"
+png_report="$temporary_root/png-report.json"
+mkdir -p "$png_directory"
+python3 -c 'import base64, pathlib, sys; pathlib.Path(sys.argv[2]).write_bytes(base64.b64decode(pathlib.Path(sys.argv[1]).read_text()))' \
+  tests/fixtures/media/one-pixel-rgba.png.base64 \
+  "$png_source"
+cp "$png_source" "$png_before"
+./target/debug/optiflow \
+  --state-directory "$png_state_directory" \
+  --output-format json \
+  scan \
+  --probe \
+  "$png_directory" > "$png_report"
+jq --exit-status '.outcome.exit_code == 0' "$png_report" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].schema == "optiflow.media-profile-evidence.v1"' "$png_report" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].coverage.status == "complete"' "$png_report" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].coverage.opportunity_count == 1' "$png_report" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].entries[0].opportunity.savings_claim == "not_estimated"' "$png_report" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].entries[0].opportunity.estimated_output_bytes == null' "$png_report" >/dev/null
+jq --exit-status '.result.media_profile_evidence[0].entries[0].opportunity.estimated_logical_savings_bytes == null' "$png_report" >/dev/null
+cmp "$png_source" "$png_before"
 
 extension_lock="$temporary_root/reference-extension.lock.json"
 extension_list="$temporary_root/extensions-list.json"

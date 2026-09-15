@@ -7,6 +7,14 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added `optiflow.media-profile-evidence.v1` and the built-in
+  `optiflow.builtin.lossless-png-review@1.0.0` analysis profile. Current,
+  handle-bound PNG observations can now produce deterministic review
+  opportunities with exact provider and policy provenance, explicit coverage,
+  required future-output validations, and no savings estimate.
+- Added hermetic success, unavailable, invalid, timeout, deterministic-rerun,
+  partial-coverage, artifact-validation, and source-preservation evidence for
+  media-profile analysis, plus an installed-`ffprobe` PNG smoke fixture.
 - Added a versioned synthetic read-only performance fixture with enforced cold
   discovery, complete hashing, warm-cache, peak-memory, and artifact-size
   ceilings plus retained CI measurement evidence.
@@ -83,6 +91,13 @@ public contracts still receive explicit migration notes.
 
 ### Changed
 
+- Advanced the report contract to `optiflow.report.v6` to embed media-profile
+  evidence. Run and plan contracts remain v5; both report v5 and v6 require a
+  matching artifact-set marker.
+- Bound built-in `ffprobe` evidence to one canonical executable path, exact
+  version line, BLAKE3-256 binary digest, and invocation fingerprint. A zero
+  exit status is insufficient: stderr, JSON shape, semantic observations, and
+  provider identity must all validate.
 - Split application command coordination into scan, report/plan, and extension
   modules, and removed repeated collection-wide lookup while classifying
   hard-link aliases.
@@ -103,11 +118,17 @@ public contracts still receive explicit migration notes.
   stderr. JSON stdout is reserved for one buffered machine document.
 - Aligned the `rusqlite` manifest requirement with the already resolved 0.40
   lockfile dependency and its checked integer-conversion behavior.
-- Current run, report, and plan contracts are v5 and carry artifact-set identity
-  bindings. Readers distinguish committed, incomplete, and incompatible sets.
+- Current run and plan contracts are v5, while the current report is v6. These
+  documents carry artifact-set identity bindings, and readers distinguish
+  committed, incomplete, and incompatible sets.
 
 ### Compatibility
 
+- Issue #66 adds no command, database migration, source mutation, output
+  production, extension authority, or cross-repository dependency. Report v6
+  is the only changed product artifact identifier; report v1-v4 remain
+  reviewable without markers and report v5 remains reviewable only with its
+  original complete marker.
 - Issue #29 does not change commands, options, exit codes, product JSON schemas,
   state migrations, extension authority, or the read-only source boundary.
 - Existing CLI, configuration, run, report, plan, command-result, database, and

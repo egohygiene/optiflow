@@ -382,6 +382,102 @@ fn historical_v1_v2_and_v4_reports_remain_reviewable_without_markers() {
 }
 
 #[test]
+fn v5_and_v6_reports_require_a_complete_artifact_set_marker() {
+    let workspace = tempdir().expect("workspace");
+    let input = workspace.path().join("media");
+    let state = workspace.path().join("state");
+    fs::create_dir_all(&input).expect("input");
+    fs::write(input.join("unique.bin"), b"unique").expect("fixture");
+
+    let mut scan = command(&state);
+    scan.args(["scan", "--no-probe", input.to_str().expect("input path")]);
+    let (scan_status, current, _) = json_output(scan);
+    assert_eq!(scan_status.code(), Some(0));
+
+    for version in [5, 6] {
+        let mut report_value = current["result"].clone();
+        report_value["schema_version"] = serde_json::json!(format!("optiflow.report.v{version}"));
+        if version == 5 {
+            report_value
+                .as_object_mut()
+                .expect("report")
+                .remove("media_profile_evidence");
+        }
+        let path = workspace
+            .path()
+            .join(format!("uncommitted-report-v{version}.json"));
+        fs::write(
+            &path,
+            serde_json::to_vec_pretty(&report_value).expect("report JSON"),
+        )
+        .expect("report fixture");
+
+        let mut report = command(&state);
+        report.args(["report", path.to_str().expect("report path")]);
+        let (status, document, _) = json_output(report);
+        assert_eq!(status.code(), Some(5));
+        assert_eq!(document["outcome"]["class"], "stale_state");
+        assert_eq!(
+            document["diagnostics"][0]["code"],
+            "artifact_set_incomplete"
+        );
+    }
+}
+
+#[test]
+fn committed_report_v5_remains_reviewable() {
+    let workspace = tempdir().expect("workspace");
+    let input = workspace.path().join("media");
+    let state = workspace.path().join("state");
+    fs::create_dir_all(&input).expect("input");
+    fs::write(input.join("unique.bin"), b"unique").expect("fixture");
+
+    let mut scan = command(&state);
+    scan.args(["scan", "--no-probe", input.to_str().expect("input path")]);
+    let (scan_status, current, _) = json_output(scan);
+    assert_eq!(scan_status.code(), Some(0));
+    let run_id = current["result"]["run"]["run_id"]
+        .as_str()
+        .expect("run identifier");
+    let run_directory = state.join("runs").join(run_id);
+    let report_path = run_directory.join("report.json");
+    let marker_path = run_directory.join("artifact-set.json");
+
+    let mut historical = current["result"].clone();
+    historical["schema_version"] = serde_json::json!("optiflow.report.v5");
+    historical
+        .as_object_mut()
+        .expect("report")
+        .remove("media_profile_evidence");
+    let mut report_bytes = serde_json::to_vec_pretty(&historical).expect("historical report JSON");
+    report_bytes.push(b'\n');
+    fs::write(&report_path, &report_bytes).expect("historical report fixture");
+
+    let mut marker: serde_json::Value =
+        serde_json::from_slice(&fs::read(&marker_path).expect("marker bytes"))
+            .expect("marker JSON");
+    let report_member = marker["members"]
+        .as_array_mut()
+        .expect("marker members")
+        .iter_mut()
+        .find(|member| member["kind"] == "report")
+        .expect("report member");
+    report_member["schema"] = serde_json::json!("optiflow.report.v5");
+    report_member["size_bytes"] = serde_json::json!(report_bytes.len());
+    report_member["digest"]["value"] =
+        serde_json::json!(blake3::hash(&report_bytes).to_hex().to_string());
+    let mut marker_bytes = serde_json::to_vec_pretty(&marker).expect("marker JSON bytes");
+    marker_bytes.push(b'\n');
+    fs::write(&marker_path, marker_bytes).expect("updated marker");
+
+    let mut report = command(&state);
+    report.args(["report", report_path.to_str().expect("report path")]);
+    let (status, document, _) = json_output(report);
+    assert_eq!(status.code(), Some(0));
+    assert_eq!(document["result"]["schema_version"], "optiflow.report.v5");
+}
+
+#[test]
 fn human_diagnostics_use_stderr_and_escape_hostile_filenames() {
     let workspace = tempdir().expect("workspace");
     let state = workspace.path().join("state");

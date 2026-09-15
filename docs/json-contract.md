@@ -15,8 +15,9 @@ The current artifact identifiers are:
 | Effective policy | `optiflow.effective-policy.v1` | `schemas/effective-policy-v1.schema.json` |
 | Artifact set | `optiflow.artifact-set.v1` | `schemas/artifact-set-v1.schema.json` |
 | Run | `optiflow.run.v5` | `schemas/run.schema.json` |
-| Report | `optiflow.report.v5` | `schemas/report.schema.json` |
+| Report | `optiflow.report.v6` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v5` | `schemas/plan.schema.json` |
+| Media profile evidence | `optiflow.media-profile-evidence.v1` | `schemas/media-profile-evidence-v1.schema.json` |
 | Extension manifest | `optiflow.extension-manifest.v1` | `schemas/extension-manifest-v1.schema.json` |
 | Extension lock | `optiflow.extension-lock.v1` | `schemas/extension-lock-v1.schema.json` |
 | Extension invocation | `optiflow.extension-invocation.v1` | `schemas/extension-invocation-v1.schema.json` |
@@ -59,9 +60,9 @@ directly. They now wrap that value in `result`, with committed outputs listed in
 `artifacts`. This is a pre-1.0 machine-output compatibility change. Immutable
 `v1` through `v4` artifact schemas were not changed.
 
-New v5 run, report, and plan documents are accepted only with a matching
-`optiflow.artifact-set.v1` marker. The marker records member schemas, lossless
-relative paths, byte lengths, and BLAKE3-256 digests. See the
+New v5 run and plan documents and v5-v6 report documents are accepted only with
+a matching `optiflow.artifact-set.v1` marker. The marker records member schemas,
+lossless relative paths, byte lengths, and BLAKE3-256 digests. See the
 [artifact-set commit protocol](artifact-set-protocol.md) for reader and
 recovery behavior.
 
@@ -80,10 +81,17 @@ Reports embed:
 - Aggregate counts and reclaimable bytes
 - Exact duplicate groups and evidence
 - Complete observations, warnings, cache facts, and optional media descriptors
+- Versioned media-profile coverage, limitations, provider identity, normalized
+  evidence, and review opportunities
 
 New runs also commit a validated `effective-policy.json` sidecar. Its immutable
 location is derived from the run's existing `artifact_directory`; historical
 runs without it remain reviewable with explicitly unknown policy evidence.
+
+Report v6 embeds `optiflow.media-profile-evidence.v1`. The initial
+`optiflow.builtin.lossless-png-review@1.0.0` profile never creates an output and
+always records savings as `not_estimated`; see
+[Media-profile evidence](media-profiles.md).
 
 ## Plans
 

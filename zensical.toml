@@ -25,6 +25,7 @@ nav = [
     { "CLI outcomes" = "cli-contract.md" },
     { "Configuration" = "configuration.md" },
     { "JSON artifacts" = "json-contract.md" },
+    { "Media-profile evidence" = "media-profiles.md" },
     { "Extension SDK" = "plugin-sdk.md" },
     { "Extension capabilities" = "extension-capabilities.md" },
   ] },

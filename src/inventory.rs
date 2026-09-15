@@ -4,12 +4,12 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-use crate::adapters::ffprobe;
+use crate::adapters::ffprobe::FfprobeAdapter;
 use crate::domain::{
     CachedAnalysis, EvidenceValidity, MediaKind, ObservationStability, ObservationStatus,
 };
 
-pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) -> CachedAnalysis {
+pub fn analyze(path: &Path, probe_media: bool, ffprobe: Option<&FfprobeAdapter>) -> CachedAnalysis {
     let mut warnings = Vec::new();
 
     let detected = match infer::get_from_path(path) {
@@ -21,7 +21,8 @@ pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) 
                 content_hash: None,
                 media: None,
                 probe_signature: probe_media.then(|| {
-                    ffprobe_signature
+                    ffprobe
+                        .map(FfprobeAdapter::cache_signature)
                         .unwrap_or("ffprobe-unavailable")
                         .to_owned()
                 }),
@@ -46,26 +47,29 @@ pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) 
     };
 
     let media = if probe_media
-        && ffprobe_signature.is_some()
         && matches!(
             media_kind,
             MediaKind::Image | MediaKind::Video | MediaKind::Audio
         ) {
-        match ffprobe::inspect(path) {
-            Ok(descriptor) => Some(descriptor),
-            Err(error) => {
-                warnings.push(error.to_string());
-                None
+        if let Some(ffprobe) = ffprobe {
+            let result = File::open(path)
+                .with_context(|| format!("failed to open media for inspection: {}", path.display()))
+                .and_then(|file| ffprobe.inspect_file(&file, path));
+            match result {
+                Ok(descriptor) => Some(descriptor),
+                Err(error) => {
+                    warnings.push(error.to_string());
+                    None
+                }
             }
+        } else {
+            None
         }
     } else {
         None
     };
 
-    if probe_media
-        && ffprobe_signature.is_none()
-        && !matches!(status, ObservationStatus::Unsupported)
-    {
+    if probe_media && ffprobe.is_none() && !matches!(status, ObservationStatus::Unsupported) {
         warnings.push("ffprobe is unavailable; stream metadata was not collected".to_owned());
     }
 
@@ -75,7 +79,8 @@ pub fn analyze(path: &Path, probe_media: bool, ffprobe_signature: Option<&str>) 
         content_hash: None,
         media,
         probe_signature: probe_media.then(|| {
-            ffprobe_signature
+            ffprobe
+                .map(FfprobeAdapter::cache_signature)
                 .unwrap_or("ffprobe-unavailable")
                 .to_owned()
         }),
@@ -95,7 +100,7 @@ pub fn analyze_file(
     file: &mut File,
     display_path: &Path,
     probe_media: bool,
-    ffprobe_signature: Option<&str>,
+    ffprobe: Option<&FfprobeAdapter>,
 ) -> Result<CachedAnalysis> {
     const SNIFF_BYTES: usize = 8192;
 
@@ -123,29 +128,29 @@ pub fn analyze_file(
     let mut warnings = Vec::new();
 
     let media = if probe_media
-        && ffprobe_signature.is_some()
         && matches!(
             media_kind,
             MediaKind::Image | MediaKind::Video | MediaKind::Audio
         ) {
-        let result = ffprobe::inspect_file(file, display_path);
-        file.seek(SeekFrom::Start(0))
-            .context("failed to rewind opened file after ffprobe inspection")?;
-        match result {
-            Ok(descriptor) => Some(descriptor),
-            Err(error) => {
-                warnings.push(error.to_string());
-                None
+        if let Some(ffprobe) = ffprobe {
+            let result = ffprobe.inspect_file(file, display_path);
+            file.seek(SeekFrom::Start(0))
+                .context("failed to rewind opened file after ffprobe inspection")?;
+            match result {
+                Ok(descriptor) => Some(descriptor),
+                Err(error) => {
+                    warnings.push(error.to_string());
+                    None
+                }
             }
+        } else {
+            None
         }
     } else {
         None
     };
 
-    if probe_media
-        && ffprobe_signature.is_none()
-        && !matches!(status, ObservationStatus::Unsupported)
-    {
+    if probe_media && ffprobe.is_none() && !matches!(status, ObservationStatus::Unsupported) {
         warnings.push("ffprobe is unavailable; stream metadata was not collected".to_owned());
     }
 
@@ -155,7 +160,8 @@ pub fn analyze_file(
         content_hash: None,
         media,
         probe_signature: probe_media.then(|| {
-            ffprobe_signature
+            ffprobe
+                .map(FfprobeAdapter::cache_signature)
                 .unwrap_or("ffprobe-unavailable")
                 .to_owned()
         }),

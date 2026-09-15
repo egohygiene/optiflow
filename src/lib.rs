@@ -13,6 +13,7 @@ pub mod extensions;
 pub mod filesystem;
 pub mod hashing;
 pub mod inventory;
+pub mod media_profiles;
 pub mod observation;
 pub mod outcome;
 pub mod planning;

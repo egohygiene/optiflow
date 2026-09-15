@@ -1,0 +1,499 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/media-profile-evidence-v1.schema.json",
+  "title": "optiflow media profile evidence v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "analysis_id",
+    "source_run_id",
+    "profile",
+    "evidence_policy_fingerprint",
+    "coverage",
+    "entries"
+  ],
+  "properties": {
+    "schema": { "const": "optiflow.media-profile-evidence.v1" },
+    "analysis_id": { "type": "string", "pattern": "^mpa-[0-9a-f]{32}$" },
+    "source_run_id": { "type": "string", "format": "uuid" },
+    "profile": { "$ref": "#/$defs/profile" },
+    "evidence_policy_fingerprint": { "$ref": "#/$defs/digest" },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": { "status": { "const": "not_applicable" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "candidate_media_count": { "const": 0 },
+              "complete_evidence_count": { "const": 0 },
+              "limited_evidence_count": { "const": 0 },
+              "opportunity_count": { "const": 0 },
+              "limitations": { "maxItems": 0 }
+            }
+          },
+          "entries": { "maxItems": 0 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": { "status": { "const": "not_requested" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "candidate_media_count": { "minimum": 1 },
+              "complete_evidence_count": { "const": 0 },
+              "limited_evidence_count": { "minimum": 1 },
+              "opportunity_count": { "const": 0 },
+              "limitations": {
+                "contains": { "const": "media_probe_disabled" }
+              }
+            }
+          },
+          "entries": {
+            "minItems": 1,
+            "items": {
+              "properties": {
+                "status": {
+                  "enum": ["insufficient_evidence", "excluded"]
+                },
+                "limitations": {
+                  "contains": { "const": "media_probe_disabled" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": { "status": { "const": "complete" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "candidate_media_count": { "minimum": 1 },
+              "complete_evidence_count": { "minimum": 1 },
+              "limited_evidence_count": { "const": 0 },
+              "opportunity_count": { "minimum": 1 },
+              "limitations": { "maxItems": 0 }
+            }
+          },
+          "entries": {
+            "minItems": 1,
+            "items": {
+              "properties": { "status": { "const": "opportunity" } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": { "status": { "const": "partial" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "candidate_media_count": { "minimum": 2 },
+              "complete_evidence_count": { "minimum": 1 },
+              "limited_evidence_count": { "minimum": 1 },
+              "opportunity_count": { "minimum": 1 },
+              "limitations": { "minItems": 1 }
+            }
+          },
+          "entries": {
+            "minItems": 2,
+            "allOf": [
+              {
+                "contains": {
+                  "properties": { "status": { "const": "opportunity" } },
+                  "required": ["status"]
+                },
+                "minContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "enum": ["insufficient_evidence", "excluded"]
+                    }
+                  },
+                  "required": ["status"]
+                },
+                "minContains": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "properties": { "status": { "const": "unavailable" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "properties": {
+              "candidate_media_count": { "minimum": 1 },
+              "complete_evidence_count": { "const": 0 },
+              "limited_evidence_count": { "minimum": 1 },
+              "opportunity_count": { "const": 0 },
+              "limitations": { "minItems": 1 }
+            }
+          },
+          "entries": {
+            "minItems": 1,
+            "items": {
+              "properties": {
+                "status": {
+                  "enum": ["insufficient_evidence", "excluded"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "non_negative_integer": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "digest": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "blake3-256" },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "native_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["encoding", "value"],
+          "properties": {
+            "encoding": { "const": "utf8" },
+            "value": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["encoding", "base64"],
+          "properties": {
+            "encoding": { "const": "unix_bytes" },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "media_kind",
+        "intent",
+        "configuration_fingerprint",
+        "guarantees"
+      ],
+      "properties": {
+        "id": { "const": "optiflow.builtin.lossless-png-review" },
+        "version": { "const": "1.0.0" },
+        "media_kind": { "const": "image" },
+        "intent": { "const": "lossless_recompression_review" },
+        "configuration_fingerprint": { "$ref": "#/$defs/digest" },
+        "guarantees": {
+          "type": "object",
+          "required": ["source_mutation", "outputs_produced", "savings_estimate"],
+          "properties": {
+            "source_mutation": { "const": false },
+            "outputs_produced": { "const": false },
+            "savings_estimate": { "const": "not_estimated" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "limitation": {
+      "enum": [
+        "media_probe_disabled",
+        "provider_unavailable",
+        "provider_result_unavailable",
+        "source_evidence_not_current",
+        "provider_evidence_invalid"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "status",
+        "candidate_media_count",
+        "complete_evidence_count",
+        "limited_evidence_count",
+        "opportunity_count",
+        "limitations"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_requested",
+            "not_applicable",
+            "complete",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "candidate_media_count": { "$ref": "#/$defs/non_negative_integer" },
+        "complete_evidence_count": { "$ref": "#/$defs/non_negative_integer" },
+        "limited_evidence_count": { "$ref": "#/$defs/non_negative_integer" },
+        "opportunity_count": { "$ref": "#/$defs/non_negative_integer" },
+        "limitations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/limitation" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "observation_id",
+        "path",
+        "size_bytes",
+        "modified_unix_ns",
+        "fingerprint"
+      ],
+      "properties": {
+        "observation_id": { "type": "string", "format": "uuid" },
+        "path": { "$ref": "#/$defs/native_path" },
+        "size_bytes": { "$ref": "#/$defs/non_negative_integer" },
+        "modified_unix_ns": { "type": ["integer", "null"] },
+        "fingerprint": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "provider": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "executable",
+        "binary_digest",
+        "invocation_fingerprint"
+      ],
+      "properties": {
+        "name": { "const": "ffprobe" },
+        "version": { "type": "string", "minLength": 1 },
+        "executable": { "$ref": "#/$defs/native_path" },
+        "binary_digest": { "$ref": "#/$defs/digest" },
+        "invocation_fingerprint": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "observations": {
+      "type": "object",
+      "required": [
+        "content_type",
+        "format_name",
+        "codec_name",
+        "width",
+        "height",
+        "stream_count"
+      ],
+      "properties": {
+        "content_type": { "const": "image/png" },
+        "format_name": { "type": ["string", "null"] },
+        "codec_name": { "type": ["string", "null"] },
+        "width": { "type": ["integer", "null"], "minimum": 0 },
+        "height": { "type": ["integer", "null"], "minimum": 0 },
+        "stream_count": { "$ref": "#/$defs/non_negative_integer" }
+      },
+      "additionalProperties": false
+    },
+    "validation_requirement": {
+      "enum": [
+        "source_observation_revalidated",
+        "output_exists",
+        "output_is_regular_file",
+        "output_content_type_png",
+        "complete_decode",
+        "dimensions_preserved",
+        "frame_count_preserved",
+        "alpha_preserved",
+        "color_profile_policy_satisfied",
+        "metadata_policy_satisfied",
+        "decoded_pixel_equivalence",
+        "output_smaller_than_source"
+      ]
+    },
+    "opportunity": {
+      "type": "object",
+      "required": [
+        "opportunity_id",
+        "classification",
+        "proposed_operation",
+        "source_logical_bytes",
+        "estimated_output_bytes",
+        "estimated_logical_savings_bytes",
+        "savings_claim",
+        "reason",
+        "required_output_validations"
+      ],
+      "properties": {
+        "opportunity_id": { "type": "string", "pattern": "^opo-[0-9a-f]{32}$" },
+        "classification": { "const": "review_candidate" },
+        "proposed_operation": { "const": "evaluate_lossless_png_recompression" },
+        "source_logical_bytes": { "$ref": "#/$defs/non_negative_integer" },
+        "estimated_output_bytes": { "type": "null" },
+        "estimated_logical_savings_bytes": { "type": "null" },
+        "savings_claim": { "const": "not_estimated" },
+        "reason": { "type": "string", "minLength": 1 },
+        "required_output_validations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/validation_requirement" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "entry": {
+      "type": "object",
+      "required": [
+        "entry_id",
+        "source",
+        "provider",
+        "status",
+        "limitations",
+        "observations",
+        "opportunity"
+      ],
+      "properties": {
+        "entry_id": { "type": "string", "pattern": "^mpe-[0-9a-f]{32}$" },
+        "source": { "$ref": "#/$defs/source" },
+        "provider": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/provider" }
+          ]
+        },
+        "status": {
+          "enum": ["opportunity", "insufficient_evidence", "excluded"]
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/limitation" },
+          "uniqueItems": true
+        },
+        "observations": { "$ref": "#/$defs/observations" },
+        "opportunity": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/opportunity" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "opportunity" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "provider": { "$ref": "#/$defs/provider" },
+              "limitations": { "maxItems": 0 },
+              "observations": {
+                "properties": {
+                  "format_name": {
+                    "type": "string",
+                    "pattern": "(^|,)png_pipe(,|$)"
+                  },
+                  "codec_name": { "const": "png" },
+                  "width": { "type": "integer", "minimum": 1 },
+                  "height": { "type": "integer", "minimum": 1 },
+                  "stream_count": { "const": 1 }
+                }
+              },
+              "opportunity": { "$ref": "#/$defs/opportunity" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "insufficient_evidence" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "limitations": { "minItems": 1 },
+              "opportunity": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "excluded" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "limitations": {
+                "contains": { "const": "source_evidence_not_current" }
+              },
+              "opportunity": { "type": "null" }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

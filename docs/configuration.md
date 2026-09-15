@@ -177,8 +177,9 @@ evidence policy; their final values are recorded and fingerprinted.
 Every new scan publishes `effective-policy.json`, `run.json`, and `report.json`
 as one marker-sealed set in the run artifact directory. The existing v3 run
 field `artifact_directory` remains the immutable location reference. Historical
-v1-v4 contracts and database migrations remain unchanged; current v5 documents
-add artifact-set identity bindings.
+v1-v4 contracts and database migrations remain unchanged. Run and plan v5 and
+historical report v5 use artifact-set identity bindings. Report v6 retains that
+binding while adding the required media-profile evidence collection.
 
 Report and plan commands validate and expose the source policy artifact. A
 different current evidence policy produces the informational

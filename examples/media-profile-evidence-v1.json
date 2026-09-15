@@ -1,0 +1,100 @@
+{
+  "schema": "optiflow.media-profile-evidence.v1",
+  "analysis_id": "mpa-00000000000000000000000000000000",
+  "source_run_id": "018f47a2-4f17-7b00-8000-000000000000",
+  "profile": {
+    "id": "optiflow.builtin.lossless-png-review",
+    "version": "1.0.0",
+    "media_kind": "image",
+    "intent": "lossless_recompression_review",
+    "configuration_fingerprint": {
+      "algorithm": "blake3-256",
+      "value": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "guarantees": {
+      "source_mutation": false,
+      "outputs_produced": false,
+      "savings_estimate": "not_estimated"
+    }
+  },
+  "evidence_policy_fingerprint": {
+    "algorithm": "blake3-256",
+    "value": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "coverage": {
+    "status": "complete",
+    "candidate_media_count": 1,
+    "complete_evidence_count": 1,
+    "limited_evidence_count": 0,
+    "opportunity_count": 1,
+    "limitations": []
+  },
+  "entries": [
+    {
+      "entry_id": "mpe-22222222222222222222222222222222",
+      "source": {
+        "observation_id": "018f47a2-4f17-7b00-8000-000000000001",
+        "path": {
+          "encoding": "utf8",
+          "value": "/media/example.png"
+        },
+        "size_bytes": 128,
+        "modified_unix_ns": 42,
+        "fingerprint": {
+          "algorithm": "blake3-256",
+          "value": "2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      },
+      "provider": {
+        "name": "ffprobe",
+        "version": "ffprobe version 7.1",
+        "executable": {
+          "encoding": "utf8",
+          "value": "/usr/bin/ffprobe"
+        },
+        "binary_digest": {
+          "algorithm": "blake3-256",
+          "value": "3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        "invocation_fingerprint": {
+          "algorithm": "blake3-256",
+          "value": "4444444444444444444444444444444444444444444444444444444444444444"
+        }
+      },
+      "status": "opportunity",
+      "limitations": [],
+      "observations": {
+        "content_type": "image/png",
+        "format_name": "png_pipe",
+        "codec_name": "png",
+        "width": 1,
+        "height": 1,
+        "stream_count": 1
+      },
+      "opportunity": {
+        "opportunity_id": "opo-55555555555555555555555555555555",
+        "classification": "review_candidate",
+        "proposed_operation": "evaluate_lossless_png_recompression",
+        "source_logical_bytes": 128,
+        "estimated_output_bytes": null,
+        "estimated_logical_savings_bytes": null,
+        "savings_claim": "not_estimated",
+        "reason": "Current content and provider observations support later lossless PNG recompression evaluation.",
+        "required_output_validations": [
+          "source_observation_revalidated",
+          "output_exists",
+          "output_is_regular_file",
+          "output_content_type_png",
+          "complete_decode",
+          "dimensions_preserved",
+          "frame_count_preserved",
+          "alpha_preserved",
+          "color_profile_policy_satisfied",
+          "metadata_policy_satisfied",
+          "decoded_pixel_equivalence",
+          "output_smaller_than_source"
+        ]
+      }
+    }
+  ]
+}

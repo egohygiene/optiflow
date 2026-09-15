@@ -17,6 +17,9 @@ move, quarantine, or optimization command.
 - Classify files by inspected content rather than filename extension.
 - Collect optional container, stream, codec, dimensions, duration, sample-rate,
   channel, and bitrate metadata through `ffprobe` JSON.
+- Derive deterministic read-only lossless-PNG review opportunities from
+  current, provider-bound evidence without creating outputs or estimating
+  savings.
 - Persist observations and reusable analysis in a local SQLite database.
 - Narrow exact-duplicate candidates by byte length before complete hashing.
 - Calculate complete streaming BLAKE3-256 hashes only for size candidates.
@@ -138,8 +141,9 @@ Machine results and committed domain artifacts have independent identifiers:
 | Effective policy | `optiflow.effective-policy.v1` | `schemas/effective-policy-v1.schema.json` |
 | Artifact set | `optiflow.artifact-set.v1` | `schemas/artifact-set-v1.schema.json` |
 | Run | `optiflow.run.v5` | `schemas/run.schema.json` |
-| Report | `optiflow.report.v5` | `schemas/report.schema.json` |
+| Report | `optiflow.report.v6` | `schemas/report.schema.json` |
 | Plan | `optiflow.plan.v5` | `schemas/plan.schema.json` |
+| Media profile evidence | `optiflow.media-profile-evidence.v1` | `schemas/media-profile-evidence-v1.schema.json` |
 | Extension manifest | `optiflow.extension-manifest.v1` | `schemas/extension-manifest-v1.schema.json` |
 | Extension lock | `optiflow.extension-lock.v1` | `schemas/extension-lock-v1.schema.json` |
 | Extension invocation | `optiflow.extension-invocation.v1` | `schemas/extension-invocation-v1.schema.json` |
@@ -182,6 +186,9 @@ The [artifact-set commit protocol](docs/artifact-set-protocol.md) defines
 coherent scan/plan publication, marker validation, and crash recovery.
 The [handle-bound observation protocol](docs/observation-protocol.md) documents
 how OptiFlow rejects replacement and in-read races without mixing evidence.
+The [media-profile evidence contract](docs/media-profiles.md) defines the first
+lossless-PNG review profile, exact provider provenance, limitation semantics,
+and why an opportunity is neither an output nor a savings guarantee.
 
 ## Ecosystem integration
 
@@ -260,6 +267,7 @@ schemas, repository intelligence, and release guidance.
 - [Handle-bound observation protocol](docs/observation-protocol.md)
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
+- [Media-profile evidence](docs/media-profiles.md)
 - [CLI outcome contract](docs/cli-contract.md)
 - [Configuration and effective policy](docs/configuration.md)
 - [Safe extension SDK](docs/plugin-sdk.md)

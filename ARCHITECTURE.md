@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.1
+version: 0.1.2
 status: draft
 owners:
   - egohygiene
@@ -31,7 +31,8 @@ larger Ego Hygiene platform. [`SYSTEM.md`](SYSTEM.md) owns the logical system
 inventory; this document owns structural rules.
 
 The current execution boundary converts immutable filesystem observations into
-evidence-backed reports and review-only plans. Mutation, transactional
+evidence-backed relationships, media-profile review opportunities, reports,
+and review-only plans. Mutation, transactional
 replacement, validation, quarantine, and recovery are future structural units
 and must not be simulated inside the read-only pipeline.
 
@@ -63,7 +64,7 @@ Owns canonical concepts, evidence rules, effective policy values, inventory
 classification, exact-group derivation, and plan semantics.
 
 - Modules: `domain`, `configuration::policy`, `inventory`, `duplicates`,
-  `planning`.
+  `media_profiles`, `planning`.
 - Depends on data and behavior it owns rather than concrete external tools.
 - Contains no shell, terminal, GitHub, container, or cloud-provider semantics.
 
@@ -102,7 +103,7 @@ is not part of the CLI runtime.
 ## Runtime and Data Flow
 
 ```mermaid
-flowchart LR
+flowchart TD
     caller[Person / flow / automation] --> cli[CLI interface]
     cli --> policy[Effective policy]
     policy --> discovery[Conservative discovery]
@@ -111,11 +112,14 @@ flowchart LR
     inventory --> evidence[Complete content evidence]
     evidence --> groups[Exact relationship groups]
     groups --> report[Immutable report]
+    inventory --> profiles[Media-profile evidence]
+    profiles --> report
     report --> plan[Review-only plan]
     plan --> outcome[Typed command result]
     outcome --> caller
     ffprobe[ffprobe adapter] -. normalized facts .-> inventory
     schemas[Checked-in schemas] -. validate .-> policy
+    schemas -. validate .-> profiles
     schemas -. validate .-> report
     schemas -. validate .-> plan
     schemas -. validate .-> outcome
@@ -142,7 +146,8 @@ permission.
 | `render` | Interface | Enforce stdout/stderr ownership and buffered JSON rendering |
 | `discovery` | Application/infrastructure boundary | Traverse explicit inputs under conservative policy |
 | `inventory` | Domain | Normalize filesystem and media observations |
-| `adapters::ffprobe` | Infrastructure | Invoke and parse `ffprobe` directly without a shell |
+| `adapters::ffprobe` | Infrastructure | Bind one exact executable identity, invoke it from the read-only handle, and validate bounded evidence |
+| `media_profiles` | Domain | Derive versioned, deterministic review opportunities and honest scoped coverage from accepted observations |
 | `extensions` | Application/contract boundary | Validate explicit provider declarations and locks, resolve precedence, register typed embedded roles, and reject unsafe contributions |
 | `extensions::process` | Infrastructure | Invoke one absolute, byte-pinned trusted provider with bounded JSON stdio and no inherited environment |
 | `hashing` | Evidence | Stream complete BLAKE3-256 hashes with cancellation checkpoints |
@@ -180,6 +185,12 @@ permission.
 13. Extension results are proposed evidence. They cannot publish artifacts,
     execute plans, mutate source media, or bypass core revalidation,
     authorization, hashing, byte confirmation, provenance, and recovery.
+14. Built-in media profiles consume accepted observations only. Missing,
+    stale, partial, unavailable, or invalid provider evidence produces no
+    opportunity.
+15. Provider success is necessary but insufficient: the exact executable
+    identity, bounded output, empty error stream, JSON shape, and expected
+    semantic observations must all validate.
 
 ## Dependency Direction
 
@@ -214,6 +225,8 @@ indirection that has no demonstrated boundary value.
 - Embedded extensions register role-specific Rust traits; trusted process
   extensions exchange closed, bounded, independently versioned JSON documents.
 - Local persistence uses transactional SQLite plus immutable JSON artifacts.
+- Media-profile evidence binds profile configuration, evidence policy, native
+  path facts, normalized observations, and exact provider identity.
 - Automation exchanges `optiflow.command-result.v1` and referenced artifacts.
 - `flow` invokes the binary as a subprocess and branches on complete schema
   identifiers and exit codes.
@@ -257,6 +270,8 @@ semantics satisfy OptiFlow requirements.
 - Handled `SIGINT` and `SIGTERM` never finalize an active run as completed.
 - Full hashes are calculated only when a candidate relationship requires them
   in the current MVP.
+- The built-in PNG profile creates no output and makes no output-size, logical-
+  savings, or physical-savings estimate.
 - Direct byte confirmation remains deferred to the future destructive gate.
 - The extension SDK grants no mutation, destructive, signing, or publication
   effect. Process trust is explicit but does not claim operating-system
@@ -266,9 +281,10 @@ semantics satisfy OptiFlow requirements.
 
 ## Relationship to System Inventory
 
-The Invocation, Discovery, Inventory, Relationship, State, Reporting,
-Presentation, Contract, and Publication systems in [`SYSTEM.md`](SYSTEM.md) map
-onto the layers above. The future Transactional Execution System will add
+The Invocation, Discovery, Inventory, Relationship, Media Profile Analysis,
+State, Reporting, Presentation, Contract, and Publication systems in
+[`SYSTEM.md`](SYSTEM.md) map onto the layers above. The future Transactional
+Execution System will add
 explicit execution-domain and transaction-infrastructure units instead of
 expanding `planning` into an implicit apply engine.
 

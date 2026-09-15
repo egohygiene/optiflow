@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-meta
 title: OptiFlow Meta Architecture
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-09-15
 governed_by:
   - architecture-meta
 depends_on:
@@ -200,9 +200,9 @@ declared dependencies are stable.
 
 ## Lifecycle and Validation Status
 
-All documents currently use version `0.1.0` and status `draft`. Draft means the
-corpus is canonical working architecture but still expected to change before
-the first stable product release.
+Documents retain independent revision versions and currently use status
+`draft`. Draft means the corpus is canonical working architecture but still
+expected to change before the first stable product release.
 
 The current validation contract is manual for OptiFlow:
 

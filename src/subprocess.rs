@@ -529,6 +529,16 @@ impl SubprocessRunner {
         self.run_with_cancel_and_input(command, SubprocessInput::Null, is_cancelled)
     }
 
+    /// Run a command with stdin connected directly to a clone of an opened
+    /// read-only file handle and retain both bounded output streams.
+    pub fn run_with_file(
+        &self,
+        command: &SubprocessCommand,
+        file: &File,
+    ) -> Result<SubprocessOutput, SubprocessError> {
+        self.run_with_cancel_and_file(command, Some(file), || false)
+    }
+
     /// Run a command with a bounded caller-owned byte document on stdin.
     pub fn run_with_input_and_cancel<F>(
         &self,

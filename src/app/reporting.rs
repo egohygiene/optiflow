@@ -10,8 +10,9 @@ use crate::artifact_set::{
 use crate::configuration::EffectivePolicyV1;
 use crate::contracts::{self, Contract};
 use crate::domain::{
-    PLAN_SCHEMA_VERSION, REPORT_SCHEMA_VERSION, REPORT_SCHEMA_VERSION_V1, REPORT_SCHEMA_VERSION_V2,
-    REPORT_SCHEMA_VERSION_V3, REPORT_SCHEMA_VERSION_V4, ScanReport,
+    MediaProfileCoverageStatus, PLAN_SCHEMA_VERSION, REPORT_SCHEMA_VERSION,
+    REPORT_SCHEMA_VERSION_V1, REPORT_SCHEMA_VERSION_V2, REPORT_SCHEMA_VERSION_V3,
+    REPORT_SCHEMA_VERSION_V4, REPORT_SCHEMA_VERSION_V5, ScanReport,
 };
 use crate::outcome::{
     ArtifactReference, CoverageStatus, Diagnostic, DiagnosticClassification, DiagnosticCode,
@@ -223,7 +224,7 @@ fn load_report(store: &StateStore, run_or_path: &str) -> Result<LoadedReport, Bo
             )
         })?;
         let report = decode_report(&bytes, &report_path)?;
-        let artifact_set = if report.schema_version == REPORT_SCHEMA_VERSION {
+        let artifact_set = if report_requires_artifact_set(&report.schema_version) {
             let directory = report_path.parent().unwrap_or_else(|| Path::new("."));
             Some(require_report_artifact_set(
                 artifact_set::inspect_scan_set(directory),
@@ -264,7 +265,7 @@ fn load_report(store: &StateStore, run_or_path: &str) -> Result<LoadedReport, Bo
     })?;
     if let Some(report) = report {
         let directory = Path::new(&report.run.artifact_directory);
-        let artifact_set = if report.schema_version == REPORT_SCHEMA_VERSION {
+        let artifact_set = if report_requires_artifact_set(&report.schema_version) {
             Some(require_report_artifact_set(
                 artifact_set::inspect_scan_set(directory),
                 directory,
@@ -401,6 +402,7 @@ fn decode_report(bytes: &[u8], path: &Path) -> Result<ScanReport, Box<Diagnostic
                 | REPORT_SCHEMA_VERSION_V2
                 | REPORT_SCHEMA_VERSION_V3
                 | REPORT_SCHEMA_VERSION_V4
+                | REPORT_SCHEMA_VERSION_V5
         )
     ) {
         return Err(Box::new(
@@ -447,6 +449,19 @@ fn report_is_partial(report: &ScanReport) -> bool {
     report.summary.unstable_observation_count > 0
         || report.summary.unreadable_files > 0
         || !report.run.warnings.is_empty()
+        || report.media_profile_evidence.iter().any(|evidence| {
+            matches!(
+                evidence.coverage.status,
+                MediaProfileCoverageStatus::Partial | MediaProfileCoverageStatus::Unavailable
+            )
+        })
+}
+
+fn report_requires_artifact_set(schema_version: &str) -> bool {
+    matches!(
+        schema_version,
+        REPORT_SCHEMA_VERSION | REPORT_SCHEMA_VERSION_V5
+    )
 }
 
 fn load_source_policy(

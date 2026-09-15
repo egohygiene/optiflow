@@ -26,6 +26,8 @@ produces immutable plans for human review.
   see staging, marker validation, crash recovery, and durability boundaries.
 - **[Inspect the handle-bound observation protocol](observation-protocol.md)**
   to see how file races, retries, cache reuse, and refusal are handled.
+- **[Review media-profile evidence](media-profiles.md)** to understand the
+  first lossless-PNG candidate contract and why it makes no savings claim.
 - **[See the current v0.1.x milestone](current-release-milestone.md)** for the
   dependency-ready hardening queue and release exit criteria.
 - **[Consume the CLI contract](cli-contract.md)** from `flow`, a shell script,
@@ -46,6 +48,10 @@ An exact duplicate group requires equal logical size and equal complete
 BLAKE3-256 content hashes. The report preserves the evidence used to make that
 claim. A generated plan is a separate, immutable, review-only artifact with
 preconditions for a future execution boundary.
+
+For byte-classified PNG inputs, report v6 can also preserve a deterministic
+review opportunity when current provider evidence is complete. This is analysis
+only: it creates no optimized output and estimates no savings.
 
 ```text
 inputs

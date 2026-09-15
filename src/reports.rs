@@ -4,7 +4,9 @@ use std::path::Path;
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::domain::{CacheStatus, DoctorReport, Plan, ReclaimabilityStatus, ScanReport};
+use crate::domain::{
+    CacheStatus, DoctorReport, MediaProfileCoverageStatus, Plan, ReclaimabilityStatus, ScanReport,
+};
 
 pub fn print_json<T: Serialize>(value: &T) -> Result<()> {
     let stdout = std::io::stdout();
@@ -80,6 +82,24 @@ pub fn print_scan_report(report: &ScanReport) {
             "  Unstable observations:    {} (excluded from duplicate groups)",
             report.summary.unstable_observation_count
         );
+    }
+    for evidence in &report.media_profile_evidence {
+        let coverage = match evidence.coverage.status {
+            MediaProfileCoverageStatus::NotRequested => "not requested",
+            MediaProfileCoverageStatus::NotApplicable => "not applicable",
+            MediaProfileCoverageStatus::Complete => "complete",
+            MediaProfileCoverageStatus::Partial => "partial",
+            MediaProfileCoverageStatus::Unavailable => "unavailable",
+        };
+        println!(
+            "  Media profile:            {}@{} ({coverage})",
+            evidence.profile.id, evidence.profile.version
+        );
+        println!(
+            "  Media review candidates:  {}",
+            evidence.coverage.opportunity_count
+        );
+        println!("  Est. media savings:       not estimated");
     }
     println!("  Artifacts: {}", report.run.artifact_directory);
 

@@ -27,7 +27,10 @@ message text.
 Complete success means the requested operation produced a trustworthy result
 under its declared coverage contract. Warnings with `impact: "none"` do not
 change that outcome. In particular, an unavailable optional `ffprobe` does not
-make an otherwise complete file and duplicate inventory partial.
+make file and exact-duplicate inventory incomplete. When a probe-enabled scan
+contains byte-classified PNG input, however, unavailable or invalid provider
+evidence makes the requested lossless-PNG profile coverage incomplete, so the
+combined command result is partial and identifies the affected count.
 
 Partial success means OptiFlow produced a valid, inspectable result while
 known exclusions reduced its coverage. Examples include one unavailable root
