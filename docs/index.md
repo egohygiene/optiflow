@@ -37,6 +37,8 @@ produces immutable plans for human review.
   to see how observations become evidence-backed reports and plans.
 - **[Place OptiFlow in the platform](cloud-native-placement.md)** to understand
   how CNCF capabilities fit around the portable product boundary.
+- **[Inspect the performance budgets](performance.md)** for the reproducible
+  discovery, hashing, cache-reuse, memory, and artifact-size regression guard.
 
 ## What the current release proves
 

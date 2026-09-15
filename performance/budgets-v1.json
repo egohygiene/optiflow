@@ -1,0 +1,16 @@
+{
+  "schema": "optiflow.performance-budgets.v1",
+  "fixture": {
+    "discovery_file_count": 1000,
+    "hash_group_count": 8,
+    "hash_members_per_group": 4,
+    "hash_file_bytes": 1048576
+  },
+  "budgets": {
+    "discovery_cold_max_seconds": 15.0,
+    "hash_cold_max_seconds": 15.0,
+    "hash_warm_max_seconds": 10.0,
+    "maximum_peak_rss_bytes": 268435456,
+    "maximum_artifact_bytes_per_observation": 4096
+  }
+}

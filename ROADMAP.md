@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-13
+updated: 2026-09-15
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -31,15 +31,15 @@ repository: egohygiene/optiflow
 visibility: public
 publication: composed
 route: /roadmap/
-updated: 2026-09-13
+updated: 2026-09-15
 -->
-## 2026-09-13 execution snapshot
+## 2026-09-15 execution snapshot
 
 > This evidence-reconciled snapshot is the issue-generation and visual-roadmap handoff. The longer-horizon strategy below remains canonical context; generated HTML, JSON, progress, issue plans, and commit lists are projections.
 
 **Lifecycle:** read-only v0.1 alpha
 
-**Current gate:** Add the explicitly authorized safe extension SDK while retaining the read-only release boundary.
+**Current gate:** Define the first read-only media-profile checkpoint after #51 and #29 establish the extension and measurable CLI foundations.
 
 **North-star outcome:** A trustworthy optimization protocol that begins read-only, binds observations to native handles, and advances to reviewed transactions.
 
@@ -47,8 +47,9 @@ updated: 2026-09-13
 
 **Mode:** `composed`  
 **Route:** `/roadmap/`  
-**Current publication evidence:** Documentation and site workflows are green and
-a signed `v0.1.0` release exists; production domain work remains open in #28.
+**Current publication evidence:** Documentation and site workflows are green,
+a signed `v0.1.0` release exists, and #28 completed production publication and
+rollback evidence.
 
 Compose dist/roadmap/ into the repository's existing final site artifact at /roadmap/. The current Pages workflow remains the only deployer.
 
@@ -139,16 +140,18 @@ issues: [29, 51]
 
 **Exit criteria:**
 
-- [ ] Issue #51 publishes typed roles, versioned declarations and locks, bounded invocation, deterministic resolution, and adversarial refusal evidence.
-- [ ] CLI behavior and performance budgets are tested.
+- [x] Issue #51 publishes typed roles, versioned declarations and locks, bounded invocation, deterministic resolution, and adversarial refusal evidence.
+- [x] CLI behavior and performance budgets are tested.
 - [ ] Media profiles retain read-only evidence and stable artifact identity.
 
 **Current evidence:**
 
-- The suite roadmap in `egohygiene/flow#11` independently authorized #51 after
-  OptiFlow #26 and #27 completed; Flow #7 already froze the suite extension
-  ownership split.
-- Issue #29 remains separate downstream CLI and performance coordination.
+- Issue #51 closed through PR #62 with the additive read-only extension SDK;
+  flow #7 remains the suite ownership boundary.
+- Issue #29 preserves the stable CLI outcome contract, splits scan,
+  report/plan, and extension command coordination, and enforces a retained
+  synthetic performance baseline without adding mutation authority.
+- The first read-only media-profile issue remains to be scoped separately.
 
 <!-- roadmap-step
 id: OPT-Q05
@@ -174,13 +177,13 @@ issues: []
 
 <!-- roadmap-step
 id: OPT-Q06
-status: active
+status: complete
 depends_on: [OPT-Q01]
 issues: [28]
 -->
 #### OPT-Q06 — Complete production site delivery
 
-**State:** `active`
+**State:** `complete`
 
 **Depends on:** `OPT-Q01`
 
@@ -189,14 +192,13 @@ performance, redirect, and rollback evidence for the already composed site.
 
 **Exit criteria:**
 
-- [ ] Production publication and rollback are proven on the organization domain.
+- [x] Production publication and rollback are proven on the organization domain.
 
 **Current evidence:**
 
-- The composed site is live on the product hostname through the pinned Pages
-  workflow. Issue #28 remains open for review of its canonical metadata,
-  preview artifact, live-validation, and rollback evidence; it is independent
-  of CLI hardening and the extension SDK.
+- Issue #28 closed through PR #63 after canonical metadata, preview artifacts,
+  live validation, and rollback evidence were aligned with the pinned Pages
+  workflow.
 
 ### Roadmap-to-issue handoff
 
@@ -553,7 +555,7 @@ enough to install before mutation is introduced.
 - [x] Test Linux and macOS path and filesystem behavior independently.
 - [ ] Add schema validation for every emitted artifact in CI.
 - [ ] Test SQLite migrations from every previously released schema.
-- [ ] Establish a performance baseline for file discovery, candidate hashing,
+- [x] Establish a performance baseline for file discovery, candidate hashing,
   cache reuse, memory use, and artifact size.
 
 ### `v0.1.x` exit criteria

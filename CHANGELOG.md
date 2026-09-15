@@ -7,6 +7,9 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a versioned synthetic read-only performance fixture with enforced cold
+  discovery, complete hashing, warm-cache, peak-memory, and artifact-size
+  ceilings plus retained CI measurement evidence.
 - Added the independently versioned `optiflow.extension-sdk.v1` boundary with
   closed manifest, operator-lock, invocation, and result schemas; typed roles
   cover inspectors, analyzers, normalization/policy contributors, planners,
@@ -80,6 +83,11 @@ public contracts still receive explicit migration notes.
 
 ### Changed
 
+- Split application command coordination into scan, report/plan, and extension
+  modules, and removed repeated collection-wide lookup while classifying
+  hard-link aliases.
+- Documented the intentional absence of a live `v0.1.x` progress stream and
+  added outcome-specific remediation guidance without changing JSON stdout.
 - Pages pull requests now retain a reviewable site artifact, production
   deployment is restricted to `main`, and the site verifier enforces canonical
   metadata, accessibility structure, and reduced-motion baselines for public
@@ -100,6 +108,8 @@ public contracts still receive explicit migration notes.
 
 ### Compatibility
 
+- Issue #29 does not change commands, options, exit codes, product JSON schemas,
+  state migrations, extension authority, or the read-only source boundary.
 - Existing CLI, configuration, run, report, plan, command-result, database, and
   artifact-set contracts are unchanged. The extension commands and four
   extension wire identifiers are additive; no new crate dependency was added.

@@ -134,6 +134,32 @@ should enforce one outside OptiFlow. Structured output
 is either one complete JSON document or empty if the process cannot reach the
 renderer safely.
 
+## Progress and diagnostic guidance
+
+The `v0.1.x` CLI has no live scan-progress stream. Human and JSON modes both
+produce one terminal result; JSON stdout never contains progress messages.
+Callers may cancel cooperatively with `SIGINT` or `SIGTERM`, but must not infer
+completion or progress by watching SQLite rows, temporary files, or an
+artifact directory before a committed result names it. A future machine event
+stream requires a separately versioned contract.
+
+Use the outcome class and typed diagnostic fields before displaying the human
+message:
+
+| Outcome | Caller guidance |
+| --- | --- |
+| `success` | Consume the declared result and committed artifacts. |
+| `partial_success` | Consume the valid result, surface every coverage limitation, and decide whether excluded evidence requires a new scan. |
+| `invalid_input` | Correct the invocation, selected configuration, path, manifest, or lock; an unchanged retry is not useful. |
+| `capability_unavailable` | Install or explicitly select the required capability, then retry. |
+| `stale_state` | Recreate or migrate the prerequisite evidence; do not treat the old artifact as current. |
+| `internal_failure` | Preserve diagnostics and retry only when `retryable` is true or the underlying state/storage failure has been repaired. |
+| `interrupted` / `terminated` | Treat the command as incomplete; inspect durable state through supported commands before starting again. |
+
+Diagnostic wording may improve within the pre-1.0 line. Automation branches on
+`outcome.class`, `outcome.exit_code`, diagnostic `code`, `classification`,
+`impact`, and typed context rather than message text.
+
 ## Shell and CI consumption
 
 Capture the command status before another shell command overwrites it:

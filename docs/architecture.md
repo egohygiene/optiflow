@@ -78,7 +78,9 @@ specification
 
 The [development model](development-model.md) defines the required traceability
 between behavior, safety invariants, machine contracts, tests, and emitted
-evidence.
+evidence. The [performance budget](performance.md) exercises the same public
+CLI while keeping its synthetic measurement artifact outside the product
+contract.
 
 The repository-level
 [architecture reference](https://github.com/egohygiene/optiflow/blob/main/ARCHITECTURE.md)

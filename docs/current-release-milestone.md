@@ -1,94 +1,75 @@
-# Current Release Milestone — v0.1.x Hardening
+# Current Release Milestone — v0.1.x Foundation
 
-This is the compact execution view for the current OptiFlow release milestone. `ROADMAP.md` remains the long-horizon product roadmap; this file answers **what is dependency-ready now?**
+This is the compact execution view for optiflow's current release foundation.
+[`ROADMAP.md`](https://github.com/egohygiene/optiflow/blob/main/ROADMAP.md)
+remains the long-horizon product roadmap; this file records which existing
+issues supplied the read-only baseline and what is dependency-ready next.
 
 ## Milestone objective
 
-Ship a trustworthy read-only `v0.1.x` foundation whose paths, observation evidence, external-tool execution, artifact publication, fault behavior, and release evidence are strong enough to support public distribution before source mutation is introduced.
+Maintain a trustworthy read-only `v0.1.x` product whose path identity,
+observations, external-tool execution, artifact publication, fault behavior,
+extension boundary, release evidence, CLI semantics, and performance budgets
+are explicit before source mutation is introduced.
 
-## Ready now
+## Completed dependency chain
 
-### #21 — lossless NativePath schema v4
+| Issue | Delivered evidence |
+| --- | --- |
+| #21 — NativePath v4 | Lossless native path identity across state and artifact boundaries |
+| #23 — bounded subprocess runner | Direct argv execution with time, output, concurrency, cancellation, and typed failure bounds |
+| #22 — handle-bound observations | One stable read handle binds identity, allocation, content, and optional probe evidence |
+| #24 — artifact-set commit protocol | Staged, digest-verified publication with incomplete/incompatible refusal and recovery |
+| #26 — adversarial matrix | Property, filesystem-fault, parser, and artifact-reader evidence |
+| #27 — signed release policy | Dependency policy and the verified `v0.1.0` release path |
+| #51 — safe extension SDK | Explicit declarations and locks, typed read-only roles, deterministic resolution, and bounded providers |
+| #28 — production site | Canonical production publication, live validation, and rollback evidence |
 
-**Priority:** P0  
-**Dependencies:** none
+The live GitHub issue and pull-request records remain authoritative for exact
+merge commits and workflow runs.
 
-Make path identity lossless across SQLite, JSON, plans, reports, logs, and CLI boundaries. This is upstream of handle-bound observation and artifact-set work because persisted identity must be trustworthy first.
+## #29 — CLI boundaries and performance
 
-### #23 — typed bounded subprocess runner
+Issue #8 and PR #15 already established the stable exit-code, JSON-envelope,
+signal, stream-ownership, and typed-diagnostic contract that #29 depends on.
+The remaining #29 work is now represented by:
 
-**Priority:** P0  
-**Dependencies:** none
+- command coordination separated into scan, report/plan, and extension modules;
+- an optimized hard-link alias path without collection-wide repeated lookup;
+- a versioned synthetic fixture and enforceable wall-time, memory, and artifact
+  size ceilings;
+- retained Linux CI measurements from the optimized release binary; and
+- explicit progress and caller-remediation guidance that preserves one clean
+  terminal JSON result.
 
-Centralize ffprobe/future adapter execution with argv-only invocation, bounded stdout/stderr, timeouts, cancellation, concurrency, and typed errors.
+This checkpoint does not add a live progress stream, source-media mutation,
+optimization execution, new product JSON schema, database migration, or
+extension authority.
 
-These two issues can proceed in parallel because their core contracts are independent.
+## Current evidence checklist
 
-## Ready after #21
-
-### #22 — handle-bound observation evidence
-
-Bind evidence to the same opened handle/equivalent platform primitive and reject races where guarantees cannot be established.
-
-**Implementation status:** complete on the working hardening branch; pending
-review and merge.
-
-### #24 — artifact-set commit protocol
-
-Publish run/report/plan related outputs as one coherent set with staging, commit markers, recovery semantics, and explicit durability boundaries.
-
-**Implementation status:** complete on the working hardening branch; pending
-review and merge.
-
-## Integration proof after #21–#24
-
-### #26 — adversarial fault and property-test matrix
-
-Exercise filesystem races, symlinks, permissions, mount boundaries, database faults, corrupt artifacts, hostile metadata, serialization invariants, and bounded fuzz/fault targets against the hardened contracts.
-
-## Release gate after #23 + organization dependencies
-
-### #27 — dependency/security/signed-release policy
-
-Requires the bounded subprocess foundation plus organization trust/release automation. This issue is the public-release supply-chain gate, not a reason to block correctness work in #21–#24.
-
-## Site deployment track
-
-### #28 — production optiflow.egohygiene.io deployment
-
-The composed site is live at `https://optiflow.egohygiene.io/` through the
-repository-owned Pages workflow. REL-04 and HOL-03 are complete; #28 now owns
-the final canonical metadata, preview-artifact, live-validation, and rollback
-evidence. ORG-03 retains the organization-wide hostname and DNS governance
-record. This track does not change the CLI safety milestone, and the public
-site must not advertise unsupported mutation or release guarantees.
-
-## Dependency graph
-
-```mermaid
-flowchart LR
-  N21[#21 NativePath v4] --> N22[#22 handle-bound evidence]
-  N21 --> N24[#24 artifact-set commit]
-  N21 --> N26[#26 fault/property matrix]
-  N22 --> N26
-  N23[#23 bounded subprocess runner] --> N26
-  N24 --> N26
-  N23 --> N27[#27 release/security]
-  ORG[org trust + Relay release] --> N27
-  SITE[org domain + Relay publication] --> N28[#28 production site]
-```
-
-## Milestone exit checklist
-
-- [ ] Native paths round-trip losslessly through every supported artifact/state boundary.
+- [x] Native paths round-trip losslessly through supported artifact/state boundaries.
 - [x] Observation evidence cannot silently combine incompatible file states.
-- [ ] External tools cannot produce unbounded output or hang the process indefinitely.
+- [x] External tools use the typed bounded subprocess and provider paths.
 - [x] Related artifacts are distinguishable as committed, incomplete, or incompatible sets.
-- [x] Adversarial/fault tests exercise the combined invariants.
-- [ ] Public packages have the agreed dependency/security/provenance evidence.
-- [ ] Installation and supported-platform smoke tests pass from packaged artifacts.
-- [ ] Documentation and product-site claims match the actual release contract.
+- [x] Adversarial and fault tests exercise the combined read-only invariants.
+- [x] Public release artifacts carry the documented dependency, checksum, SBOM, provenance, and signing evidence.
+- [x] CLI exits, JSON stdout, diagnostics, and interruption behavior have a stable documented contract.
+- [x] Representative discovery, candidate-hashing, cache-reuse, memory, and artifact-size budgets are enforced.
+- [x] Production documentation and site claims preserve the read-only boundary.
+
+Unchecked items in the detailed `v0.1.x` roadmap that lack a current issue are
+future issue-planning inputs, not implicit additions to #29.
 
 ## What comes after
 
-Only after this milestone earns trustworthy read-only distribution should `v0.2.0` introduce transactional exact-duplicate source mutation. The mutation roadmap remains governed by the safety invariants in `ROADMAP.md` and `ARCHITECTURE.md`.
+OPT-Q04 still needs its first bounded read-only media-profile issue. A profile
+may contribute optimization evidence and proposed outputs through the safe
+provider boundary, but it cannot mutate source files or bypass core artifact
+identity and validation.
+
+OPT-Q05 then introduces reviewed transactions only after preview, explicit
+authorization, current precondition proof, output validation, durable commit,
+interruption, and rollback behavior are specified together. flow may
+orchestrate released optiflow commands; it does not own optiflow's file-safety
+semantics or import its source.
