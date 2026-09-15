@@ -73,6 +73,83 @@ and passes the verifier's explicit `--allow-missing-intelligence` waiver. Set
 exercise the published contract; every Pages build requires the complete
 `/intelligence/` mount.
 
+## Delivery modes
+
+The pinned `Publish site` workflow uses one build path for review and
+production:
+
+| Event | Artifact | Deployment |
+| --- | --- | --- |
+| Pull request | Compose, verify, and retain a reviewable `github-pages` artifact for seven days | Never |
+| Push to `main` | Compose, verify, and retain the exact artifact | Deploy to the protected `github-pages` environment |
+| Manual dispatch on `main` | Recompose and verify current `main` | Deploy to the protected `github-pages` environment |
+
+The workflow refuses to configure or deploy Pages from any ref other than
+`main`. Pull-request artifacts therefore exercise the production composer
+without acquiring production publication authority.
+
+## Production contract
+
+The canonical production endpoint is
+`https://optiflow.egohygiene.io/`. The product hostname is a DNS CNAME to
+`egohygiene.github.io`; GitHub Pages terminates TLS and serves the artifact
+created by `.github/workflows/pages.yml`. The default Pages URL redirects to
+the canonical hostname, and plain HTTP redirects to HTTPS.
+
+Every public HTML entry point must publish one canonical URL. The site verifier
+enforces that contract for the landing, architecture, and documentation entry
+points together with a non-empty description, English language declaration,
+viewport metadata, one main landmark, one primary heading, and one skip link.
+It also requires reduced-motion overrides for both hand-authored visual
+surfaces.
+
+After every production deployment, verify the public route and its critical
+mounts without disabling certificate checks:
+
+```bash
+curl --fail --silent --show-error --location \
+  --output /dev/null \
+  --write-out "url=%{url_effective} status=%{http_code} tls=%{ssl_verify_result}\n" \
+  "http://optiflow.egohygiene.io/"
+
+for route in / /architecture/ /docs/ /intelligence/ \
+  /schemas/config-v1.schema.json; do
+  curl --fail --silent --show-error --location \
+    --output /dev/null \
+    --write-out "$route status=%{http_code} start-transfer=%{time_starttransfer}s bytes=%{size_download}\n" \
+    "https://optiflow.egohygiene.io$route"
+done
+
+curl --fail --silent --show-error \
+  "https://optiflow.egohygiene.io/" \
+  | rg '<link rel="canonical" href="https://optiflow.egohygiene.io/">'
+```
+
+For a release review, also inspect the landing and architecture surfaces at
+320, 768, and 1440 CSS pixels; traverse navigation and controls by keyboard;
+confirm the skip link receives focus; and repeat with reduced motion enabled.
+Record the workflow run, deployed commit, DNS answer, redirect chain, response
+timings, and review result on the delivery issue.
+
+## Rollback
+
+Production is commit-derived, so the durable rollback is a reviewed revert on
+`main`:
+
+1. Identify the last known-good `Publish site` run and its full commit SHA.
+2. Revert the faulty merge in a pull request; do not patch generated `dist/`
+   output or mutate a deployed artifact.
+3. Merge the revert after its pull-request artifact passes verification.
+4. Confirm that the resulting `main` run deploys successfully, then repeat the
+   production checks above and attach the run and commit to the incident or
+   delivery issue.
+
+If the source is already correct but a deployment needs to be replayed, run
+`Publish site` manually from `main`. A DNS or certificate failure is outside
+this repository's authority: the organization-domain owner restores the CNAME
+and Pages domain settings under ORG-03, while OptiFlow maintainers leave the
+last known-good artifact intact.
+
 ## Current scope
 
 The repository now publishes the Zensical source, a LaunchKit-derived landing

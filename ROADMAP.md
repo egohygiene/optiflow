@@ -193,8 +193,10 @@ performance, redirect, and rollback evidence for the already composed site.
 
 **Current evidence:**
 
-- Issue #28 remains open and is independent of the completed adversarial and
-  signed-release prerequisites and the active extension SDK.
+- The composed site is live on the product hostname through the pinned Pages
+  workflow. Issue #28 remains open for review of its canonical metadata,
+  preview artifact, live-validation, and rollback evidence; it is independent
+  of CLI hardening and the extension SDK.
 
 ### Roadmap-to-issue handoff
 

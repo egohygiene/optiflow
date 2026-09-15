@@ -80,6 +80,10 @@ public contracts still receive explicit migration notes.
 
 ### Changed
 
+- Pages pull requests now retain a reviewable site artifact, production
+  deployment is restricted to `main`, and the site verifier enforces canonical
+  metadata, accessibility structure, and reduced-motion baselines for public
+  entry points.
 - JSON command output is now a command-result envelope. The previous top-level
   scan/report/plan value is available under `result`, and committed artifacts
   are listed under `artifacts`. Consumers of the pre-1.0 `--json` output should

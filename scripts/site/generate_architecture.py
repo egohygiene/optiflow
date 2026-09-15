@@ -569,6 +569,7 @@ def render_html(dataset: dict[str, object]) -> str:
     <meta property="og:description" content="{html.escape(product['description'])}">
     <meta property="og:url" content="https://optiflow.egohygiene.io/architecture/">
     <title>architecture · optiflow</title>
+    <link rel="canonical" href="https://optiflow.egohygiene.io/architecture/">
     <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/architecture.css">
     <script src="assets/architecture.js" defer></script>
