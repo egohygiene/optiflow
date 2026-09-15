@@ -98,3 +98,39 @@ jobs:
 
       - name: Run synthetic end-to-end test
         run: ./scripts/smoke-test.sh
+
+  performance:
+    name: Read-only performance budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build the optimized binary
+        run: cargo build --locked --release
+
+      - name: Enforce performance budgets
+        run: |
+          python3 scripts/run-performance-baseline.py \
+            --binary "target/release/optiflow" \
+            --budgets "performance/budgets-v1.json" \
+            --output "target/performance-baseline.json" \
+            --enforce
+
+      - name: Retain performance evidence
+        if: always()
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: optiflow-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/performance-baseline.json
+          if-no-files-found: warn
+          retention-days: 30

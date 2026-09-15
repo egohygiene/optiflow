@@ -62,8 +62,9 @@ The verification pyramid for optiflow is:
 3. CLI integration tests
 4. JSON Schema contract tests using real serialized artifacts
 5. Synthetic end-to-end safety tests
-6. Cross-platform CI on Linux and macOS
-7. Release-candidate installation and artifact verification
+6. Release-mode synthetic performance budgets
+7. Cross-platform CI on Linux and macOS
+8. Release-candidate installation and artifact verification
 
 Higher layers do not replace lower layers. Safety-sensitive behavior should be
 proven at the lowest practical layer and repeated at an end-to-end boundary.

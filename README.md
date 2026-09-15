@@ -195,6 +195,7 @@ an unversioned Rust dependency on its default branch.
 
 ```bash
 task validate
+task performance:check
 ```
 
 Equivalent commands:
@@ -206,11 +207,21 @@ cargo test --locked --all-targets
 task contracts
 task extensions:examples
 ./scripts/smoke-test.sh
+python3 scripts/run-performance-baseline.py \
+  --binary "target/release/optiflow" \
+  --budgets "performance/budgets-v1.json" \
+  --output "target/performance-baseline.json" \
+  --enforce
 ```
 
 The end-to-end test uses synthetic files in a temporary directory, includes
 spaces and Unicode in paths, and verifies that both duplicate inputs remain
 unchanged after scanning and planning.
+
+The [performance baseline](docs/performance.md) uses a separate synthetic
+fixture to enforce tolerant release-mode ceilings for cold discovery, complete
+candidate hashing, warm-cache reuse, peak resident memory, and committed
+artifact size. It never reads user media or invokes optional probes.
 
 Dependency admission, security reporting, supported binary targets, signed
 release verification, and immutable rollback are defined in the
@@ -254,6 +265,7 @@ schemas, repository intelligence, and release guidance.
 - [Safe extension SDK](docs/plugin-sdk.md)
 - [Generated extension capability reference](docs/extension-capabilities.md)
 - [Development model](docs/development-model.md)
+- [Performance budgets](docs/performance.md)
 - [Release and dependency policy](docs/release-policy.md)
 - [Security policy](SECURITY.md)
 - [Site publication architecture](docs/site-publication.md)

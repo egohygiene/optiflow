@@ -68,6 +68,17 @@ tasks:
     cmds:
       - ./scripts/smoke-test.sh
 
+  performance:check:
+    desc: Enforce the synthetic read-only performance budgets.
+    cmds:
+      - cargo build --locked --release
+      - >-
+        python3 scripts/run-performance-baseline.py
+        --binary "target/release/optiflow"
+        --budgets "performance/budgets-v1.json"
+        --output "target/performance-baseline.json"
+        --enforce
+
   contracts:
     desc: Verify schemas and generated extension contract documentation.
     cmds:
@@ -152,4 +163,5 @@ tasks:
       - task: contracts
       - task: extensions:examples
       - task: smoke
+      - task: performance:check
       - task: site:build

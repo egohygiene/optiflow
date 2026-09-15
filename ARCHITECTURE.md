@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-13
+updated: 2026-09-15
 governed_by:
   - architecture-architecture
 depends_on:
@@ -51,7 +51,9 @@ system exit status.
 Coordinates use cases, resolves one typed command outcome, handles cooperative
 interruption, and defines artifact-commit boundaries.
 
-- Modules: `app`, `outcome`, `signals`, `configuration::resolver`.
+- Modules: the `app` dispatcher and its `scan`, `reporting`, and
+  `extension_commands` use-case modules; `outcome`; `signals`; and
+  `configuration::resolver`.
 - Receives explicit ports and fully materialized policy.
 - Does not contain adapter parsing or filesystem-specific mutation.
 
@@ -131,7 +133,10 @@ permission.
 | `cli` | Interface | Parse commands, output mode, selectors, and traversal overrides |
 | `configuration::resolver` | Application | Select, snapshot, merge, validate, and explain configuration |
 | `configuration::policy` | Domain | Hold values, provenance, locked invariants, and fingerprints |
-| `app` | Application | Coordinate command use cases and artifact boundaries |
+| `app` | Application | Resolve configuration once and dispatch typed command use cases |
+| `app::scan` | Application | Coordinate discovery, observation, exact evidence, persistence, and atomic scan publication |
+| `app::reporting` | Application | Load compatible evidence and coordinate report and review-plan publication |
+| `app::extension_commands` | Application | Coordinate explicit extension catalog inspection and typed availability outcomes |
 | `outcome` | Application | Resolve diagnostics, coverage, artifacts, and exit semantics |
 | `signals` | Application | Capture cooperative interruption without terminating library code |
 | `render` | Interface | Enforce stdout/stderr ownership and buffered JSON rendering |
@@ -196,9 +201,10 @@ Zensical, Docker, Kubernetes, cloud SDKs, SQLite row layouts, or raw `ffprobe`
 JSON. Infrastructure implements the boundaries required by application and
 domain use cases.
 
-The current module graph predates a formal compile-time boundary linter. New
-changes should move toward this direction without creating indirection that has
-no demonstrated boundary value.
+The command coordinator is split by proven scan, report/plan, and extension
+use cases. The wider module graph still predates a formal compile-time boundary
+linter; new changes should move toward the declared direction without creating
+indirection that has no demonstrated boundary value.
 
 ## Communication Patterns
 
