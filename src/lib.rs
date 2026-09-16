@@ -18,6 +18,7 @@ pub mod observation;
 pub mod outcome;
 pub mod planning;
 pub mod png_candidate;
+pub mod png_validation;
 pub mod render;
 pub mod reports;
 pub mod signals;

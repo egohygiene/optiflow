@@ -7,6 +7,13 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a read-only PNG byte-pair validator with actual complete decoding,
+  exact pixel/metadata comparison, observed content identities, explicit byte
+  limits, and real synthetic success/refusal fixtures. Initial support is
+  noninterlaced 8-bit RGB/RGBA with a documented metadata subset. The opaque
+  result does not attest filesystem/process behavior or authorize artifacts;
+  no encoder, CLI integration, source writes, or wire-schema changes are added.
+
 - Added the separate `optiflow.png-candidate-contract.v1` preparation contract,
   pure consistency checker, and synthetic success/refusal fixtures for a
   future static RGB/RGBA PNG candidate. This does not produce or validate PNG

@@ -191,9 +191,15 @@ guarantees.
   policy without granting mutation authority.
 - Issue #78 defines the contract-only static PNG candidate preparation seam
   with synthetic acceptance/refusal evidence. It does not deliver an encoder,
-  byte validator, candidate output, or transactional authority. After review,
-  scope source-preserving provider execution and media-artifact publication
-  separately; keep replacement/recovery under the later transaction gate.
+  byte validator, candidate output, or transactional authority.
+- Issue #80 adds actual read-only source/candidate PNG byte validation for a
+  documented noninterlaced RGB/RGBA metadata subset. Synthetic functional tests
+  prove complete stream validation, exact pixel/metadata preservation, byte
+  limits and honest refusals. It does not generate candidates or supply host
+  filesystem/process attestations. After review, scope source-preserving
+  provider execution and media-artifact publication separately; resolve that
+  execution's architecture/release boundary before CLI integration and keep
+  replacement/recovery under the later transaction gate.
 - Transactional v0.2 and stable beta/v1 remain roadmap work.
 
 <!-- roadmap-step

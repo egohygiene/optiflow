@@ -81,8 +81,12 @@ documents.
 `png_candidate` separately checks the consistency of proposed PNG candidate
 request/provider/host evidence under a closed contract. It performs no IO and
 is not connected to application execution or artifact acceptance. Its
-`ConsistentForReview` result grants no authority; actual byte validation,
-candidate generation, and media publication remain future architecture work.
+`ConsistentForReview` result grants no authority. The separate `png_validation`
+library observes actual immutable source/candidate bytes for a documented
+static PNG subset, including full decode and direct preservation comparisons.
+Its opaque result supplies byte facts only; filesystem stability, provider
+execution, resource measurements, candidate generation, and media publication
+remain future architecture work. Neither API is connected to the CLI.
 
 ### Infrastructure Layer
 
