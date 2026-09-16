@@ -34,7 +34,7 @@ jobs:
 
       - name: Generate public repository intelligence
         # relay v1.0.0
-        uses: egohygiene/relay/actions/repository-intelligence@b71b090406a3a9e4cd9f107e9d14a623bbecb127
+        uses: egohygiene/relay/actions/repository-intelligence@1eada5142f7fc7da7862f335589e3b8f5884ffaf
         with:
           output-directory: ".site/producers/intelligence"
           work-directory: ".cache/repository-intelligence"
@@ -52,7 +52,7 @@ jobs:
 
       - name: Install uv
         # astral-sh/setup-uv v8.1.0
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
         with:
           enable-cache: false
           version: "0.11.33"
