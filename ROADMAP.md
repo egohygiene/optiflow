@@ -176,7 +176,9 @@ guarantees.
 
 **Exit criteria:**
 
-- [ ] Every mutation is previewable, attributable, and reversible.
+- [ ] Every mutation is previewable and attributable, and is either
+  recoverable under its recorded guarantee or separately approved as
+  irreversible.
 - [ ] Every execution batch declares its roots, action and in-flight byte
   limits, minimum free-space reserve, and peak additional-space estimate.
 - [ ] Lossy and metadata-changing actions use versioned profiles with
@@ -595,7 +597,8 @@ evidence-complete, recoverable workflow.
 - [ ] Require plans to declare their action type, mutation authority, policy,
   source run, evidence, preconditions, and expected storage outcome.
 - [ ] Bind each approved batch to explicit roots or subtrees, selected actions,
-  maximum action count, and maximum in-flight files and bytes.
+  maximum action count, maximum in-flight files and bytes, per-filesystem
+  capacity limits, and a minimum free-space reserve.
 - [ ] Verify plan schema, source identity, supported action versions, and policy
   compatibility before execution begins.
 - [ ] Re-stat, re-hash, and byte-compare exact candidates immediately before
@@ -628,18 +631,23 @@ evidence-complete, recoverable workflow.
 ### Space and filesystem safety
 
 - [ ] Estimate temporary, quarantine, database, and safety-margin space before
-  execution.
-- [ ] Publish peak storage accounting that distinguishes baseline source
-  bytes, staged candidates, committed replacements whose originals remain in
-  quarantine, delayed same-filesystem reclamation, cross-filesystem copies,
-  journal/database growth, and the safety margin.
+  execution, including adapter-declared temporary, backup, and other working
+  artifacts; reject tools that may write to undeclared locations.
+- [ ] Publish peak storage accounting per affected filesystem that
+  distinguishes logical and allocated bytes, baseline sources, staged
+  candidates, adapter working artifacts, committed replacements whose
+  originals remain in quarantine, delayed same-filesystem reclamation,
+  cross-filesystem copies, journal/database growth, and the safety margin;
+  report shared extents and unmeasurable allocation as unknown rather than as
+  savings.
 - [ ] Provide a sequential one-action-at-a-time mode that bounds active scratch
-  space to the current action's candidate or copy, journal/database growth,
-  and safety margin; include retained quarantine and previously committed
-  outputs separately in the batch peak.
-- [ ] Recheck available capacity and the configured free-space floor before
-  every action; pause or fail closed before mutation when the next action would
-  exceed either bound.
+  space to the current action's candidate, copy, and declared adapter working
+  artifacts plus journal/database growth and safety margin; include retained
+  quarantine and previously committed outputs separately in the batch peak.
+- [ ] Recheck measured capacity and the configured free-space floor before
+  every action and on resume; pause or fail closed before mutation when the
+  next action's projected usage would violate either bound, and monitor
+  tool-owned output where the platform supports it.
 - [ ] Refuse actions when required space is unavailable or cannot be measured
   safely.
 - [ ] Distinguish projected logical savings from physical savings.
@@ -663,8 +671,12 @@ evidence-complete, recoverable workflow.
 - [ ] Inject stale plans, modified files, renamed paths, permission changes,
   insufficient space, failed synchronization, interrupted moves, interrupted
   copies, database contention, and volume disconnects.
-- [ ] Prove folder and subtree boundaries, action-count limits, in-flight byte
-  limits, and the free-space floor cannot be exceeded after planning or resume.
+- [ ] Prove folder and subtree boundaries and action-count and in-flight-byte
+  limits are hard invariants after planning or resume; prove execution refuses
+  to start or resume when measured or projected capacity violates the approved
+  bounds, and stops safely when monitored tool-owned output crosses a hard
+  limit. Treat capacity consumed concurrently by other processes as an
+  explicit external risk rather than a guarantee Optiflow can make.
 - [ ] Prove that validation failure leaves the source unchanged.
 - [ ] Prove that resuming does not repeat a committed mutation.
 - [ ] Prove restore behavior for same- and cross-filesystem quarantine.
@@ -778,11 +790,12 @@ pretending one output format is correct for every use case.
   sufficient.
 - [ ] Detect unintended resizing, cropping, orientation changes, alpha loss,
   gamut changes, banding, and animation loss.
-- [ ] Store quality tool and model identity, preprocessing and color-space
-  policy, parameters, threshold, score, applicability limits, and results with
-  the execution.
+- [ ] Store quality tool identity, model identity and immutable model-content
+  digest, preprocessing and color-space policy, parameters, threshold, score,
+  applicability limits, and results with the execution.
 - [ ] Start new or materially changed quality profiles in review-required mode;
-  require corpus calibration and explicit approval before unattended commits.
+  require corpus calibration and explicit approval, encoded in the immutable
+  plan or effective policy, before unattended commits.
 - [ ] Add review-required outcomes for borderline results instead of silently
   accepting them.
 
@@ -793,16 +806,22 @@ pretending one output format is correct for every use case.
 - [ ] Define a typed, capability- and version-aware ExifTool adapter for
   supported formats. It operates only on staged candidates, never writes the
   source implicitly, and creates no backup outside the transaction boundary.
-- [ ] Record before/after metadata manifests, residual or unremovable fields,
-  and measured metadata-only byte savings separately from encoding savings.
+- [ ] Record privacy-preserving before/after metadata manifests containing tag
+  identifiers or categories and their disposition, with values redacted or
+  digested by default; permit raw values only under an explicit local
+  diagnostic policy.
+- [ ] Record the isolated metadata pass's signed logical and allocated size
+  delta separately from encoding changes, together with pre/post candidate
+  digests and size baselines; permit zero or negative savings.
 - [ ] Protect orientation, capture time, copyright, color, and paired-asset
   metadata unless the profile says otherwise.
 - [ ] Report metadata that cannot be represented in the target format.
 - [ ] Re-run structural, decode, perceptual, metadata-policy, and size
   validation after the metadata pass and fail closed on unsupported or unsafe
   rewrites.
-- [ ] Never claim complete privacy sanitization from generic tag deletion
-  without output-specific residual-data verification.
+- [ ] Never claim complete privacy sanitization. Report which declared metadata
+  carriers were inspected or removed and which residual, unsupported, or
+  unknown surfaces remain.
 - [ ] Require confirmation when a requested conversion would discard a feature
   the source contains.
 
@@ -811,8 +830,8 @@ pretending one output format is correct for every use case.
 - [ ] Every lossy or format-changing action names the intended tradeoff.
 - [ ] Originals are retained unless the plan explicitly authorizes replacement.
 - [ ] Quality and metadata decisions are reproducible from recorded provenance.
-- [ ] Reports attribute measured encoding and metadata savings separately and
-  disclose residual metadata.
+- [ ] Reports attribute measured encoding changes and the metadata-pass size
+  delta separately and disclose residual metadata.
 - [ ] Unsupported source features fail closed or require explicit approval.
 
 ## `v0.5.0` — audio and video optimization
@@ -864,11 +883,13 @@ plan/apply/validate/commit model.
   it.
 - [ ] Add audio quality and loudness checks appropriate to the selected action.
 - [ ] Evaluate versioned VMAF v1 models for video and ViSQOL modes for audio as
-  profile-selected full-reference candidates; record model, preprocessing,
-  frame or sample coverage, and known applicability limits.
-- [ ] Use deterministic frame or audio windows and retain score distributions,
-  low-percentile or worst-window evidence, and aggregation policy rather than
-  accepting a collection-wide mean alone.
+  profile-selected full-reference candidates; record immutable model-content
+  digest, ViSQOL mode, preprocessing, resampling and downmix behavior, frame or
+  sample coverage, and known applicability limits.
+- [ ] Require every candidate action to meet its per-output acceptance policy;
+  treat batch or whole-output aggregates as informational only. Use
+  deterministic frame or audio windows and retain score distributions,
+  low-percentile or worst-window evidence, and the aggregation policy.
 - [ ] Route borderline, sparsely sampled, or out-of-domain metric results to
   review instead of treating one score as commit authority.
 - [ ] Define tolerances explicitly and record all deviations.
