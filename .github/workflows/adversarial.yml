@@ -43,7 +43,7 @@ jobs:
 
       - name: Upload adversarial evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adversarial-${{ runner.os }}
           path: target/adversarial-evidence/
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload fuzz evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adversarial-fuzz-Linux
           path: |
