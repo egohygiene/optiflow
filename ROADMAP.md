@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.2
+version: 0.1.3
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-15
+updated: 2026-09-16
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -31,9 +31,9 @@ repository: egohygiene/optiflow
 visibility: public
 publication: composed
 route: /roadmap/
-updated: 2026-09-15
+updated: 2026-09-16
 -->
-## 2026-09-15 execution snapshot
+## 2026-09-16 execution snapshot
 
 > This evidence-reconciled snapshot is the issue-generation and visual-roadmap handoff. The longer-horizon strategy below remains canonical context; generated HTML, JSON, progress, issue plans, and commit lists are projections.
 
@@ -163,22 +163,30 @@ versioned media-profile evidence without weakening safety.
 id: OPT-Q05
 status: planned
 depends_on: [OPT-Q03, OPT-Q04]
-issues: []
+issues: [75]
 -->
 #### OPT-Q05 — Introduce reviewed transactions and stabilize
 
 **State:** `planned`  
 **Depends on:** `OPT-Q03`, `OPT-Q04`
 
-**Outcome:** A v0.2 transactional protocol advances through beta to v1 only with preview, approval, and rollback guarantees.
+**Outcome:** A v0.2 transactional protocol advances through beta to v1 only
+with preview, approval, bounded folder-scoped execution, and rollback
+guarantees.
 
 **Exit criteria:**
 
 - [ ] Every mutation is previewable, attributable, and reversible.
+- [ ] Every execution batch declares its roots, action and in-flight byte
+  limits, minimum free-space reserve, and peak additional-space estimate.
+- [ ] Lossy and metadata-changing actions use versioned profiles with
+  reproducible validation and explicit source-retention policy.
 - [ ] Compatibility, migration, and failure recovery are proven before v1.
 
 **Current evidence:**
 
+- Issue #75 clarifies bounded batching, perceptual validation, and metadata
+  policy without granting mutation authority.
 - Transactional v0.2 and stable beta/v1 remain roadmap work.
 
 <!-- roadmap-step
@@ -586,6 +594,8 @@ evidence-complete, recoverable workflow.
 - [ ] Add an explicit `apply --plan <path-or-id>` boundary.
 - [ ] Require plans to declare their action type, mutation authority, policy,
   source run, evidence, preconditions, and expected storage outcome.
+- [ ] Bind each approved batch to explicit roots or subtrees, selected actions,
+  maximum action count, and maximum in-flight files and bytes.
 - [ ] Verify plan schema, source identity, supported action versions, and policy
   compatibility before execution begins.
 - [ ] Re-stat, re-hash, and byte-compare exact candidates immediately before
@@ -619,6 +629,17 @@ evidence-complete, recoverable workflow.
 
 - [ ] Estimate temporary, quarantine, database, and safety-margin space before
   execution.
+- [ ] Publish peak storage accounting that distinguishes baseline source
+  bytes, staged candidates, committed replacements whose originals remain in
+  quarantine, delayed same-filesystem reclamation, cross-filesystem copies,
+  journal/database growth, and the safety margin.
+- [ ] Provide a sequential one-action-at-a-time mode that bounds active scratch
+  space to the current action's candidate or copy, journal/database growth,
+  and safety margin; include retained quarantine and previously committed
+  outputs separately in the batch peak.
+- [ ] Recheck available capacity and the configured free-space floor before
+  every action; pause or fail closed before mutation when the next action would
+  exceed either bound.
 - [ ] Refuse actions when required space is unavailable or cannot be measured
   safely.
 - [ ] Distinguish projected logical savings from physical savings.
@@ -642,6 +663,8 @@ evidence-complete, recoverable workflow.
 - [ ] Inject stale plans, modified files, renamed paths, permission changes,
   insufficient space, failed synchronization, interrupted moves, interrupted
   copies, database contention, and volume disconnects.
+- [ ] Prove folder and subtree boundaries, action-count limits, in-flight byte
+  limits, and the free-space floor cannot be exceeded after planning or resume.
 - [ ] Prove that validation failure leaves the source unchanged.
 - [ ] Prove that resuming does not repeat a committed mutation.
 - [ ] Prove restore behavior for same- and cross-filesystem quarantine.
@@ -745,20 +768,41 @@ pretending one output format is correct for every use case.
 ### Quality validation
 
 - [ ] Define detector-specific visual quality thresholds per profile.
+- [ ] Select full-reference perceptual validators through typed, versioned
+  adapter capabilities; evaluate SSIMULACRA 2.1 as the initial still-image
+  candidate without declaring any metric universally authoritative.
+- [ ] Calibrate thresholds against documented fixture corpora, including the
+  original/candidate pairs tracked by issue #65, and retain review-required
+  outcomes for content outside the calibrated domain.
 - [ ] Combine structural invariants with quality metrics; neither alone is
   sufficient.
 - [ ] Detect unintended resizing, cropping, orientation changes, alpha loss,
   gamut changes, banding, and animation loss.
-- [ ] Store quality tool version, parameters, and results with the execution.
+- [ ] Store quality tool and model identity, preprocessing and color-space
+  policy, parameters, threshold, score, applicability limits, and results with
+  the execution.
+- [ ] Start new or materially changed quality profiles in review-required mode;
+  require corpus calibration and explicit approval before unattended commits.
 - [ ] Add review-required outcomes for borderline results instead of silently
   accepting them.
 
 ### Metadata and privacy
 
-- [ ] Add explicit `preserve`, `strip-private`, and custom metadata policies.
+- [ ] Add explicit `preserve`, `strip-private`, `allowlist`,
+  `strip-all-removable`, and custom metadata policies.
+- [ ] Define a typed, capability- and version-aware ExifTool adapter for
+  supported formats. It operates only on staged candidates, never writes the
+  source implicitly, and creates no backup outside the transaction boundary.
+- [ ] Record before/after metadata manifests, residual or unremovable fields,
+  and measured metadata-only byte savings separately from encoding savings.
 - [ ] Protect orientation, capture time, copyright, color, and paired-asset
   metadata unless the profile says otherwise.
 - [ ] Report metadata that cannot be represented in the target format.
+- [ ] Re-run structural, decode, perceptual, metadata-policy, and size
+  validation after the metadata pass and fail closed on unsupported or unsafe
+  rewrites.
+- [ ] Never claim complete privacy sanitization from generic tag deletion
+  without output-specific residual-data verification.
 - [ ] Require confirmation when a requested conversion would discard a feature
   the source contains.
 
@@ -767,6 +811,8 @@ pretending one output format is correct for every use case.
 - [ ] Every lossy or format-changing action names the intended tradeoff.
 - [ ] Originals are retained unless the plan explicitly authorizes replacement.
 - [ ] Quality and metadata decisions are reproducible from recorded provenance.
+- [ ] Reports attribute measured encoding and metadata savings separately and
+  disclose residual metadata.
 - [ ] Unsupported source features fail closed or require explicit approval.
 
 ## `v0.5.0` — audio and video optimization
@@ -817,6 +863,14 @@ plan/apply/validate/commit model.
 - [ ] Add reference-based visual quality measurement where the profile requires
   it.
 - [ ] Add audio quality and loudness checks appropriate to the selected action.
+- [ ] Evaluate versioned VMAF v1 models for video and ViSQOL modes for audio as
+  profile-selected full-reference candidates; record model, preprocessing,
+  frame or sample coverage, and known applicability limits.
+- [ ] Use deterministic frame or audio windows and retain score distributions,
+  low-percentile or worst-window evidence, and aggregation policy rather than
+  accepting a collection-wide mean alone.
+- [ ] Route borderline, sparsely sampled, or out-of-domain metric results to
+  review instead of treating one score as commit authority.
 - [ ] Define tolerances explicitly and record all deviations.
 - [ ] Compare final size and measured quality against plan thresholds before
   commit.
@@ -827,6 +881,8 @@ plan/apply/validate/commit model.
 - [ ] Resume at action boundaries; only claim within-file resume when the
   underlying operation provides a verifiable continuation contract.
 - [ ] Re-estimate disk requirements as outputs are produced.
+- [ ] Enforce the approved batch's in-flight file/byte limits and free-space
+  floor throughout long-running execution.
 - [ ] Handle thermal, power, and cancellation signals conservatively when the
   platform exposes them.
 
