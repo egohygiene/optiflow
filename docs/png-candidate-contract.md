@@ -1,14 +1,15 @@
 ---
 title: PNG candidate contract
-description: Contract-only preparation for source-preserving PNG candidate evaluation.
+description: PNG candidate declarations, actual byte validation, and remaining execution boundaries.
 ---
 
 # PNG candidate contract
 
 Issue [#78](https://github.com/egohygiene/optiflow/issues/78) defines
 `optiflow.png-candidate-contract.v1`, a **contract-only** review packet for a
-future lossless PNG provider. No encoder is selected or invoked. No PNG is
-decoded, created, published, replaced, or deleted by this checkpoint. The
+future lossless PNG provider. Issue
+[#80](https://github.com/egohygiene/optiflow/issues/80) adds a separate read-only
+byte validator described below. No encoder is selected or invoked; the
 existing CLI and read-only v0.1 authority are unchanged.
 
 The [schema](../schemas/png-candidate-contract-v1.schema.json), Rust
@@ -32,7 +33,7 @@ validation or host-observation fields inside that result. A future coordinator
 must acquire the host observations itself rather than copying provider stdout.
 Deserializing a `HostEvidence` value does not authenticate its origin.
 
-The only success result is `ConsistentForReview`. It is evidence-consistency
+The packet checker's success result is `ConsistentForReview`. It is evidence-consistency
 feedback, not an accepted media artifact, runtime safety attestation, creative
 approval, or permission to execute. No current application path consumes it.
 
@@ -145,10 +146,79 @@ deserialization so shared legacy domain types cannot discard unknown fields.
 semantic-refusal tests are separate because a schema-valid claim can still be
 inconsistent.
 
+## Actual byte validation
+
+The library function `png_validation::validate_png_pair` accepts immutable
+source/candidate byte slices and explicit `ByteValidationLimits`. It opens no
+files, invokes no provider, and creates no output. Its opaque
+`ValidatedPngPair` has private fields and no deserializer: declarations from
+the contract example cannot be converted into observed byte evidence.
+
+It uses the pinned [`png` 0.18.1 decoder](https://docs.rs/png/0.18.1/png/struct.Decoder.html)
+(declared MSRV 1.73, below OptiFlow's 1.85), with identity transformations and
+checksum checking explicitly enabled. A separate chunk scanner verifies all
+CRCs, framing, ordering, and supported metadata before decoding. A bounded
+`flate2` zlib pass requires the complete stream, correct Adler-32, exact
+filtered image length, and consumption of all IDAT data. This compensates for
+the decoder's intentional tolerance of unused compressed bytes and malformed
+ancillary metadata. PNG permits readers to ignore unused final IDAT bytes;
+this validator's refusal is a
+[stricter profile rule](https://www.w3.org/TR/png-3/#11IDAT), not a claim that
+every refused file violates PNG.
+
+The current implementation supports a **subset** of
+`optiflow.png-idat-preserve.v1`:
+
+| Input | Current behavior |
+| --- | --- |
+| Static, noninterlaced 8-bit RGB/RGBA | Complete decode and exact samples |
+| `PLTE`, RGB `tRNS`, `gAMA`, `sRGB`, `pHYs` | Check shape, multiplicity and placement; preserve exact bytes |
+| Uncompressed `tEXt` | Check keyword/text structure; preserve exact bytes and order |
+| Unknown private safe-to-copy ancillary chunks | Preserve opaque bytes and placement; no semantic interpretation |
+| Interlace, grayscale, indexed color, other bit depths, APNG | Explicit refusal |
+| Other public/registered metadata, including `iCCP`, `zTXt`, `iTXt`, `cHRM`, `eXIf` | Explicit refusal; no compressed-metadata expansion |
+| Unknown critical or unsafe-to-copy chunks | Explicit refusal |
+
+Private safe-to-copy chunks have lowercase first, second and fourth type
+letters, and an uppercase reserved third letter. Supported metadata validation
+is structural; this is not an ICC/colorimetric or general PNG conformance
+certifier. Adding metadata/interlace support requires its own bounded tests.
+
+Both actual canonical sample buffers and every ordered preserved raw chunk
+are compared directly, with one marker retaining the IDAT run's position.
+This catches alpha changes, invisible RGB changes, metadata additions/removals,
+and movement across IDAT even when visible rendering is identical. Only then
+does the validator expose `ContentIdentity`, `PngFacts` and a strictly positive
+`encoded_byte_reduction`, computed from the observed slices with the digest
+recipes above. No serialized schema changes are required. The existing pure
+contract checker retains its declaration-only semantics.
+
+Limits independently bound source bytes, candidate bytes, decoded bytes per
+image and chunks per image. Checked dimensions are refused before image-sized
+allocation. Allocation failures in caller-owned sample/chunk/IDAT buffers
+return a limit refusal. `decoder_allocation_bytes` configures the PNG library's
+**best-effort internal allocation accounting**, excluding caller input, output
+samples, IDAT copies, zlib state and bookkeeping. Two decoded images are held
+for comparison. These ceilings are not peak RSS, wall-clock enforcement,
+process isolation or a substitute for `CandidateLimits`. The API produces no
+`ResourceUsage` measurements or `HostEvidence` packet.
+
+Run the generated, original synthetic PNG proofs with:
+
+```sh
+cargo test --locked --test png_byte_validation
+```
+
+These tests include different compression/filter/IDAT layouts, transparency,
+metadata placement, changed samples, corrupt chunk CRCs and zlib checksums,
+truncation, extra compressed/decompressed bytes, unsupported input, and exact
+budget boundaries. They are functional fixtures, not the broader redistribution
+corpus tracked by [#65](https://github.com/egohygiene/optiflow/issues/65).
+
 ## Next execution checkpoint
 
-After this contract is reviewed, scope one real source-preserving provider
-with independently produced byte-validation evidence, a complete source-handle
+After this validator is reviewed, scope one real source-preserving provider
+using independently produced byte-validation evidence, a complete source-handle
 window, bounded workspace/process behavior, and candidate-media publication.
 That checkpoint must explicitly resolve the architecture and release boundary
 before adding runtime execution. Existing Scan/Plan JSON artifact publication
