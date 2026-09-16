@@ -26,6 +26,7 @@ nav = [
     { "Configuration" = "configuration.md" },
     { "JSON artifacts" = "json-contract.md" },
     { "Media-profile evidence" = "media-profiles.md" },
+    { "PNG candidate contract" = "png-candidate-contract.md" },
     { "Extension SDK" = "plugin-sdk.md" },
     { "Extension capabilities" = "extension-capabilities.md" },
   ] },

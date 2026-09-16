@@ -7,6 +7,11 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added the separate `optiflow.png-candidate-contract.v1` preparation contract,
+  pure consistency checker, and synthetic success/refusal fixtures for a
+  future static RGB/RGBA PNG candidate. This does not produce or validate PNG
+  bytes, select an encoder, measure savings, or change v0.1 CLI/write authority.
+
 - Added `optiflow.media-profile-evidence.v1` and the built-in
   `optiflow.builtin.lossless-png-review@1.0.0` analysis profile. Current,
   handle-bound PNG observations can now produce deterministic review

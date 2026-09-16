@@ -13,6 +13,7 @@ pub enum Contract {
     Config,
     EffectivePolicy,
     MediaProfileEvidence,
+    PngCandidateContract,
     ExtensionManifest,
     ExtensionLock,
     ExtensionInvocation,
@@ -65,6 +66,9 @@ pub fn schema(contract: Contract) -> Result<Value> {
         Contract::EffectivePolicy => include_str!("../schemas/effective-policy-v1.schema.json"),
         Contract::MediaProfileEvidence => {
             include_str!("../schemas/media-profile-evidence-v1.schema.json")
+        }
+        Contract::PngCandidateContract => {
+            include_str!("../schemas/png-candidate-contract-v1.schema.json")
         }
         Contract::ExtensionManifest => include_str!("../schemas/extension-manifest-v1.schema.json"),
         Contract::ExtensionLock => include_str!("../schemas/extension-lock-v1.schema.json"),

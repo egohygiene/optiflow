@@ -17,6 +17,7 @@ pub mod media_profiles;
 pub mod observation;
 pub mod outcome;
 pub mod planning;
+pub mod png_candidate;
 pub mod render;
 pub mod reports;
 pub mod signals;

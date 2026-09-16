@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.3
+version: 0.1.4
 status: draft
 owners:
   - egohygiene
@@ -163,7 +163,7 @@ versioned media-profile evidence without weakening safety.
 id: OPT-Q05
 status: planned
 depends_on: [OPT-Q03, OPT-Q04]
-issues: [75]
+issues: [75, 78]
 -->
 #### OPT-Q05 — Introduce reviewed transactions and stabilize
 
@@ -189,6 +189,11 @@ guarantees.
 
 - Issue #75 clarifies bounded batching, perceptual validation, and metadata
   policy without granting mutation authority.
+- Issue #78 defines the contract-only static PNG candidate preparation seam
+  with synthetic acceptance/refusal evidence. It does not deliver an encoder,
+  byte validator, candidate output, or transactional authority. After review,
+  scope source-preserving provider execution and media-artifact publication
+  separately; keep replacement/recovery under the later transaction gate.
 - Transactional v0.2 and stable beta/v1 remain roadmap work.
 
 <!-- roadmap-step

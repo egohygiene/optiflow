@@ -1,0 +1,336 @@
+{
+  "schema": "optiflow.png-candidate-contract.v1",
+  "request": {
+    "profile": "optiflow.png-idat-preserve.v1",
+    "source_observation_id": "synthetic-observation",
+    "source": {
+      "path": {
+        "encoding": "utf8",
+        "value": "/synthetic/source.png"
+      },
+      "filesystem_identity": {
+        "platform": "linux",
+        "filesystem_id": "1",
+        "file_id": "100",
+        "link_count": 1
+      },
+      "observation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "content": {
+        "digest": {
+          "algorithm": "blake3-256",
+          "value": "2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "logical_bytes": 1024
+      },
+      "regular_file": true,
+      "symlink": false
+    },
+    "effective_policy_fingerprint": {
+      "algorithm": "blake3-256",
+      "value": "7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    "producer": {
+      "name": "encoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/encoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    },
+    "validator": {
+      "name": "decoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/decoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "6666666666666666666666666666666666666666666666666666666666666666"
+      }
+    },
+    "limits": {
+      "input_bytes": 4096,
+      "candidate_bytes": 4096,
+      "decoded_bytes": 4096,
+      "temporary_bytes": 8192,
+      "memory_bytes": 1048576,
+      "elapsed_ms": 1000
+    }
+  },
+  "provider_result": {
+    "request_fingerprint": {
+      "algorithm": "blake3-256",
+      "value": "c3b447daa23361c02636f6a66a9d2c9e8c3d070ef7d0e5222a027f5ae8e6b677"
+    },
+    "producer": {
+      "name": "encoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/encoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    },
+    "status": "succeeded",
+    "candidate": {
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "logical_bytes": 800
+    }
+  },
+  "host_evidence": {
+    "request_fingerprint": {
+      "algorithm": "blake3-256",
+      "value": "c3b447daa23361c02636f6a66a9d2c9e8c3d070ef7d0e5222a027f5ae8e6b677"
+    },
+    "source_before": {
+      "path": {
+        "encoding": "utf8",
+        "value": "/synthetic/source.png"
+      },
+      "filesystem_identity": {
+        "platform": "linux",
+        "filesystem_id": "1",
+        "file_id": "100",
+        "link_count": 1
+      },
+      "observation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "content": {
+        "digest": {
+          "algorithm": "blake3-256",
+          "value": "2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "logical_bytes": 1024
+      },
+      "regular_file": true,
+      "symlink": false
+    },
+    "source_after": {
+      "path": {
+        "encoding": "utf8",
+        "value": "/synthetic/source.png"
+      },
+      "filesystem_identity": {
+        "platform": "linux",
+        "filesystem_id": "1",
+        "file_id": "100",
+        "link_count": 1
+      },
+      "observation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "content": {
+        "digest": {
+          "algorithm": "blake3-256",
+          "value": "2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "logical_bytes": 1024
+      },
+      "regular_file": true,
+      "symlink": false
+    },
+    "candidate": {
+      "path": {
+        "encoding": "utf8",
+        "value": "/synthetic/staging/candidate.png"
+      },
+      "filesystem_identity": {
+        "platform": "linux",
+        "filesystem_id": "1",
+        "file_id": "101",
+        "link_count": 1
+      },
+      "observation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "content": {
+        "digest": {
+          "algorithm": "blake3-256",
+          "value": "4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        "logical_bytes": 800
+      },
+      "regular_file": true,
+      "symlink": false
+    },
+    "producer_before": {
+      "name": "encoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/encoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    },
+    "producer_after": {
+      "name": "encoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/encoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    },
+    "validator_before": {
+      "name": "decoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/decoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "6666666666666666666666666666666666666666666666666666666666666666"
+      }
+    },
+    "validator_after": {
+      "name": "decoder-fixture",
+      "version": "synthetic-1",
+      "executable": {
+        "encoding": "utf8",
+        "value": "/synthetic/tools/decoder-fixture"
+      },
+      "binary_digest": {
+        "algorithm": "blake3-256",
+        "value": "6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "invocation_fingerprint": {
+        "algorithm": "blake3-256",
+        "value": "6666666666666666666666666666666666666666666666666666666666666666"
+      }
+    },
+    "source_png": {
+      "width": 8,
+      "height": 8,
+      "bit_depth": 8,
+      "color_type": 6,
+      "frames": 1,
+      "complete_decode": true,
+      "animation_chunks": false,
+      "decoded_bytes": 256,
+      "ihdr_digest": {
+        "algorithm": "blake3-256",
+        "value": "8888888888888888888888888888888888888888888888888888888888888888"
+      },
+      "decoded_samples_digest": {
+        "algorithm": "blake3-256",
+        "value": "9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "non_idat_chunks_digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "unknown_unsafe_to_copy_chunks": false
+    },
+    "candidate_png": {
+      "width": 8,
+      "height": 8,
+      "bit_depth": 8,
+      "color_type": 6,
+      "frames": 1,
+      "complete_decode": true,
+      "animation_chunks": false,
+      "decoded_bytes": 256,
+      "ihdr_digest": {
+        "algorithm": "blake3-256",
+        "value": "8888888888888888888888888888888888888888888888888888888888888888"
+      },
+      "decoded_samples_digest": {
+        "algorithm": "blake3-256",
+        "value": "9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "non_idat_chunks_digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "unknown_unsafe_to_copy_chunks": false
+    },
+    "checks": [
+      {
+        "kind": "source_stable",
+        "status": "passed"
+      },
+      {
+        "kind": "complete_decode",
+        "status": "passed"
+      },
+      {
+        "kind": "dimensions",
+        "status": "passed"
+      },
+      {
+        "kind": "frame_count",
+        "status": "passed"
+      },
+      {
+        "kind": "decoded_samples",
+        "status": "passed"
+      },
+      {
+        "kind": "alpha_preserved",
+        "status": "passed"
+      },
+      {
+        "kind": "color_preserved",
+        "status": "passed"
+      },
+      {
+        "kind": "metadata_preserved",
+        "status": "passed"
+      }
+    ],
+    "resource_usage": {
+      "peak_temporary_bytes": 800,
+      "peak_memory_bytes": 16384,
+      "elapsed_ms": 10
+    }
+  }
+}

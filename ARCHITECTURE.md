@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.2
+version: 0.1.3
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-15
+updated: 2026-09-16
 governed_by:
   - architecture-architecture
 depends_on:
@@ -77,6 +77,12 @@ documents.
 - Modules: `hashing`, `contracts`; files: `schemas/`.
 - Schema identity is independent from the Rust crate version.
 - Validation occurs before an artifact is reported as committed.
+
+`png_candidate` separately checks the consistency of proposed PNG candidate
+request/provider/host evidence under a closed contract. It performs no IO and
+is not connected to application execution or artifact acceptance. Its
+`ConsistentForReview` result grants no authority; actual byte validation,
+candidate generation, and media publication remain future architecture work.
 
 ### Infrastructure Layer
 
