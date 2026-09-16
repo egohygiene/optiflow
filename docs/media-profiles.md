@@ -111,6 +111,11 @@ media processing. No sibling source is imported.
 
 ## Separate follow-up checkpoints
 
+The contract-only portion of candidate preparation is defined in
+[PNG candidate contract](png-candidate-contract.md). It checks synthetic or
+caller-supplied evidence consistency and does not execute an optimizer, decode
+PNG bytes, or extend this profile's authority.
+
 The following remain outside this profile:
 
 - optimizer selection or invocation;
