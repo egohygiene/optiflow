@@ -11,6 +11,10 @@ move, quarantine, or optimization command.
 
 ## Current capabilities
 
+The capabilities below describe [merged source at `5be461c`](https://github.com/egohygiene/optiflow/tree/5be461c413fc34515cd70f41d4178eb8243525d9),
+checked on 2026-09-17. They are not a promise about every installed `0.1.0`
+binary: this source includes work added after the `v0.1.0` release tag.
+
 - Scan one or more files and directories without modifying them.
 - Exclude hidden trees, symbolic links, filesystem crossings, and optiflow's
   own state directory by default.
@@ -32,6 +36,60 @@ move, quarantine, or optimization command.
 - Load explicitly selected, operator-locked extension manifests for typed
   inspectors, analyzers, policy contributors, planners, validators,
   report/export providers, and read-only lifecycle observers.
+
+### Media capability matrix
+
+**OptiFlow does not yet produce optimized media or apply replacements.**
+Inventory, optional probing, review evidence, and candidate validation are
+separate capabilities. Exact deduplication here means evidence and review
+planning, not deletion.
+
+Legend: **✓** merged implementation; **~** conditional or limited subset;
+**P** planned only; **—** no implementation or selected format-specific profile.
+Each status links to its evidence or precise roadmap boundary.
+
+| Files | Inventory / exact dedup | Optional probe | Review evidence | Candidate validation | Candidate production | Apply / replace | Maturity / evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Any regular file (baseline) | [✓][inventory] | [—][probe] | [—][absent] | [—][absent] | [—][absent] | [P][transactions] | [Format-independent inventory][inventory] |
+| PNG | [✓][inventory] | [~][probe] | [~][png-review] | [~][png-bytes] | [P][png-plan] | [P][transactions] | [Review + library validator][png-bytes] |
+| JPEG | [✓][inventory] | [~][probe] | [—][absent] | [P][quality-plan] | [P][image-plan] | [P][transactions] | [Probe eligible; encoding planned][image-plan] |
+| GIF | [✓][inventory] | [~][probe] | [—][absent] | [—][absent] | [—][format-plans] | [P][transactions] | [No GIF producer selected][format-plans] |
+| SVG | [✓][inventory] | [—][probe] | [—][absent] | [—][absent] | [—][format-plans] | [P][transactions] | [Inventory only][probe] |
+| WebP | [✓][inventory] | [~][probe] | [—][absent] | [P][quality-plan] | [P][format-plans] | [P][transactions] | [Delivery-format evaluation][format-plans] |
+| AVIF / HEIF | [✓][inventory] | [~][probe] | [—][absent] | [P][quality-plan] | [P][format-plans] | [P][transactions] | [AVIF evaluation; HEIF inventory/probe][format-plans] |
+| JPEG XL | [✓][inventory] | [~][probe] | [—][absent] | [P][quality-plan] | [P][format-plans] | [P][transactions] | [Delivery-format evaluation][format-plans] |
+| TIFF, RAW, other images | [✓][inventory] | [~][probe] | [—][absent] | [—][absent] | [—][format-plans] | [P][transactions] | [Recognition varies; preserve RAW][probe] |
+| Audio | [✓][inventory] | [~][probe] | [—][absent] | [P][av-validation] | [P][av-plan] | [P][transactions] | [Stream inspection; transforms planned][av-plan] |
+| Video | [✓][inventory] | [~][probe] | [—][absent] | [P][av-validation] | [P][av-plan] | [P][transactions] | [Stream inspection; transforms planned][av-plan] |
+
+The baseline row covers arbitrary readable regular files; media rows add the
+listed conditional capabilities. Classification inspects bytes, not suffixes.
+The locked `infer` recognizers only establish classification eligibility;
+optional `ffprobe` coverage depends on the exact installed provider and the
+input. SVG has no built-in image recognizer. RAW and container recognition
+is partial. **P does not mean supported**: the modern-format entries are
+evaluation candidates, and planned apply refers to the shared transaction
+engine, not a promise of optimization for every row.
+
+PNG review opportunities do not prove that a candidate can be made smaller.
+The separate byte validator is library-only: static noninterlaced 8-bit
+RGB/RGBA with a documented metadata subset, exact sample/chunk preservation,
+and a strictly smaller encoded candidate. It does not run during scans or
+create files. See the [capability evidence and optimizer strategy](docs/optimizer-strategy.md)
+for source ownership, limits, OxiPNG sequencing, and the `image_optim` comparison.
+
+[inventory]: docs/optimizer-strategy.md#inventory-and-exact-duplicates
+[probe]: docs/optimizer-strategy.md#classification-and-optional-probing
+[absent]: docs/optimizer-strategy.md#current-boundaries
+[png-review]: docs/media-profiles.md#selection-and-evidence
+[png-bytes]: docs/png-candidate-contract.md#actual-byte-validation
+[transactions]: ROADMAP.md#v020--transactional-exact-duplicate-resolution
+[png-plan]: ROADMAP.md#adapter-framework
+[image-plan]: ROADMAP.md#encoders-and-formats
+[quality-plan]: ROADMAP.md#quality-validation
+[format-plans]: docs/optimizer-strategy.md#format-plans
+[av-plan]: ROADMAP.md#ffmpeg-adapter
+[av-validation]: ROADMAP.md#validation
 
 ## Requirements
 
@@ -268,6 +326,7 @@ schemas, repository intelligence, and release guidance.
 - [State model](docs/state-model.md)
 - [JSON contract](docs/json-contract.md)
 - [Media-profile evidence](docs/media-profiles.md)
+- [Media capabilities and optimizer strategy](docs/optimizer-strategy.md)
 - [CLI outcome contract](docs/cli-contract.md)
 - [Configuration and effective policy](docs/configuration.md)
 - [Safe extension SDK](docs/plugin-sdk.md)

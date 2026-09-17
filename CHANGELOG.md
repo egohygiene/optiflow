@@ -7,6 +7,11 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a source-pinned README media capability matrix and optimizer-strategy
+  reference, separating inventory, conditional probing, review evidence, PNG
+  byte validation, planned production and future transactions. Documents
+  `image_optim` prior art without adding providers or runtime dependencies.
+
 - Added a read-only PNG byte-pair validator with actual complete decoding,
   exact pixel/metadata comparison, observed content identities, explicit byte
   limits, and real synthetic success/refusal fixtures. Initial support is

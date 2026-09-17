@@ -28,6 +28,9 @@ produces immutable plans for human review.
   to see how file races, retries, cache reuse, and refusal are handled.
 - **[Review media-profile evidence](media-profiles.md)** to understand the
   first lossless-PNG candidate contract and why it makes no savings claim.
+- **[Check media capabilities and optimizer strategy](optimizer-strategy.md)**
+  to distinguish current inspection/validation from planned production and
+  replacement, and see the OxiPNG and `image_optim` direction.
 - **[See the current v0.1.x milestone](current-release-milestone.md)** for the
   dependency-ready hardening queue and release exit criteria.
 - **[Consume the CLI contract](cli-contract.md)** from `flow`, a shell script,
