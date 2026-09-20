@@ -286,7 +286,9 @@ unchanged after scanning and planning.
 The [performance baseline](docs/performance.md) uses a separate synthetic
 fixture to enforce tolerant release-mode ceilings for cold discovery, complete
 candidate hashing, warm-cache reuse, peak resident memory, and committed
-artifact size. It never reads user media or invokes optional probes.
+artifact size. It retains three independent trials, uses median wall time and
+worst-case resource/artifact evidence, and never reads user media or invokes
+optional probes.
 
 Dependency admission, security reporting, supported binary targets, signed
 release verification, and immutable rollback are defined in the

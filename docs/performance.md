@@ -12,8 +12,8 @@ will finish a real collection within the same time.
 The authoritative fixture and ceilings are checked in at
 [`performance/budgets-v1.json`](https://github.com/egohygiene/optiflow/blob/main/performance/budgets-v1.json).
 CI builds an optimized binary, generates the fixture in a temporary directory,
-enforces every ceiling, and retains an `optiflow.performance-baseline.v1` JSON
-report for review.
+executes three independent cold-state trials, enforces every ceiling, and
+retains an `optiflow.performance-baseline.v2` JSON report for review.
 
 ## Representative fixture
 
@@ -46,6 +46,27 @@ hardware-independent service-level objectives. Tightening a ceiling requires
 repeatable evidence on the supported CI platform; loosening one requires an
 explicit explanation in the pull request.
 
+## Sampling and enforcement
+
+Each baseline executes three trials against the same immutable generated input
+and a new state directory for every trial. The harness validates file counts,
+duplicate groups, and warm-cache reuse in every trial before it evaluates a
+performance number.
+
+- Wall-time ceilings are enforced against the median of the three samples. A
+  sustained regression must therefore exceed its budget in at least two
+  trials; one isolated shared-runner stall remains visible without deciding the
+  build.
+- Artifact-size ceilings use the largest value observed for each scenario.
+- Peak resident memory is the largest value observed across every measured
+  child process.
+- The report retains the raw scenario measurements for all three trials plus
+  the aggregate used for enforcement.
+
+This policy preserves the published ceilings and detects sustained
+order-of-magnitude regressions while separating them from transient whole-host
+contention. It does not discard slow samples or weaken correctness checks.
+
 ## Run the baseline
 
 ```bash
@@ -55,6 +76,7 @@ task performance:check
 The equivalent commands are:
 
 ```bash
+python3 -m unittest tests/test_performance_baseline.py
 cargo build --locked --release
 python3 scripts/run-performance-baseline.py \
   --binary "target/release/optiflow" \
@@ -64,15 +86,16 @@ python3 scripts/run-performance-baseline.py \
 ```
 
 The report records the tested binary version, operating-system class,
-architecture, exact fixture and budgets, scenario timings, cache-hit counts,
-duplicate-group counts, artifact sizes, peak resident memory, and every budget
-violation. It intentionally excludes hostnames, repository paths, temporary
-paths, environment values, and source contents.
+architecture, exact fixture and budgets, sampling policy, every raw trial,
+enforcement aggregates, cache-hit counts, duplicate-group counts, artifact
+sizes, peak resident memory, and every budget violation. It intentionally
+excludes hostnames, repository paths, temporary paths, environment values, and
+source contents.
 
 ## Interpretation and limitations
 
-- Wall time includes process startup and the complete scan transaction, but not
-  release compilation or fixture generation.
+- Each wall-time sample includes process startup and the complete scan
+  transaction, but not release compilation or fixture generation.
 - Peak resident memory is the largest measured optiflow child-process value;
   it is not a component-level allocation profile.
 - Artifact size covers the committed per-run directory, not SQLite storage or
@@ -97,4 +120,6 @@ state directory.
 
 This baseline adds no command, option, environment variable, database
 migration, or product JSON contract. The measurement report is CI evidence,
-not a runtime artifact accepted by `report`, `plan`, or flow.
+not a runtime artifact accepted by `report`, `plan`, or flow. The sampling
+change advances that evidence schema from v1 to v2 because `elapsed_seconds`
+now identifies an aggregate and v2 also retains the raw trials.

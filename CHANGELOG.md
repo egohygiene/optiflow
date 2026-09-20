@@ -108,6 +108,12 @@ public contracts still receive explicit migration notes.
 
 ### Changed
 
+- Made the synthetic performance guard resilient to isolated shared-runner
+  stalls without raising any budget. CI now retains three independent trials,
+  enforces median wall time, and keeps worst-case artifact-size and peak-memory
+  evidence while validating scan correctness in every trial. The CI-only
+  measurement evidence advances to `optiflow.performance-baseline.v2`; product
+  JSON contracts are unchanged.
 - Advanced the report contract to `optiflow.report.v6` to embed media-profile
   evidence. Run and plan contracts remain v5; both report v5 and v6 require a
   matching artifact-set marker.

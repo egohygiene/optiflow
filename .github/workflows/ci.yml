@@ -108,6 +108,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Test performance sampling policy
+        run: python3 -m unittest tests/test_performance_baseline.py
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 

@@ -8,6 +8,7 @@ import json
 import math
 import platform
 import resource
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -18,7 +19,8 @@ from typing import Any
 
 
 BUDGET_SCHEMA = "optiflow.performance-budgets.v1"
-RESULT_SCHEMA = "optiflow.performance-baseline.v1"
+RESULT_SCHEMA = "optiflow.performance-baseline.v2"
+MEASUREMENT_TRIAL_COUNT = 3
 EXPECTED_FIXTURE_KEYS = {
     "discovery_file_count",
     "hash_group_count",
@@ -31,6 +33,11 @@ EXPECTED_BUDGET_KEYS = {
     "hash_warm_max_seconds",
     "maximum_peak_rss_bytes",
     "maximum_artifact_bytes_per_observation",
+}
+EXPECTED_SCENARIO_KEYS = {
+    "discovery_cold",
+    "hash_cold",
+    "hash_warm",
 }
 
 
@@ -197,6 +204,69 @@ def binary_version(binary: Path) -> str:
     return completed.stdout.strip()
 
 
+def validate_scenarios(
+    scenarios: dict[str, dict[str, Any]],
+    fixture: dict[str, Any],
+) -> None:
+    """Validate the correctness evidence emitted by one independent trial."""
+    require_exact_keys(scenarios, EXPECTED_SCENARIO_KEYS, "trial scenarios")
+    expected_hash_files = fixture["hash_group_count"] * fixture["hash_members_per_group"]
+    if scenarios["discovery_cold"]["analyzed_files"] != fixture["discovery_file_count"]:
+        raise RuntimeError("discovery fixture file count did not round-trip")
+    if scenarios["hash_cold"]["analyzed_files"] != expected_hash_files:
+        raise RuntimeError("hash fixture file count did not round-trip")
+    if scenarios["hash_cold"]["exact_duplicate_groups"] != fixture["hash_group_count"]:
+        raise RuntimeError("hash fixture duplicate groups did not round-trip")
+    if scenarios["hash_warm"]["cache_hits"] != expected_hash_files:
+        raise RuntimeError("warm-cache fixture did not reuse every observation")
+
+
+def aggregate_scenarios(
+    trials: list[dict[str, dict[str, Any]]],
+) -> dict[str, dict[str, Any]]:
+    """Aggregate independent trials without hiding raw measurements."""
+    if not trials or len(trials) % 2 == 0:
+        raise ValueError("performance measurement requires a positive odd trial count")
+
+    for trial in trials:
+        require_exact_keys(trial, EXPECTED_SCENARIO_KEYS, "trial scenarios")
+
+    scenarios = {}
+    invariant_fields = (
+        "analyzed_files",
+        "cache_hits",
+        "exact_duplicate_groups",
+    )
+    maximum_fields = (
+        "artifact_file_count",
+        "artifact_bytes",
+        "artifact_bytes_per_observation",
+    )
+    for scenario_name in sorted(EXPECTED_SCENARIO_KEYS):
+        samples = [trial[scenario_name] for trial in trials]
+        aggregate = {}
+        for field in invariant_fields:
+            values = [sample[field] for sample in samples]
+            if any(value != values[0] for value in values[1:]):
+                raise RuntimeError(
+                    f"{scenario_name}.{field} differed across trials: {values}"
+                )
+            aggregate[field] = values[0]
+
+        elapsed_samples = [sample["elapsed_seconds"] for sample in samples]
+        aggregate["elapsed_seconds"] = round(
+            statistics.median(elapsed_samples),
+            6,
+        )
+        aggregate["elapsed_seconds_samples"] = elapsed_samples
+        for field in maximum_fields:
+            values = [sample[field] for sample in samples]
+            aggregate[field] = max(values)
+            aggregate[f"{field}_samples"] = values
+        scenarios[scenario_name] = aggregate
+    return scenarios
+
+
 def evaluate(
     scenarios: dict[str, dict[str, Any]],
     measured_peak_rss_bytes: int,
@@ -269,36 +339,33 @@ def main() -> int:
             fixture["hash_file_bytes"],
         )
 
-        scenarios = {
-            "discovery_cold": run_scan(
+        trials = []
+        for trial_index in range(MEASUREMENT_TRIAL_COUNT):
+            trial_workspace = workspace / f"trial-{trial_index + 1}"
+            scenarios = {
+                "discovery_cold": run_scan(
+                    binary,
+                    trial_workspace / "discovery-state",
+                    discovery_collection,
+                    timeout,
+                ),
+                "hash_cold": run_scan(
+                    binary,
+                    trial_workspace / "hash-state",
+                    hash_collection,
+                    timeout,
+                ),
+            }
+            scenarios["hash_warm"] = run_scan(
                 binary,
-                workspace / "discovery-state",
-                discovery_collection,
-                timeout,
-            ),
-            "hash_cold": run_scan(
-                binary,
-                workspace / "hash-state",
+                trial_workspace / "hash-state",
                 hash_collection,
                 timeout,
-            ),
-        }
-        scenarios["hash_warm"] = run_scan(
-            binary,
-            workspace / "hash-state",
-            hash_collection,
-            timeout,
-        )
+            )
+            validate_scenarios(scenarios, fixture)
+            trials.append(scenarios)
 
-    expected_hash_files = fixture["hash_group_count"] * fixture["hash_members_per_group"]
-    if scenarios["discovery_cold"]["analyzed_files"] != fixture["discovery_file_count"]:
-        raise RuntimeError("discovery fixture file count did not round-trip")
-    if scenarios["hash_cold"]["analyzed_files"] != expected_hash_files:
-        raise RuntimeError("hash fixture file count did not round-trip")
-    if scenarios["hash_cold"]["exact_duplicate_groups"] != fixture["hash_group_count"]:
-        raise RuntimeError("hash fixture duplicate groups did not round-trip")
-    if scenarios["hash_warm"]["cache_hits"] != expected_hash_files:
-        raise RuntimeError("warm-cache fixture did not reuse every observation")
+    scenarios = aggregate_scenarios(trials)
 
     measured_peak_rss_bytes = peak_rss_bytes()
     violations = evaluate(scenarios, measured_peak_rss_bytes, budgets)
@@ -312,9 +379,22 @@ def main() -> int:
         },
         "fixture": fixture,
         "budgets": budgets,
+        "sampling": {
+            "trial_count": MEASUREMENT_TRIAL_COUNT,
+            "elapsed_seconds_statistic": "median",
+            "artifact_size_statistic": "maximum",
+            "peak_rss_statistic": "maximum",
+        },
         "measurements": {
             "scenarios": scenarios,
             "peak_rss_bytes": measured_peak_rss_bytes,
+            "trials": [
+                {
+                    "trial": index + 1,
+                    "scenarios": trial,
+                }
+                for index, trial in enumerate(trials)
+            ],
         },
         "violations": violations,
         "passed": not violations,
