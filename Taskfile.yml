@@ -68,9 +68,15 @@ tasks:
     cmds:
       - ./scripts/smoke-test.sh
 
+  performance:test:
+    desc: Test performance sampling and enforcement policy.
+    cmds:
+      - python3 -m unittest tests/test_performance_baseline.py
+
   performance:check:
     desc: Enforce the synthetic read-only performance budgets.
     cmds:
+      - task: performance:test
       - cargo build --locked --release
       - >-
         python3 scripts/run-performance-baseline.py
