@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Build optiflow, inspect its environment, and run a first read-only scan.
+description: Install or build optiflow, inspect its environment, and run a first read-only scan.
 ---
 
 # Getting started
@@ -11,6 +11,43 @@ artifact SBOM and provenance. Follow the
 [independent verification procedure](release-policy.md#independent-verification)
 before installing a downloaded binary. Rust is required only when building
 from source, and `ffprobe` is optional for stream-level media metadata.
+
+The currently published [`v0.1.0`
+bundle](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0) targets
+source revision `f04c82a0b0c677a2939ea351c4219602cd7181af`. A build from
+current `main` can contain later read-only features; preserve its exact source
+revision when comparing behavior with the release.
+
+## Install a verified prebuilt binary
+
+First complete the [independent verification
+procedure](release-policy.md#independent-verification). It leaves the verified
+platform archives under `optiflow-release/`. Select exactly one supported
+target:
+
+- `x86_64-unknown-linux-gnu`
+- `x86_64-apple-darwin`
+- `aarch64-apple-darwin`
+
+Then extract that archive, copy the binary into a user-owned executable
+directory, and run the read-only environment check:
+
+```bash
+release_version="v0.1.0"
+release_target="x86_64-unknown-linux-gnu"
+unpack_directory="optiflow-${release_version}-${release_target}"
+
+mkdir -p "${unpack_directory}" "${HOME}/.local/bin"
+tar --extract --gzip \
+  --file "optiflow-release/optiflow-${release_version}-${release_target}.tar.gz" \
+  --directory "${unpack_directory}"
+cp "${unpack_directory}/optiflow" "${HOME}/.local/bin/optiflow"
+chmod 0755 "${HOME}/.local/bin/optiflow"
+"${HOME}/.local/bin/optiflow" doctor
+```
+
+Choose the target that exactly matches the current host. The release does not
+claim support for other architectures or libc variants.
 
 ## Build from source
 
@@ -49,11 +86,12 @@ runs/<run-id>/
 └── report.json
 ```
 
-With the default probe policy and an available `ffprobe`, report v6 includes
-read-only lossless-PNG profile evidence. Pass `--no-probe` to record that this
-analysis was not requested. See [media-profile evidence](media-profiles.md)
-before interpreting a review candidate; it is not an output or savings
-guarantee.
+When building current `main`, the default probe policy and an available
+`ffprobe` allow report v6 to include read-only lossless-PNG profile evidence.
+That post-release capability is not present in the `v0.1.0` binary. Pass
+`--no-probe` to record that this analysis was not requested. See
+[media-profile evidence](media-profiles.md) before interpreting a review
+candidate; it is not an output or savings guarantee.
 
 ## Generate a review-only plan
 

@@ -7,8 +7,9 @@ description: Dependency admission, security gates, signed binary publication, su
 
 OptiFlow is an organization trust-policy class `R2` command-line application.
 Its current adoption state is **piloting**: repository checks and the immutable
-release path are enforced by their workflows, while promotion to `conformant`
-waits for a successful public release and organization ruleset evidence.
+release path are enforced by their workflows. The public `v0.1.0` release is
+complete; promotion to `conformant` still waits for organization ruleset
+evidence.
 
 | Adoption field | Value |
 | --- | --- |
@@ -18,6 +19,7 @@ waits for a successful public release and organization ruleset evidence.
 | Organization policy | `egohygiene/.github` trust policy at `b415c8029bf2fb5d474f367e7129791588ba3860` |
 | Relay profile | `binary` from Relay `v1.5.0`, pinned to `1eada5142f7fc7da7862f335589e3b8f5884ffaf` |
 | Effective state | `piloting` from 2026-09-12 |
+| Latest public release | [`v0.1.0`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0) from `f04c82a0b0c677a2939ea351c4219602cd7181af` |
 | Bot exemptions | Dependabot-authored lockfile and immutable action-pin updates; review and checks remain required |
 | Active exceptions | None |
 

@@ -31,8 +31,8 @@ produces immutable plans for human review.
 - **[Check media capabilities and optimizer strategy](optimizer-strategy.md)**
   to distinguish current inspection/validation from planned production and
   replacement, and see the OxiPNG and `image_optim` direction.
-- **[See the current v0.1.x milestone](current-release-milestone.md)** for the
-  dependency-ready hardening queue and release exit criteria.
+- **[See the operator-ready milestone](current-release-milestone.md)** for the
+  exact release/source pins and the dependency-ordered external-drive path.
 - **[Consume the CLI contract](cli-contract.md)** from `flow`, a shell script,
   or another subprocess client.
 - **[Configure an effective policy](configuration.md)** with deterministic
@@ -45,16 +45,18 @@ produces immutable plans for human review.
 - **[Inspect the performance budgets](performance.md)** for the reproducible
   discovery, hashing, cache-reuse, memory, and artifact-size regression guard.
 
-## What the current release proves
+## What the release and current source prove
 
-An exact duplicate group requires equal logical size and equal complete
-BLAKE3-256 content hashes. The report preserves the evidence used to make that
-claim. A generated plan is a separate, immutable, review-only artifact with
-preconditions for a future execution boundary.
+The published `v0.1.0` release proves read-only inventory and exact duplicate
+groups from equal logical size plus equal complete BLAKE3-256 content hashes.
+Its report preserves the evidence used to make that claim. A generated plan is
+a separate, immutable, review-only artifact with preconditions for a future
+execution boundary.
 
-For byte-classified PNG inputs, report v6 can also preserve a deterministic
-review opportunity when current provider evidence is complete. This is analysis
-only: it creates no optimized output and estimates no savings.
+Post-release `main` adds report v6 and can preserve a deterministic review
+opportunity for byte-classified PNG inputs when current provider evidence is
+complete. That behavior is not retroactively present in the `v0.1.0` binary.
+It is analysis only: it creates no optimized output and estimates no savings.
 
 ```text
 inputs

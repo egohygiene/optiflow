@@ -336,6 +336,7 @@ schemas, repository intelligence, and release guidance.
 - [Development model](docs/development-model.md)
 - [Performance budgets](docs/performance.md)
 - [Release and dependency policy](docs/release-policy.md)
+- [Operator-ready release path](docs/current-release-milestone.md)
 - [Security policy](SECURITY.md)
 - [Site publication architecture](docs/site-publication.md)
 - [Cloud-native placement](docs/cloud-native-placement.md)
