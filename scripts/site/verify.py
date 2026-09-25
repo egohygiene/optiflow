@@ -41,7 +41,7 @@ INTELLIGENCE_PATHS = (
 REQUIRED_COPY = (
     "Know what is <em>actually</em> on disk.",
     "v0.1 · read-only by design",
-    "Prebuilt releases are not published yet.",
+    "Verified v0.1.0 binaries are published.",
     "LaunchKit",
 )
 

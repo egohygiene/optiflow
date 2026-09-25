@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.4
+version: 0.1.5
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-16
+updated: 2026-09-25
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -31,16 +31,17 @@ repository: egohygiene/optiflow
 visibility: public
 publication: composed
 route: /roadmap/
-updated: 2026-09-16
+updated: 2026-09-25
 -->
-## 2026-09-16 execution snapshot
+## 2026-09-25 execution snapshot
 
 > This evidence-reconciled snapshot is the issue-generation and visual-roadmap handoff. The longer-horizon strategy below remains canonical context; generated HTML, JSON, progress, issue plans, and commit lists are projections.
 
-**Lifecycle:** read-only v0.1 alpha
+**Lifecycle:** released read-only `v0.1.0`; post-release `main` remains read-only
 
-**Current gate:** Review the completed OPT-Q04 evidence before separately scoping
-the transactional authority required by OPT-Q05.
+**Current gate:** Complete #88's filesystem and removable-volume corpus, then
+qualify the current read-only product through #89 before granting any mutation
+authority.
 
 **North-star outcome:** A trustworthy optimization protocol that begins read-only, binds observations to native handles, and advances to reviewed transactions.
 
@@ -48,9 +49,12 @@ the transactional authority required by OPT-Q05.
 
 **Mode:** `composed`  
 **Route:** `/roadmap/`  
-**Current publication evidence:** Documentation and site workflows are green,
-a signed `v0.1.0` release exists, and #28 completed production publication and
-rollback evidence.
+**Current publication evidence:** The public `v0.1.0` release targets
+`f04c82a0b0c677a2939ea351c4219602cd7181af` and includes signed, verified
+release-bundle evidence. The reconciled starting `main` revision is
+`7de8483b64387542a05214004c19a9cd05628908`; its CI, adversarial,
+documentation, site, security, and Identity workflows are green. Issue #28
+completed production publication and rollback evidence.
 
 Compose dist/roadmap/ into the repository's existing final site artifact at /roadmap/. The current Pages workflow remains the only deployer.
 
@@ -163,7 +167,7 @@ versioned media-profile evidence without weakening safety.
 id: OPT-Q05
 status: planned
 depends_on: [OPT-Q03, OPT-Q04]
-issues: [75, 78]
+issues: [65, 75, 78, 80, 83, 85, 87, 88, 89, 90, 91, 92, 96, 93, 94, 95]
 -->
 #### OPT-Q05 — Introduce reviewed transactions and stabilize
 
@@ -187,20 +191,20 @@ guarantees.
 
 **Current evidence:**
 
-- Issue #75 clarifies bounded batching, perceptual validation, and metadata
-  policy without granting mutation authority.
-- Issue #78 defines the contract-only static PNG candidate preparation seam
-  with synthetic acceptance/refusal evidence. It does not deliver an encoder,
-  byte validator, candidate output, or transactional authority.
-- Issue #80 adds actual read-only source/candidate PNG byte validation for a
-  documented noninterlaced RGB/RGBA metadata subset. Synthetic functional tests
-  prove complete stream validation, exact pixel/metadata preservation, byte
-  limits and honest refusals. It does not generate candidates or supply host
-  filesystem/process attestations. After review, scope source-preserving
-  provider execution and media-artifact publication separately; resolve that
-  execution's architecture/release boundary before CLI integration and keep
-  replacement/recovery under the later transaction gate.
-- Transactional v0.2 and stable beta/v1 remain roadmap work.
+- #75 completed the bounded batching, perceptual-validation, and metadata-policy
+  plan without granting mutation authority through PR #76 at `21a0583`.
+- #78 completed the contract-only static PNG candidate preparation seam through
+  PR #79 at `d67250c`. It delivers no encoder or candidate output.
+- #80 completed bounded read-only source/candidate PNG byte validation through
+  PR #82 at `5be461c`. It does not generate candidates or attest a host
+  filesystem/process boundary.
+- #83 completed the capability matrix and optimizer-strategy documentation
+  through PR #84 at `95bbe19`; #85 restored deterministic performance evidence
+  through PR #86 at the pinned `main` revision `7de8483`.
+- #65 owns the fixture branch that gates #94; #87 records the reconciled
+  handoff; #88 through #96 own the remaining product checkpoints below.
+  Transactional `v0.2`, lossless-image `v0.3`, and stable beta/v1 remain
+  planned work.
 
 <!-- roadmap-step
 id: OPT-Q06
@@ -226,6 +230,49 @@ performance, redirect, and rollback evidence for the already composed site.
 - Issue #28 closed through PR #63 after canonical metadata, preview artifacts,
   live validation, and rollback evidence were aligned with the pinned Pages
   workflow.
+
+### Operator-ready execution chain
+
+The dependency order below is authoritative for the current implementation
+queue. An issue becoming ready does not grant authority owned by a later issue.
+
+| Gate | Owning issue | Exit delivered by that issue |
+| --- | --- | --- |
+| 1 | [#88](https://github.com/egohygiene/optiflow/issues/88) | Deterministic filesystem, path, state, and removable-volume corpus foundations; read-only only. |
+| 2 | [#89](https://github.com/egohygiene/optiflow/issues/89) | Qualified external-drive read-only pilot and signed `v0.1.1`; no space is reclaimed. |
+| 3 | [#90](https://github.com/egohygiene/optiflow/issues/90) | Versioned execution/approval contracts and a fully non-mutating dry run. |
+| 4 | [#91](https://github.com/egohygiene/optiflow/issues/91) | First bounded mutation: approved exact-duplicate quarantine with durable evidence. |
+| 5 | [#92](https://github.com/egohygiene/optiflow/issues/92) | Status, idempotent resume, restore, owned cleanup, and injected-fault recovery. |
+| 6 | [#96](https://github.com/egohygiene/optiflow/issues/96) | Separately previewed and authorized irreversible quarantine finalization. |
+| 7 | [#93](https://github.com/egohygiene/optiflow/issues/93) | Disposable removable-volume qualification and signed exact-deduplication `v0.2.0`. |
+| Parallel after relevant #65 fixtures | [#94](https://github.com/egohygiene/optiflow/issues/94) | Source-preserving OxiPNG candidates; no replacement authority. |
+| Join after #93 and #94 | [#95](https://github.com/egohygiene/optiflow/issues/95) | Transactional, independently validated lossless PNG replacement and signed `v0.3.0`. |
+
+This produces four ordered product milestones:
+
+1. #88 and #89 qualify the read-only external-drive product.
+2. #90, #91, #92, #96, and #93 deliver recoverable exact-duplicate
+   reclamation with an explicit irreversible boundary.
+3. #94 produces validated, source-preserving candidates after its relevant #65
+   fixtures are ready; #95 reuses the #93 transaction engine after #93 and #94.
+4. Later image and audio/video profiles are not implementation-ready. #65 owns
+   their reusable fixture families; #61 owns the post-roadmap audit and bounded
+   follow-up issue creation. Neither issue grants product capability.
+
+### Truth and scheduling boundaries
+
+| State | Exact evidence or owner |
+| --- | --- |
+| Released | `v0.1.0` source `f04c82a0b0c677a2939ea351c4219602cd7181af`, annotated tag object `1e0381cb9e92616fabda2828f201ef1c1f2d4688`, and signed release-bundle evidence. The Git tag object itself is not claimed to be signed. |
+| Merged after release | `main` at `7de8483b64387542a05214004c19a9cd05628908`, including completed #75, #78, #80, #83, and #85 evidence. These additions are not retroactively present in `v0.1.0`. |
+| Planned | #88 through #96 in the dependency order above. Planned work is not supported behavior. |
+| Unsupported today | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
+
+[Issue #60](https://github.com/egohygiene/optiflow/issues/60) remains gated on
+the shared ADR system and is not part of this product chain. [Issue
+#61](https://github.com/egohygiene/optiflow/issues/61) remains gated until the
+active Flow-suite roadmap completes; it is the final repository/backlog audit,
+not an implementation shortcut.
 
 ### Roadmap-to-issue handoff
 
@@ -470,8 +517,10 @@ feature is designed.
 
 ## `v0.1.0` — read-only exact-duplicate MVP
 
-**Status:** implemented in the current codebase; publication may still be
-pending.
+**Status:** released on 2026-09-12 from
+`f04c82a0b0c677a2939ea351c4219602cd7181af`. The public release includes
+checksums, SBOM, provenance, and a signed release-subject bundle. The annotated
+tag object is not itself claimed to be signed.
 
 ### Goal
 
@@ -514,6 +563,13 @@ change source media.
 
 **Goal:** make the read-only foundation accurate enough to trust and simple
 enough to install before mutation is introduced.
+
+**2026-09-25 reconciliation:** Checked release and validation items below are
+backed by completed #26 and #27, the public `v0.1.0` bundle, and green workflows
+at the pinned `main` revision. Remaining unchecked filesystem/corpus work is
+owned by #88; packaged external-drive qualification, clean-install/upgrade
+evidence, and `v0.1.1` are owned by #89. Unchecked items are planned work, not
+evidence that the already published `v0.1.0` release is pending.
 
 ### Inventory correctness
 
@@ -561,16 +617,16 @@ enough to install before mutation is introduced.
 ### Release and supply-chain foundation
 
 - [x] Add `CHANGELOG.md`.
-- [ ] Add `SECURITY.md` and a repository-local release checklist.
+- [x] Add `SECURITY.md` and a repository-local release checklist.
 - [x] Enforce the declared minimum supported Rust version in CI.
-- [ ] Check dependency licenses, advisories, duplicate versions, and source
+- [x] Check dependency licenses, advisories, duplicate versions, and source
   policies.
-- [ ] Generate optimized binaries for supported macOS and Linux architectures.
-- [ ] Produce release archives, SHA-256 checksums, build provenance, and an
+- [x] Generate optimized binaries for supported macOS and Linux architectures.
+- [x] Produce release archives, SHA-256 checksums, build provenance, and an
   SBOM.
 - [ ] Validate a clean install and first-run smoke test from packaged artifacts.
-- [ ] Document source installation and prebuilt binary installation.
-- [ ] Define patch-release and security-fix procedures.
+- [x] Document source installation and prebuilt binary installation.
+- [x] Define patch-release and security-fix procedures.
 - [ ] Decide whether and when to publish the Rust package; do not make the Rust
   library API stable merely by publishing the CLI package.
 
@@ -580,18 +636,18 @@ enough to install before mutation is introduced.
   links, permission failures, disappearing files, invalid media, and files that
   change during hashing.
 - [x] Test Linux and macOS path and filesystem behavior independently.
-- [ ] Add schema validation for every emitted artifact in CI.
+- [x] Add schema validation for every emitted artifact in CI.
 - [ ] Test SQLite migrations from every previously released schema.
 - [x] Establish a performance baseline for file discovery, candidate hashing,
   cache reuse, memory use, and artifact size.
 
 ### `v0.1.x` exit criteria
 
-- [ ] A public release can be installed from a versioned artifact and verified
+- [x] A public release can be installed from a versioned artifact and verified
   by checksum.
-- [ ] Duplicate and reclaimable-space reporting is hard-link aware and honest
+- [x] Duplicate and reclaimable-space reporting is hard-link aware and honest
   about unknown physical allocation.
-- [ ] All emitted JSON validates against its declared schema.
+- [x] All emitted JSON validates against its declared schema.
 - [x] The CLI has documented exit codes and keeps machine output clean.
 - [ ] Supported platforms pass clean-install and upgrade smoke tests.
 

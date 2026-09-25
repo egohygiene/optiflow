@@ -108,6 +108,11 @@ public contracts still receive explicit migration notes.
 
 ### Changed
 
+- Reconciled the public `v0.1.0` release, post-release read-only source, and
+  operator-ready roadmap. Documentation now records exact release and `main`
+  pins, corrects published-binary availability, and assigns #88 through #96 to
+  the dependency-gated `v0.1.1`, `v0.2.0`, and `v0.3.0` DAG without
+  claiming candidate-production or mutation support.
 - Made the synthetic performance guard resilient to isolated shared-runner
   stalls without raising any budget. CI now retains three independent trials,
   enforces median wall time, and keeps worst-case artifact-size and peak-memory

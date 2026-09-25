@@ -1,18 +1,50 @@
-# Current Release Milestone — v0.1.x Foundation
+# Current Release Milestone — Operator-ready Path
 
-This is the compact execution view for optiflow's current release foundation.
+This is the compact execution view from OptiFlow's shipped read-only product to
+safe external-drive space reclamation.
 [`ROADMAP.md`](https://github.com/egohygiene/optiflow/blob/main/ROADMAP.md)
-remains the long-horizon product roadmap; this file records which existing
-issues supplied the read-only baseline and what is dependency-ready next.
+remains the long-horizon product roadmap; live issue acceptance criteria and
+merged evidence remain authoritative.
 
-## Milestone objective
+## Exact reconciliation pins
 
-Maintain a trustworthy read-only `v0.1.x` product whose path identity,
-observations, external-tool execution, artifact publication, fault behavior,
-extension boundary, release evidence, CLI semantics, and performance budgets
-are explicit before source mutation is introduced.
+The starting evidence snapshot was captured on 2026-09-25 before this change.
 
-## Completed dependency chain
+| Evidence | Exact pin |
+| --- | --- |
+| Starting default branch | [`7de8483b64387542a05214004c19a9cd05628908`](https://github.com/egohygiene/optiflow/commit/7de8483b64387542a05214004c19a9cd05628908) |
+| Public release | [`v0.1.0`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0), published 2026-09-12 |
+| Released source | [`f04c82a0b0c677a2939ea351c4219602cd7181af`](https://github.com/egohygiene/optiflow/commit/f04c82a0b0c677a2939ea351c4219602cd7181af) |
+| Annotated tag object | `1e0381cb9e92616fabda2828f201ef1c1f2d4688` |
+| Release workflow | [Run 34698618575](https://github.com/egohygiene/optiflow/actions/runs/34698618575) |
+
+The release bundle contains checksums, an SPDX SBOM, SLSA provenance, and a
+keyless signature for its release-subject manifest. The annotated Git tag
+object reports as unsigned, so this documentation claims signed and verified
+release evidence, not a cryptographically signed Git tag.
+
+At the starting `main` revision, the latest push runs for
+[CI](https://github.com/egohygiene/optiflow/actions/runs/35542085075),
+[adversarial tests](https://github.com/egohygiene/optiflow/actions/runs/35542085042),
+[documentation](https://github.com/egohygiene/optiflow/actions/runs/35542085113),
+[site publication](https://github.com/egohygiene/optiflow/actions/runs/35542085069),
+[security](https://github.com/egohygiene/optiflow/actions/runs/35542085155),
+and [Identity validation](https://github.com/egohygiene/optiflow/actions/runs/35542085082)
+all succeeded.
+
+## Capability truth
+
+| State | What it means now |
+| --- | --- |
+| Released in `v0.1.0` | Read-only inventory, exact-duplicate proof, conservative reclaimable-byte evidence, and immutable review planning from the released source pin. |
+| Merged after `v0.1.0` | Extension, media-profile, bounded PNG-validation, documentation, and performance evidence on `main`. These additions are not retroactively present in the `v0.1.0` binary. |
+| Planned | The issue-owned operator chain below. A plan or closed design issue does not make behavior available. |
+| Unsupported | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
+
+Version `0.1.0` and current `main` are read-only with respect to source media.
+A review plan is evidence for an operator; it is never write authorization.
+
+## Completed evidence chain
 
 | Issue | Delivered evidence |
 | --- | --- |
@@ -21,75 +53,74 @@ are explicit before source mutation is introduced.
 | #22 — handle-bound observations | One stable read handle binds identity, allocation, content, and optional probe evidence |
 | #24 — artifact-set commit protocol | Staged, digest-verified publication with incomplete/incompatible refusal and recovery |
 | #26 — adversarial matrix | Property, filesystem-fault, parser, and artifact-reader evidence |
-| #27 — signed release policy | Dependency policy and the verified `v0.1.0` release path |
+| #27 — release policy | Dependency policy plus the published and verified `v0.1.0` release path |
 | #51 — safe extension SDK | Explicit declarations and locks, typed read-only roles, deterministic resolution, and bounded providers |
-| #29 — CLI boundaries and performance | Focused command coordination, stable remediation guidance, and enforced synthetic performance budgets |
-| #66 — lossless PNG profile evidence | Versioned, deterministic, provider-bound review evidence with explicit limitations and no savings estimate |
+| #29 — CLI and performance | Focused command coordination, stable remediation guidance, and enforced synthetic performance budgets |
+| #66 — lossless PNG review profile | Deterministic, provider-bound review evidence with explicit limitations and no savings estimate |
 | #28 — production site | Canonical production publication, live validation, and rollback evidence |
+| #75 / PR #76 | Bounded batching, perceptual-validation, and metadata-policy planning; no mutation authority |
+| #78 / PR #79 | Static PNG candidate preparation contract; no encoder or candidate output |
+| #80 / PR #82 | Read-only validation of actual PNG source/candidate bytes within a documented subset |
+| #83 / PR #84 | Media capability matrix and optimizer-strategy documentation |
+| #85 / PR #86 | Deterministic cold-discovery performance evidence on the pinned starting `main` |
 
-The live GitHub issue and pull-request records remain authoritative for exact
-merge commits and workflow runs.
+The live GitHub records remain authoritative for the full acceptance evidence.
+Closed planning, contract, validation, documentation, or CI work is not evidence
+of an optimizer or transaction engine.
 
-## Completed #29 — CLI boundaries and performance
+## Operator-ready execution chain
 
-Issue #8 and PR #15 already established the stable exit-code, JSON-envelope,
-signal, stream-ownership, and typed-diagnostic contract that #29 depends on.
-The remaining #29 work is now represented by:
+Work proceeds by dependency. Rows 1–7 are the primary operator chain; #94 is a
+parallel candidate-production lane, and #95 is their `v0.3.0` join. Each row
+has exactly one capability owner.
 
-- command coordination separated into scan, report/plan, and extension modules;
-- an optimized hard-link alias path without collection-wide repeated lookup;
-- a versioned synthetic fixture and enforceable wall-time, memory, and artifact
-  size ceilings;
-- retained Linux CI measurements from the optimized release binary; and
-- explicit progress and caller-remediation guidance that preserves one clean
-  terminal JSON result.
+| Gate | Owning issue | Bounded outcome |
+| --- | --- | --- |
+| 1 | [#88](https://github.com/egohygiene/optiflow/issues/88) | Filesystem, path, state, and removable-volume corpus foundations |
+| 2 | [#89](https://github.com/egohygiene/optiflow/issues/89) | External-drive read-only pilot and signed `v0.1.1` |
+| 3 | [#90](https://github.com/egohygiene/optiflow/issues/90) | Execution/approval contracts and non-mutating dry-run preflight |
+| 4 | [#91](https://github.com/egohygiene/optiflow/issues/91) | Bounded exact-duplicate quarantine apply |
+| 5 | [#92](https://github.com/egohygiene/optiflow/issues/92) | Status, resume, restore, cleanup, and fault recovery |
+| 6 | [#96](https://github.com/egohygiene/optiflow/issues/96) | Separately authorized quarantine finalization |
+| 7 | [#93](https://github.com/egohygiene/optiflow/issues/93) | Removable-volume qualification and signed exact-deduplication `v0.2.0` |
+| Parallel after relevant #65 fixtures | [#94](https://github.com/egohygiene/optiflow/issues/94) | Bounded, source-preserving OxiPNG candidate production |
+| Join after #93 and #94 | [#95](https://github.com/egohygiene/optiflow/issues/95) | Transactional validated lossless PNG replacement and signed `v0.3.0` |
 
-This checkpoint does not add a live progress stream, source-media mutation,
-optimization execution, new product JSON schema, database migration, or
-extension authority.
+The strict dependency shape is:
 
-## Completed #66 — first media-profile evidence
+1. #88 → #89 qualifies real read-only use before mutation.
+2. #88 → #90 → #91 → #92 → #96, with #89 also complete, enables #93.
+3. The relevant provider/media/candidate fixtures under
+   [#65](https://github.com/egohygiene/optiflow/issues/65) enable #94.
+4. #93 and #94 together enable #95.
 
-The first bounded OPT-Q04 media profile selects files by inspected
-`image/png` content and evaluates only current, handle-bound observations with
-semantically validated `ffprobe` evidence. The report embeds the independently
-versioned `optiflow.media-profile-evidence.v1` contract under the new
-`optiflow.report.v6` identifier.
+The first honest space-reclamation release is #93's `v0.2.0`, not the #89
+read-only pilot. #94 may produce validated candidate artifacts only in
+OptiFlow-owned storage; it grants no replacement authority. #95 is the first
+lossless-PNG replacement release.
 
-The built-in `optiflow.builtin.lossless-png-review@1.0.0` profile produces
-deterministic review-candidate identifiers and records exact provider version,
-executable path, executable digest, invocation fingerprint, evidence-policy
-fingerprint, normalized PNG facts, coverage, and limitations. It creates no
-candidate output, makes no savings estimate, and never changes source files.
-Missing, failed, invalid, or stale evidence produces no opportunity. Run and
-plan schemas, SQLite migrations, artifact-set membership, extension authority,
-and existing commands remain unchanged.
+## Separately gated work
 
-## Current evidence checklist
+- [#60](https://github.com/egohygiene/optiflow/issues/60) remains blocked on
+  the shared ADR system. It is not a prerequisite for starting #88.
+- [#61](https://github.com/egohygiene/optiflow/issues/61) remains the deferred
+  post-roadmap repository, backlog, and Identity audit. It does not replace an
+  active implementation issue.
+- #65 remains the corpus umbrella after #88 for media, provider,
+  candidate-comparison, perceptual, compatibility, and resource-stress fixture
+  families. Those later families do not block the exact-duplicate `v0.2` chain
+  unless a consuming issue explicitly depends on them.
+- Later image and audio/video profiles remain long-horizon roadmap work. Once
+  #61's Flow-suite completion gate is satisfied, that audit owns turning
+  confirmed gaps into bounded issues; no later format is supported merely
+  because it appears in the roadmap.
 
-- [x] Native paths round-trip losslessly through supported artifact/state boundaries.
-- [x] Observation evidence cannot silently combine incompatible file states.
-- [x] External tools use the typed bounded subprocess and provider paths.
-- [x] Related artifacts are distinguishable as committed, incomplete, or incompatible sets.
-- [x] Adversarial and fault tests exercise the combined read-only invariants.
-- [x] Public release artifacts carry the documented dependency, checksum, SBOM, provenance, and signing evidence.
-- [x] CLI exits, JSON stdout, diagnostics, and interruption behavior have a stable documented contract.
-- [x] Representative discovery, candidate-hashing, cache-reuse, memory, and artifact-size budgets are enforced.
-- [x] Production documentation and site claims preserve the read-only boundary.
-- [x] The first media profile preserves current observation, provider, policy,
-  path, artifact-set, and deterministic identity evidence.
+## Next checkpoint
 
-Unchecked items in the detailed `v0.1.x` roadmap that lack a current issue are
-future issue-planning inputs, not implicit additions to #29.
+[#88](https://github.com/egohygiene/optiflow/issues/88) is next. It must build
+the deterministic filesystem and removable-volume corpus without adding any
+mutation, deletion, quarantine, restore, candidate-production, or optimization
+authority.
 
-## What comes after
-
-OPT-Q04 is complete through issues #51, #29, and #66. Broader format support,
-candidate-output production, savings measurement, and optimization execution
-remain separate checkpoints.
-
-OPT-Q05 then introduces reviewed transactions only after preview, explicit
-authorization, current precondition proof, output validation, durable commit,
-interruption, and rollback behavior are specified together. flow may
-orchestrate released optiflow commands; it does not own optiflow's file-safety
-semantics or import its source.
+The Flow-suite coordinator is
+[`flow#11`](https://github.com/egohygiene/flow/issues/11).
