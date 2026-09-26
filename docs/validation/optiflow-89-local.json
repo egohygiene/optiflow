@@ -1,0 +1,245 @@
+{
+  "authority": "read-only",
+  "base_revision": "ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea",
+  "candidate_version": "v0.1.1",
+  "code_revision": "52b157818ebcb0e2248ca025be9e74f542c93e80",
+  "date": "2026-09-26",
+  "environment_notes": [
+    "Initial Rust build failed with a zero-length object/archive mapping error; full suite passed with incremental compilation disabled.",
+    "First extra PR-corpus run stopped after 28 executions when its generated debug executable was non-executable and had an all-zero header; this artifact was removed and rebuilt. A fresh bounded PR-corpus run then passed all 32 executions.",
+    "Documentation required repository-pinned uv 0.11.33 rather than installed uv 0.12.18; four pre-existing corpus source links were repaired during composed-site validation."
+  ],
+  "hosted_ci": "not polled; maintainer owns broad CI/lint sweep",
+  "issue": "https://github.com/egohygiene/optiflow/issues/89",
+  "local_checks": {
+    "corpus_index": {
+      "fixtures": 17,
+      "sha256": "d04c84085b46e10f36df99dacc50c674d3e5a87156c98d89586a0fe08647d0fe",
+      "status": "passed"
+    },
+    "documentation": {
+      "command": "scripts/site/build.sh",
+      "html_documents_verified": 32,
+      "status": "passed",
+      "strict_build": true,
+      "toolchain": "uv 0.11.33; locked docs dependencies"
+    },
+    "filesystem_corpus": {
+      "elapsed_seconds": 2.065,
+      "executions": 32,
+      "index_sha256": "d04c84085b46e10f36df99dacc50c674d3e5a87156c98d89586a0fe08647d0fe",
+      "receipt_sha256": "198b31a0e35150860af51182f28f5c4ddb1cce23397c68ecc6d50801b3e749e3",
+      "scheduled_tier": "not repeated for this release-only change; historical #88 evidence remains separate",
+      "status": "passed",
+      "tier": "pr"
+    },
+    "python": {
+      "admission_receipts": "synthetic test fixtures, not native qualification",
+      "command": "RUSTUP_TOOLCHAIN=1.85.0 python3 -m unittest tests/test_release_bundle.py tests/test_read_only_pilot.py tests/test_filesystem_corpus.py",
+      "tests_passed": 20
+    },
+    "rust": {
+      "command": "CARGO_INCREMENTAL=0 cargo +1.85.0 test --locked --all-targets --jobs 1",
+      "failed": 0,
+      "ignored": 1,
+      "ignored_reason": "scheduled-only filesystem stress fixture",
+      "passed": 200,
+      "toolchain": "1.85.0"
+    },
+    "workflow_syntax": "release/security YAML parsed and all run steps passed bash -n"
+  },
+  "measurement_scope": {
+    "peak_child_rss": "OS maximum across child processes, including Cosign and CLI commands; not per-scan or total concurrent RSS",
+    "state_bytes": "files under active state roots; excludes retained upgrade backup, archives, and source fixture bytes",
+    "timings": "bounded synthetic local filesystem trial; no universal device SLO"
+  },
+  "native_qualification": {
+    "aarch64-apple-darwin": {
+      "status": "pending native release workflow"
+    },
+    "x86_64-apple-darwin": {
+      "status": "pending native release workflow"
+    },
+    "x86_64-unknown-linux-gnu": {
+      "archive_sha256": "0e162f15e3649563e2ce9bea53fef7f86c24fcef5ec3d7c5fc92e0fd181a1dea",
+      "binary_sha256": "5cdf90f4052947edcc6be6474510f538c24ae33e961453227a8014a53ef25ac7",
+      "cleanup_complete": true,
+      "json_stdout_clean": true,
+      "native_target": "x86_64-unknown-linux-gnu",
+      "passed": true,
+      "peak_child_rss_bytes": 96321536,
+      "previous_revision": "f04c82a0b0c677a2939ea351c4219602cd7181af",
+      "previous_signature_verified": true,
+      "previous_version": "v0.1.0",
+      "profile": {
+        "large_file_bytes": 268435456,
+        "large_members": 2,
+        "seed": 89,
+        "tree_files": 4096
+      },
+      "release_version": "v0.1.1",
+      "scenarios": {
+        "disconnected": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.006747,
+          "exit_code": 2,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "invalid_input"
+        },
+        "interrupted": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.012309,
+          "exit_code": 130,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "interrupted",
+          "run_status": "interrupted"
+        },
+        "large_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.178265,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 77317
+        },
+        "large_warm": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.163637,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 101384
+        },
+        "partial": {
+          "cache_hits": 0,
+          "coverage": "partial",
+          "elapsed_seconds": 0.852145,
+          "exit_code": 3,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "partial_success"
+        },
+        "plan": {
+          "cache_hits": null,
+          "coverage": "complete",
+          "elapsed_seconds": 0.007695,
+          "exit_code": 0,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "mutates_files": false,
+          "outcome": "success"
+        },
+        "reconnected": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.17081,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "report": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.007137,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "restart": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.177739,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "new_run": true,
+          "outcome": "success"
+        },
+        "rollback": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.206785,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        },
+        "tree_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.857076,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 16928952
+        },
+        "tree_warm": {
+          "cache_hits": 4096,
+          "coverage": "complete",
+          "elapsed_seconds": 0.758556,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 31830393
+        },
+        "upgrade": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.11213,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        }
+      },
+      "schema": "optiflow.read-only-pilot.v1",
+      "source_digest": "80b72910cb339b8c88cabf2bbdf655d383bd82b92c4dd05d1edf9b1811b8c805",
+      "source_revision": "52b157818ebcb0e2248ca025be9e74f542c93e80",
+      "source_unchanged": true,
+      "state_bytes": 65890220,
+      "target": "x86_64-unknown-linux-gnu"
+    }
+  },
+  "physical_external_drive_tested": false,
+  "published": false,
+  "remaining_release_gates": [
+    "Merge reviewed PR on main",
+    "Execute native qualification on all three release targets at the final main SHA",
+    "Sign and publish v0.1.1 through the existing manual release workflow",
+    "Independently verify the downloaded signed bundle and reconcile release docs/issue #89"
+  ],
+  "schema": "optiflow.pilot-local-validation.v1",
+  "source_preservation": {
+    "excluded_metadata": [
+      "access time",
+      "synthetic volume root metadata changed by test-operator rename"
+    ],
+    "kernel_write_audit": "not available: local strace ptrace operation denied; no syscall-level no-write claim",
+    "method": "Exact before/after file SHA-256, path inventory, and metadata snapshots; state/output kept outside source roots. Files chmod 0444."
+  }
+}

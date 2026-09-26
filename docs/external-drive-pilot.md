@@ -182,6 +182,8 @@ The resulting receipt binds the source revision, archive digest, executable
 digest, profile, outcomes, and measurements. Bundle preparation and independent
 verification require all three matching receipts. The signed subject manifest
 covers `pilot-qualification.json` as well as the archives, SBOM, and provenance.
+The [local Linux validation record](validation/optiflow-89-local.json) retains
+the candidate receipt and explicitly lists pending macOS/publication checks.
 Unit-test receipts are explicitly synthetic; they cannot stand in for native
 workflow execution. #89 stays open until native release qualification, signed
 publication, and independent download verification complete. #90 follows with
