@@ -871,6 +871,7 @@ dependencies = [
  "predicates",
  "proptest",
  "rusqlite",
+ "rustix",
  "serde",
  "serde_json",
  "signal-hook",

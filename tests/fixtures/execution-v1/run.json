@@ -1,0 +1,58 @@
+{
+  "schema": "optiflow.execution-run.v1",
+  "run_id": "01993112-0000-7000-8000-000000000001",
+  "plan_fingerprint": "af5b47827d3dd0e27c45e65cffe21c9fe824725ebb4a64a5698543a1b0c6cb03",
+  "authorization_id": "47d39d3bdae4ff3e9aaa87ca4f5b2e62e0b468ed2398cef1a294237ad6586643",
+  "started_at": "2026-09-26T00:02:00Z",
+  "completed_at": "2026-09-26T00:02:01Z",
+  "dry_run": true,
+  "status": "validated",
+  "attempts": [
+    {
+      "schema": "optiflow.execution-attempt.v1",
+      "action_id": "action-000001",
+      "status": "validated",
+      "hash_confirmed": true,
+      "bytes_confirmed": true,
+      "identities_confirmed": true
+    }
+  ],
+  "validation": {
+    "schema": "optiflow.execution-validation.v1",
+    "status": "validated",
+    "diagnostics": []
+  },
+  "commit": {
+    "schema": "optiflow.execution-commit.v1",
+    "status": "not_started",
+    "source_mutated": false,
+    "committed_actions": 0
+  },
+  "recovery": {
+    "schema": "optiflow.execution-recovery.v1",
+    "status": "not_needed",
+    "guarantee": "no_source_mutation",
+    "resume_requires_fresh_validation": true
+  },
+  "capacity": [
+    {
+      "filesystem_id": "1",
+      "available_bytes": 100000000,
+      "source_logical_bytes": 8,
+      "retained_cross_filesystem_copy_bytes": 0,
+      "journal_and_metadata_budget_bytes": 16842752,
+      "projected_peak_additional_bytes": 16842752,
+      "reserve_bytes": 1024
+    }
+  ],
+  "savings": {
+    "selected_logical_bytes": 4,
+    "immediate_logical_reclaimed_bytes": 0,
+    "physical_reclaimed_bytes": null,
+    "physical_status": "unknown",
+    "reason": "Synthetic fixture only; no mutation and no physical savings claim."
+  },
+  "limitations": [
+    "Synthetic compatibility evidence only; all mutating operations are unsupported."
+  ]
+}

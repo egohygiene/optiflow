@@ -82,3 +82,16 @@ current resolver never fabricates a snapshot for them.
 
 See the [artifact-set commit protocol](artifact-set-protocol.md) for marker,
 reader-state, plan-handshake, crash-recovery, and durability semantics.
+
+## Execution evidence (migration 0006)
+
+`execution_plans` and `execution_approvals` hold immutable fingerprinted
+documents. `execution_runs` stores versioned dry-run, attempt, validation, commit
+and recovery evidence. Migration is additive, transactional and idempotent; it
+does not derive approval from historical scan/review state.
+
+The [execution dry-run protocol](execution-dry-run.md) defines the process lock,
+validating/validated/rejected/interrupted lifecycle, terminal immutability and
+abandoned-attempt recovery. Source commit is impossible in these v1 records.
+Execution opens do not perform scan artifact cleanup. Unknown future execution
+state versions are refused before writable initialization.

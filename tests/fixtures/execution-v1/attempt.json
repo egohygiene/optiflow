@@ -1,0 +1,8 @@
+{
+  "schema": "optiflow.execution-attempt.v1",
+  "action_id": "action-000001",
+  "status": "validated",
+  "hash_confirmed": true,
+  "bytes_confirmed": true,
+  "identities_confirmed": true
+}

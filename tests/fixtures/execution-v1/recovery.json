@@ -1,0 +1,6 @@
+{
+  "schema": "optiflow.execution-recovery.v1",
+  "status": "not_needed",
+  "guarantee": "no_source_mutation",
+  "resume_requires_fresh_validation": true
+}

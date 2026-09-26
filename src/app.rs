@@ -13,6 +13,7 @@ use crate::outcome::{
 use crate::signals::{Interruption, SignalState};
 use crate::state::StateStore;
 
+mod execution_commands;
 mod extension_commands;
 mod reporting;
 mod scan;
@@ -86,6 +87,10 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
             reporting::run_report(&state_directory, &arguments.run, &effective_policy)
         }
         Command::Plan(arguments) => match arguments.command {
+            PlanCommand::Execution(arguments) => {
+                execution_commands::plan(&arguments, &state_directory, &effective_policy, signals)
+            }
+            PlanCommand::Approve(arguments) => execution_commands::approve(&arguments),
             PlanCommand::ExactDuplicates(arguments) => reporting::run_plan(
                 &state_directory,
                 &arguments.run,
@@ -93,6 +98,9 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
                 &effective_policy,
             ),
         },
+        Command::Apply(arguments) => {
+            execution_commands::apply(&arguments, &state_directory, &effective_policy, signals)
+        }
         Command::Cache(arguments) => match arguments.command {
             CacheCommand::Status => run_cache_status(&state_directory),
         },

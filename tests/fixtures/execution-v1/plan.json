@@ -1,0 +1,156 @@
+{
+  "schema": "optiflow.execution-plan.v1",
+  "fingerprint": "af5b47827d3dd0e27c45e65cffe21c9fe824725ebb4a64a5698543a1b0c6cb03",
+  "body": {
+    "created_at": "2026-09-26T00:00:00Z",
+    "producer_version": "0.1.1",
+    "selection": "explicit_operator_paths",
+    "evidence_policy_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "roots": [
+      {
+        "path": {
+          "encoding": "utf8",
+          "value": "/synthetic/source"
+        },
+        "identity": {
+          "platform": "linux",
+          "filesystem_id": "1",
+          "file_id": "10",
+          "link_count": null
+        },
+        "mode": 16877,
+        "uid": 1000,
+        "gid": 1000
+      }
+    ],
+    "subtrees": [
+      {
+        "path": {
+          "encoding": "utf8",
+          "value": "/synthetic/source"
+        },
+        "identity": {
+          "platform": "linux",
+          "filesystem_id": "1",
+          "file_id": "10",
+          "link_count": null
+        },
+        "mode": 16877,
+        "uid": 1000,
+        "gid": 1000
+      }
+    ],
+    "quarantine": {
+      "path": {
+        "encoding": "utf8",
+        "value": "/synthetic/quarantine"
+      },
+      "identity": {
+        "platform": "linux",
+        "filesystem_id": "1",
+        "file_id": "20",
+        "link_count": null
+      },
+      "mode": 16877,
+      "uid": 1000,
+      "gid": 1000
+    },
+    "state": {
+      "path": {
+        "encoding": "utf8",
+        "value": "/synthetic/state"
+      },
+      "identity": {
+        "platform": "linux",
+        "filesystem_id": "1",
+        "file_id": "30",
+        "link_count": null
+      },
+      "mode": 16877,
+      "uid": 1000,
+      "gid": 1000
+    },
+    "bounds": {
+      "max_actions": 1,
+      "max_in_flight_files": 1,
+      "max_in_flight_bytes": 1024,
+      "free_space_reserve_bytes": 1024,
+      "journal_budget_bytes": 16777216
+    },
+    "actions": [
+      {
+        "action_id": "action-000001",
+        "operation": "quarantine_exact_duplicate.v1",
+        "keeper": {
+          "directory": {
+            "path": {
+              "encoding": "utf8",
+              "value": "/synthetic/source"
+            },
+            "identity": {
+              "platform": "linux",
+              "filesystem_id": "1",
+              "file_id": "10",
+              "link_count": null
+            },
+            "mode": 16877,
+            "uid": 1000,
+            "gid": 1000
+          },
+          "path": {
+            "encoding": "utf8",
+            "value": "/synthetic/source/keeper.bin"
+          },
+          "identity": {
+            "platform": "linux",
+            "filesystem_id": "1",
+            "file_id": "11",
+            "link_count": 1
+          },
+          "size_bytes": 4,
+          "modified_unix_ns": 1000000000,
+          "changed_unix_ns": 1000000000,
+          "mode": 33188,
+          "uid": 1000,
+          "gid": 1000,
+          "blake3": "83fe82573ab536cf20caf1c78e9801a7debeb96a7f369637f438bb12c0e8021f"
+        },
+        "candidate": {
+          "directory": {
+            "path": {
+              "encoding": "utf8",
+              "value": "/synthetic/source"
+            },
+            "identity": {
+              "platform": "linux",
+              "filesystem_id": "1",
+              "file_id": "10",
+              "link_count": null
+            },
+            "mode": 16877,
+            "uid": 1000,
+            "gid": 1000
+          },
+          "path": {
+            "encoding": "utf8",
+            "value": "/synthetic/source/candidate.bin"
+          },
+          "identity": {
+            "platform": "linux",
+            "filesystem_id": "1",
+            "file_id": "12",
+            "link_count": 1
+          },
+          "size_bytes": 4,
+          "modified_unix_ns": 1000000000,
+          "changed_unix_ns": 1000000000,
+          "mode": 33188,
+          "uid": 1000,
+          "gid": 1000,
+          "blake3": "83fe82573ab536cf20caf1c78e9801a7debeb96a7f369637f438bb12c0e8021f"
+        },
+        "topology": "same_filesystem"
+      }
+    ]
+  }
+}

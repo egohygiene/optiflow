@@ -60,6 +60,7 @@ impl Cli {
             Command::Scan(_) => "scan",
             Command::Report(_) => "report",
             Command::Plan(_) => "plan",
+            Command::Apply(_) => "apply",
             Command::Cache(_) => "cache",
             Command::Config(arguments) => match &arguments.command {
                 ConfigCommand::Validate => "config validate",
@@ -88,6 +89,9 @@ pub enum Command {
 
     /// Generate an immutable, review-only action plan.
     Plan(PlanArgs),
+
+    /// Validate an explicitly approved execution plan; only --dry-run is supported.
+    Apply(ApplyArgs),
 
     /// Inspect the persistent analysis cache.
     Cache(CacheArgs),
@@ -181,6 +185,59 @@ pub struct PlanArgs {
 pub enum PlanCommand {
     /// Propose review actions for byte-identical duplicate groups.
     ExactDuplicates(ExactDuplicatePlanArgs),
+    /// Select exact paths and capture a new immutable execution plan.
+    Execution(ExecutionPlanArgs),
+    /// Record explicit approval of a reviewed plan fingerprint.
+    Approve(ApproveArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionPlanArgs {
+    #[arg(long, value_name = "FILE")]
+    pub keep: PathBuf,
+    #[arg(long, required = true, action = clap::ArgAction::Append, value_name = "FILE")]
+    pub candidate: Vec<PathBuf>,
+    #[arg(long, required = true, action = clap::ArgAction::Append, value_name = "DIRECTORY")]
+    pub root: Vec<PathBuf>,
+    /// Restrict selection to these subtrees; defaults to the declared roots.
+    #[arg(long, action = clap::ArgAction::Append, value_name = "DIRECTORY")]
+    pub subtree: Vec<PathBuf>,
+    /// Existing quarantine directory outside all source roots.
+    #[arg(long, value_name = "DIRECTORY")]
+    pub quarantine: PathBuf,
+    #[arg(long, default_value_t = 100)]
+    pub max_actions: u64,
+    #[arg(long, default_value_t = 1_073_741_824)]
+    pub max_in_flight_bytes: u64,
+    #[arg(long, default_value_t = 268_435_456)]
+    pub reserve_bytes: u64,
+    #[arg(long, value_name = "FILE")]
+    pub output: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct ApproveArgs {
+    #[arg(long, value_name = "FILE")]
+    pub plan: PathBuf,
+    /// Copy the exact fingerprint from the plan you reviewed.
+    #[arg(long)]
+    pub fingerprint: String,
+    /// Local audit label; this is not cryptographic authentication.
+    #[arg(long)]
+    pub approved_by: String,
+    #[arg(long, value_name = "FILE")]
+    pub output: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct ApplyArgs {
+    #[arg(long, value_name = "FILE")]
+    pub plan: PathBuf,
+    #[arg(long, value_name = "FILE")]
+    pub approval: Option<PathBuf>,
+    /// Mandatory: live apply is not implemented.
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 #[derive(Debug, Args)]

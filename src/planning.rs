@@ -99,7 +99,7 @@ pub fn exact_duplicate_plan(report: &ScanReport) -> Plan {
         safety: PlanSafety {
             mutates_files: false,
             requires_explicit_apply: true,
-            description: "This v0.1 plan is evidence for review only. optiflow v0.1 has no apply or deletion command.".to_owned(),
+            description: "This v0.1 plan is evidence for review only. Source mutation is unsupported; execution dry runs require a separate explicitly selected and approved execution plan.".to_owned(),
         },
         summary: PlanSummary {
             action_count: u64::try_from(actions.len()).unwrap_or(u64::MAX),

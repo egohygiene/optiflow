@@ -16,13 +16,21 @@ use crate::domain::{
 use crate::filesystem::identity::FileStateSignature;
 
 pub struct StateStore {
-    connection: Connection,
+    pub(crate) connection: Connection,
     state_directory: PathBuf,
     database_path: PathBuf,
 }
 
 impl StateStore {
     pub fn open(state_directory: &Path) -> Result<Self> {
+        Self::open_inner(state_directory, true)
+    }
+
+    pub(crate) fn open_execution(state_directory: &Path) -> Result<Self> {
+        Self::open_inner(state_directory, false)
+    }
+
+    fn open_inner(state_directory: &Path, recover_scans: bool) -> Result<Self> {
         fs::create_dir_all(state_directory).with_context(|| {
             format!(
                 "failed to create state directory {}",
@@ -52,15 +60,18 @@ impl StateStore {
 
         // Apply migration 0005 exactly once.
         apply_migration_0005(&mut connection).context("failed to apply migration 0005")?;
+        apply_migration_0006(&mut connection).context("failed to apply migration 0006")?;
 
         let mut store = Self {
             connection,
             state_directory: state_directory.to_path_buf(),
             database_path,
         };
-        store
-            .recover_scan_artifact_sets()
-            .context("failed to recover committed scan artifact sets")?;
+        if recover_scans {
+            store
+                .recover_scan_artifact_sets()
+                .context("failed to recover committed scan artifact sets")?;
+        }
         Ok(store)
     }
 
@@ -564,6 +575,22 @@ fn apply_migration_0004(connection: &mut Connection) -> Result<()> {
     Ok(())
 }
 
+/// Add execution evidence without promoting any historical review plan.
+fn apply_migration_0006(connection: &mut Connection) -> Result<()> {
+    if connection.query_row(
+        "SELECT COUNT(*) FROM schema_migrations WHERE version = 6",
+        [],
+        |row| row.get::<_, i64>(0),
+    )? > 0
+    {
+        return Ok(());
+    }
+    let transaction = connection.transaction()?;
+    transaction.execute_batch(include_str!("../migrations/0006_execution_evidence.sql"))?;
+    transaction.commit()?;
+    Ok(())
+}
+
 /// Apply migration 0005 exactly once (handle-bound cache signatures).
 fn apply_migration_0005(connection: &mut Connection) -> Result<()> {
     let already_applied: bool = connection
@@ -799,6 +826,62 @@ mod tests {
         );
         drop(store);
         directory.close().unwrap();
+    }
+
+    #[test]
+    fn execution_migration_is_additive_idempotent_and_does_not_approve_old_plans() {
+        let directory = tempfile::tempdir().expect("fixture");
+        let database = directory.path().join("state.sqlite3");
+        let mut connection = Connection::open(&database).expect("database");
+        connection
+            .execute_batch(include_str!("../migrations/0001_initial.sql"))
+            .unwrap();
+        apply_migration_0002(&mut connection).unwrap();
+        apply_migration_0003(&mut connection).unwrap();
+        apply_migration_0004(&mut connection).unwrap();
+        apply_migration_0005(&mut connection).unwrap();
+        connection.execute("INSERT INTO scan_runs (run_id, created_at, status) VALUES ('historical', 'then', 'interrupted')", []).unwrap();
+        apply_migration_0006(&mut connection).unwrap();
+        apply_migration_0006(&mut connection).unwrap();
+        assert_eq!(migration_count(&connection, 6), 1);
+        assert_eq!(
+            connection
+                .query_row(
+                    "SELECT status FROM scan_runs WHERE run_id = 'historical'",
+                    [],
+                    |r| r.get::<_, String>(0)
+                )
+                .unwrap(),
+            "interrupted"
+        );
+        assert_eq!(
+            connection
+                .query_row("SELECT COUNT(*) FROM execution_approvals", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            connection
+                .query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0))
+                .unwrap(),
+            "ok"
+        );
+    }
+
+    #[test]
+    fn execution_migration_rolls_back_tables_and_version_marker_on_conflict() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0001_initial.sql"))
+            .unwrap();
+        connection
+            .execute("CREATE TABLE execution_runs (existing TEXT)", [])
+            .unwrap();
+        assert!(apply_migration_0006(&mut connection).is_err());
+        assert_eq!(migration_count(&connection, 6), 0);
+        let tables: i64 = connection.query_row("SELECT COUNT(*) FROM sqlite_master WHERE name IN ('execution_plans', 'execution_approvals')", [], |r| r.get(0)).unwrap();
+        assert_eq!(tables, 0);
     }
 
     fn migration_count(connection: &Connection, version: i64) -> i64 {

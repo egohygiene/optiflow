@@ -26,6 +26,7 @@ nav = [
   ] },
   { "Contracts" = [
     { "CLI outcomes" = "cli-contract.md" },
+    { "Execution dry runs" = "execution-dry-run.md" },
     { "Configuration" = "configuration.md" },
     { "JSON artifacts" = "json-contract.md" },
     { "Media-profile evidence" = "media-profiles.md" },

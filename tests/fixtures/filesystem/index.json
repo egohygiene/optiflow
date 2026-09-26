@@ -1,5 +1,5 @@
 {
-  "cargo_lock_sha256": "f4605c2b9e8ecb135be4a65087af6c22c3c611f11a18a2d57dd896fb056609c7",
+  "cargo_lock_sha256": "4e1f382de4f48c85705713b61d25890de6865fa517153d6afcd0b3cc1ac42306",
   "cases": [
     {
       "expected_sha256": "2438723acb698bdb17049d08a3aa2decc17e2032a29c0726d1a8b315b6487c76",
@@ -114,7 +114,7 @@
       "payload_sha256": [
         "25e4dd809dbfb9d2f44c279db5f0e17a1357e5cf2beaf1f2167704aad649b384"
       ],
-      "proof_source_sha256": "c22ccf809fc3be94f521a0173cb98ac797cec0003f72b3f6a7cdd54feed4fe39",
+      "proof_source_sha256": "b5c21e569dd372c673586b21e197637ddd78f53a26eb765b9355726558ce6369",
       "recipe_sha256": "1e90f6509ad0573200569c5cd2357d4cc5fa8af1dcd05239e744e760c7248e52"
     },
     {

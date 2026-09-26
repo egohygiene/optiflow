@@ -235,7 +235,7 @@
       "type": "object",
       "required": ["kind", "schema", "path"],
       "properties": {
-        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set"] },
+        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set", "execution_plan", "execution_approval"] },
         "schema": { "type": "string", "minLength": 1 },
         "run_id": { "type": "string", "minLength": 1 },
         "path": { "$ref": "#/$defs/serialized_path" }
@@ -313,7 +313,21 @@
             "effective_policy_fingerprint_mismatch",
             "historical_policy_unknown",
             "source_policy_differs",
-            "configuration_setting_unknown"
+            "configuration_setting_unknown",
+            "execution_plan_invalid",
+            "execution_approval_required",
+            "execution_approval_mismatch",
+            "execution_bounds_exceeded",
+            "execution_scope_invalid",
+            "execution_policy_mismatch",
+            "execution_source_stale",
+            "execution_source_unavailable",
+            "execution_ambiguous_identity",
+            "execution_read_only",
+            "execution_capacity_unavailable",
+            "execution_capacity_insufficient",
+            "execution_unsupported",
+            "execution_destination_occupied"
           ]
         },
         "severity": { "enum": ["information", "warning", "error", "fatal"] },
