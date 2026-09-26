@@ -98,8 +98,9 @@ updated: 2026-09-26
 **Lifecycle:** released and verified read-only `v0.1.1`; `main` remains read-only
 
 **Current gate:** #88 is merged and #89's signed `v0.1.1` is published and
-independently verified. #90 is next: execution/approval evidence and a fully
-non-mutating dry run before the first transaction can change a source file.
+independently verified. #90 is implemented in development source: explicit
+execution/approval evidence and a fully non-mutating dry run. #91 is next after
+#90 review/merge; it must earn the first source-mutation authority.
 
 **Validation handoff:** Review focused local corpus evidence and the PR without
 waiting on hosted CI. The operator will handle the broader CI/lint sweep;
@@ -328,8 +329,9 @@ This produces four ordered product milestones:
 | --- | --- |
 | Released | `v0.1.1` source `b82599a2231e997d42fd9f26f4b59587f4ae14cf`, annotated tag object `e14acbcdf14a92e28f4efed7ebaf2a3f3d905cf0`, and verified signed release-bundle evidence. The Git tag itself is not claimed to be signed. |
 | Included since `v0.1.0` | #75, #78, #80, #83, #85, #88, and #89 preparation are included in the immutable `v0.1.1` source. Later `main` changes require their own release evidence. |
-| Next / planned | #90 adds non-mutating execution/approval contracts; #91 through #96 follow the dependency order above. Planned work is not supported behavior. |
-| Unsupported today | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
+| Development source | #90 adds explicit selection/approval contracts, `apply --dry-run`, and durable validation/recovery evidence. See [execution previews](docs/execution-dry-run.md); this is not in the published v0.1.1 bundle. |
+| Next / planned | #91 through #96 follow the dependency order above, after #90 review/merge. Planned mutations are not supported behavior. |
+| Unsupported today | Candidate production, optimization execution, live apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
 
 [Issue #60](https://github.com/egohygiene/optiflow/issues/60) remains gated on
 the shared ADR system and is not part of this product chain. [Issue

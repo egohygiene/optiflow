@@ -3,6 +3,22 @@
 All notable changes to OptiFlow are documented here. The project is pre-1.0;
 public contracts still receive explicit migration notes.
 
+## Unreleased
+
+### Added
+
+- Explicit path-selected exact-duplicate execution plans and separate,
+  fingerprint-bound operator approvals. Review-plan keep defaults never grant
+  authority.
+- `apply --plan FILE --approval FILE --dry-run`: current handle-bound identity,
+  metadata, full hash, byte, scope, permission, topology and capacity checks;
+  typed fail-closed diagnostics and equivalent human/JSON evidence.
+- Seven versioned execution evidence kinds, additive SQLite migration 0006,
+  durable attempts and interrupted dry-run recovery. Source commit, restore,
+  deletion and physical-space reclamation remain unsupported.
+- Synthetic authority, corruption, filesystem, space, migration and frozen
+  compatibility proofs; existing filesystem corpus remains required.
+
 ## 0.1.1 — 2026-09-26
 
 Published from `b82599a2231e997d42fd9f26f4b59587f4ae14cf` through

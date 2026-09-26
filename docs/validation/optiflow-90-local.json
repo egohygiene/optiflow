@@ -1,0 +1,81 @@
+{
+  "schema": "optiflow.execution-local-validation.v1",
+  "issue": "https://github.com/egohygiene/optiflow/issues/90",
+  "validated_at": "2026-09-26T20:28:03.352483+00:00",
+  "base_commit": "b0caef9d3b360302653c77a34ac5ff60fd055b81",
+  "platform": "Linux x86_64",
+  "rust": "1.85.0",
+  "scope": "Synthetic exact-duplicate execution plans, approval, non-mutating dry runs and durable evidence. No user media or source mutation.",
+  "environment": {
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_CODEGEN_UNITS": "1",
+    "CARGO_PROFILE_TEST_CODEGEN_UNITS": "1"
+  },
+  "checks": [
+    {
+      "command": "cargo +1.85.0 test --locked --all-targets --jobs 1",
+      "status": "passed",
+      "passed": 229,
+      "failed": 0,
+      "ignored": 1,
+      "ignored_reason": "Existing scheduled filesystem corpus stress case; PR-tier corpus executed separately.",
+      "log_sha256": "496831f836d7981aa629574803e615ced3a43d9cee60258be40da5a0a601ee6a"
+    },
+    {
+      "command": "cargo +1.85.0 clippy --locked --all-targets --jobs 1 -- -D warnings",
+      "status": "passed",
+      "log_sha256": "a03869b1bf2f4c48e0e59922ea104de0b5508a7d311431c2a8789a2cf68fb695"
+    },
+    {
+      "command": "cargo +1.85.0 fmt --all -- --check",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/filesystem-corpus.py --check --tier pr",
+      "status": "passed",
+      "executions": 32,
+      "recipes": 16,
+      "log_sha256": "514ac923c4e066a2e76ce49557555469dadbc969397d61474a32c4af299e3415"
+    },
+    {
+      "command": "uvx --from uv==0.11.33 uv run --frozen --only-group docs bash scripts/site/build.sh",
+      "status": "passed",
+      "html_documents": 33,
+      "log_sha256": "149f765a0f42a31bec13f6015dcb2137570ce31da3f2821ad489d315c480fcb3"
+    },
+    {
+      "command": "git diff --check; parse every schemas/*.schema.json",
+      "status": "passed"
+    }
+  ],
+  "source_sha256": {
+    "Cargo.lock": "4e1f382de4f48c85705713b61d25890de6865fa517153d6afcd0b3cc1ac42306",
+    "Cargo.toml": "5d64b53116a9d17dcae820ed15bcd36f8e66f30258aeb31c02d1bd86989c7704",
+    "migrations/0006_execution_evidence.sql": "cd0bef64b2d229e94146cbf0e738d555f71a0c413a4afdb47923788721b31124",
+    "schemas/command-result.schema.json": "e03441fb12def0d46a06113df37e34dc2f5d128ca779fc4f02f6198d3db05549",
+    "schemas/execution-v1.schema.json": "f830405966decc795e0b0228b77a0364cdaeee85f1ff27f11cd6f7e0990688a0",
+    "src/app.rs": "43dfdfe1175b80783cd8529048a96393d2bd1ac52eacf04e90600b53e130678e",
+    "src/app/execution_commands.rs": "4ac4896ce335376ac4c4b5c94594cbeba037d63b8c5c62038cd6400cdddba743",
+    "src/cli.rs": "544138e39c54ace2943859513d0dabe421a9210fa2c840d287483bea6925a9e1",
+    "src/contracts.rs": "8dea59ddae37187be4bca01627f0c958297bdcdb3246b015762fc29a92b21e7f",
+    "src/execution/filesystem.rs": "4d3e26e90cc28276b2139548c3b456f1592d41ba618422f78c34c150912f0a05",
+    "src/execution/journal.rs": "01089f02caee8948554a590a27c2181065873b31b28e3d13ef24c6a5afc0923a",
+    "src/execution/mod.rs": "fbc228ef5b8523cdd3a9c44895986dbffcb7aa801291b419feb2588b1e8252d9",
+    "src/execution/model.rs": "02a2f5045a24022a5a128db227c63f10b50b8f1fbe0f5b7e151fafdeb78e8204",
+    "src/execution/validation.rs": "7190a837547e246e33acfeec15a795e7eec882095ade9b498dbb6da132c6ff29",
+    "src/outcome.rs": "f60e18c41034d34fef74e5cdc51690cd34a2e424d7f2c93883fe059d960994bb",
+    "src/planning.rs": "68577d1d4ede47fb18c411fa83914e1f81b1a29464bd5378ea2a45cc9972f2db",
+    "src/render.rs": "076a9160658cc83411b201ac91cc03db61cf4507d7b546267ca40acdbd58e9a0",
+    "src/state.rs": "b5c21e569dd372c673586b21e197637ddd78f53a26eb765b9355726558ce6369",
+    "tests/execution.rs": "af5ffd3adaa96e537efb5ce31bcaad76207129e8f13ccecb661df27ab54c3aaf",
+    "tests/fixtures/filesystem/index.json": "a5e615489548f420bb16dc53fbacdc6d859f4945d53a859b1f3fc0b3b6a0f318"
+  },
+  "limitations": [
+    "Native macOS and hosted CI were not run or polled; maintainer owns merge and broader CI sweep.",
+    "Capacity/refusal cases include injected deterministic measurements; no real removable-volume mutation was attempted.",
+    "The local default debug/codegen profile intermittently produced a zero-length object while archiving. Validation succeeded with debug info disabled, one codegen unit and incremental compilation disabled; repository profiles were not changed.",
+    "Dry runs claim no rename/copy/restore guarantee and no physical reclamation. Approval is a local audit record, not a cryptographic signature."
+  ]
+}

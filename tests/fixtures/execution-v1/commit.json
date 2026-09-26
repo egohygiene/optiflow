@@ -1,0 +1,6 @@
+{
+  "schema": "optiflow.execution-commit.v1",
+  "status": "not_started",
+  "source_mutated": false,
+  "committed_actions": 0
+}

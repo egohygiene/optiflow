@@ -232,6 +232,27 @@ without changing IDs or history. This document will retain the index.
   filesystem, and resource effects, or a semantic SDK change requires new wire
   identifiers and a migration.
 
+### OFD-012 — Bind explicit selections and approval to a dry-run-only execution contract
+
+- **Status:** Proposed for #90 review
+- **Context:** Review-plan keep defaults and plan existence cannot authorize the
+  first source mutation. Files and volumes can change after inventory, while
+  partial transaction implementations must not imply completed recovery.
+- **Decision:** Capture explicit operator-selected paths in a new immutable
+  execution plan and require a separate fingerprint-bound approval. Revalidate
+  scoped identities, metadata, full hashes, bytes, permissions and capacity
+  without source writes. Persist versioned run/attempt/validation/commit/recovery
+  evidence through an additive SQLite migration and an exclusive execution lock.
+- **Consequences:** Historical plans gain no authority. Native Linux/macOS
+  filesystem evidence is required; unsupported identities/flags/topology fail
+  closed. Canonical fingerprints give deterministic local identity but do not
+  authenticate the operator. Commit v1 can represent only `not_started`, and
+  recovery v1 claims only `no_source_mutation`. #91 requires explicit contract
+  evolution and fresh proofs before any source mutation can be represented.
+- **Evidence:** [Execution dry-run protocol](docs/execution-dry-run.md),
+  `schemas/execution-v1.schema.json`, migration 0006 and synthetic execution tests.
+- **Revisit when:** #91 earns bounded mutation and property-preserving recovery.
+
 ## Deprecated and Superseded Decisions
 
 None.

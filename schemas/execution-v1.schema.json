@@ -1,0 +1,1010 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/execution-v1.schema.json",
+  "title": "Optiflow execution evidence v1 (dry-run only)",
+  "$defs": {
+    "serialized_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "value"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "utf8"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "base64"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "unix_bytes"
+            },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "diagnostic_context": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "artifact_kind": {
+          "type": "string"
+        },
+        "os_error_kind": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "setting": {
+          "type": "string"
+        },
+        "environment_variable": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": [
+        "code",
+        "severity",
+        "classification",
+        "impact",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "invalid_invocation",
+            "invalid_command_input",
+            "required_capability_unavailable",
+            "optional_capability_unavailable",
+            "partial_inventory",
+            "source_run_partial",
+            "source_run_interrupted",
+            "stored_run_not_found",
+            "stored_state_incompatible",
+            "artifact_set_incomplete",
+            "artifact_set_incompatible",
+            "stale_evidence_prevents_operation",
+            "artifact_validation_failed",
+            "artifact_commit_failed",
+            "state_transaction_failed",
+            "internal_invariant_violated",
+            "operation_interrupted",
+            "operation_terminated",
+            "structured_output_failed",
+            "output_destination_invalid",
+            "result_produced_with_exclusions",
+            "configuration_not_found",
+            "configuration_unreadable",
+            "configuration_not_regular_file",
+            "configuration_parse_failed",
+            "configuration_schema_missing",
+            "configuration_schema_unsupported",
+            "configuration_unknown_key",
+            "configuration_value_invalid",
+            "configuration_value_out_of_range",
+            "configuration_conflict",
+            "configuration_selector_conflict",
+            "configuration_environment_invalid",
+            "configuration_path_resolution_failed",
+            "configuration_discovery_failed",
+            "configuration_source_replaced_during_read",
+            "configuration_override_shadowed",
+            "configuration_deprecated_key",
+            "configuration_locked_invariant",
+            "effective_policy_invalid",
+            "effective_policy_serialization_failed",
+            "effective_policy_fingerprint_mismatch",
+            "historical_policy_unknown",
+            "source_policy_differs",
+            "configuration_setting_unknown",
+            "execution_plan_invalid",
+            "execution_approval_required",
+            "execution_approval_mismatch",
+            "execution_bounds_exceeded",
+            "execution_scope_invalid",
+            "execution_policy_mismatch",
+            "execution_source_stale",
+            "execution_source_unavailable",
+            "execution_ambiguous_identity",
+            "execution_read_only",
+            "execution_capacity_unavailable",
+            "execution_capacity_insufficient",
+            "execution_unsupported",
+            "execution_destination_occupied"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "information",
+            "warning",
+            "error",
+            "fatal"
+          ]
+        },
+        "classification": {
+          "enum": [
+            "input",
+            "capability",
+            "coverage",
+            "observation",
+            "state",
+            "artifact",
+            "interruption",
+            "internal"
+          ]
+        },
+        "impact": {
+          "enum": [
+            "none",
+            "degrades_coverage",
+            "blocks_command"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "$ref": "#/$defs/diagnostic_context"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "filesystem_id",
+        "file_id",
+        "link_count"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "linux",
+            "macos"
+          ]
+        },
+        "filesystem_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "directory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "identity",
+        "mode",
+        "uid",
+        "gid"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "path",
+        "identity",
+        "size_bytes",
+        "modified_unix_ns",
+        "changed_unix_ns",
+        "mode",
+        "uid",
+        "gid",
+        "blake3"
+      ],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/directory"
+        },
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "modified_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "changed_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "operation",
+        "keeper",
+        "candidate",
+        "topology"
+      ],
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "pattern": "^action-[0-9]{6}$"
+        },
+        "operation": {
+          "const": "quarantine_exact_duplicate.v1"
+        },
+        "keeper": {
+          "$ref": "#/$defs/file"
+        },
+        "candidate": {
+          "$ref": "#/$defs/file"
+        },
+        "topology": {
+          "enum": [
+            "same_filesystem",
+            "cross_filesystem"
+          ]
+        }
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_actions",
+        "max_in_flight_files",
+        "max_in_flight_bytes",
+        "free_space_reserve_bytes",
+        "journal_budget_bytes"
+      ],
+      "properties": {
+        "max_actions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "max_in_flight_files": {
+          "const": 1
+        },
+        "max_in_flight_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "free_space_reserve_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 18446744073709551615
+        },
+        "journal_budget_bytes": {
+          "const": 16777216
+        }
+      }
+    },
+    "plan_body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_at",
+        "producer_version",
+        "selection",
+        "evidence_policy_fingerprint",
+        "roots",
+        "subtrees",
+        "quarantine",
+        "state",
+        "bounds",
+        "actions"
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "producer_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "selection": {
+          "const": "explicit_operator_paths"
+        },
+        "evidence_policy_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/directory"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "subtrees": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/directory"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "quarantine": {
+          "$ref": "#/$defs/directory"
+        },
+        "state": {
+          "$ref": "#/$defs/directory"
+        },
+        "bounds": {
+          "$ref": "#/$defs/bounds"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "fingerprint",
+        "body"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-plan.v1"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "body": {
+          "$ref": "#/$defs/plan_body"
+        }
+      }
+    },
+    "approval_body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_fingerprint",
+        "authority",
+        "approved_by",
+        "approved_at"
+      ],
+      "properties": {
+        "plan_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "authority": {
+          "const": "quarantine_exact_duplicates"
+        },
+        "approved_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "authorization_id",
+        "body"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-approval.v1"
+        },
+        "authorization_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "body": {
+          "$ref": "#/$defs/approval_body"
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "action_id",
+        "status",
+        "hash_confirmed",
+        "bytes_confirmed",
+        "identities_confirmed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-attempt.v1"
+        },
+        "action_id": {
+          "type": "string",
+          "pattern": "^action-[0-9]{6}$"
+        },
+        "status": {
+          "enum": [
+            "validating",
+            "validated",
+            "rejected",
+            "interrupted"
+          ]
+        },
+        "hash_confirmed": {
+          "type": "boolean"
+        },
+        "bytes_confirmed": {
+          "type": "boolean"
+        },
+        "identities_confirmed": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "validated"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "hash_confirmed": {
+                "const": true
+              },
+              "bytes_confirmed": {
+                "const": true
+              },
+              "identities_confirmed": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "status",
+        "diagnostics"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-validation.v1"
+        },
+        "status": {
+          "enum": [
+            "validating",
+            "validated",
+            "rejected",
+            "interrupted"
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          },
+          "minItems": 0,
+          "maxItems": 2005
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "validated"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "diagnostics": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "status",
+        "source_mutated",
+        "committed_actions"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-commit.v1"
+        },
+        "status": {
+          "const": "not_started"
+        },
+        "source_mutated": {
+          "const": false
+        },
+        "committed_actions": {
+          "const": 0
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "status",
+        "guarantee",
+        "resume_requires_fresh_validation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-recovery.v1"
+        },
+        "status": {
+          "enum": [
+            "not_needed",
+            "interrupted_dry_run"
+          ]
+        },
+        "guarantee": {
+          "const": "no_source_mutation"
+        },
+        "resume_requires_fresh_validation": {
+          "const": true
+        }
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_id",
+        "available_bytes",
+        "source_logical_bytes",
+        "retained_cross_filesystem_copy_bytes",
+        "journal_and_metadata_budget_bytes",
+        "projected_peak_additional_bytes",
+        "reserve_bytes"
+      ],
+      "properties": {
+        "filesystem_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "available_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "source_logical_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "retained_cross_filesystem_copy_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "journal_and_metadata_budget_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "projected_peak_additional_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "reserve_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        }
+      }
+    },
+    "savings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected_logical_bytes",
+        "immediate_logical_reclaimed_bytes",
+        "physical_reclaimed_bytes",
+        "physical_status",
+        "reason"
+      ],
+      "properties": {
+        "selected_logical_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "immediate_logical_reclaimed_bytes": {
+          "const": 0
+        },
+        "physical_reclaimed_bytes": {
+          "const": null
+        },
+        "physical_status": {
+          "const": "unknown"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "run_id",
+        "plan_fingerprint",
+        "authorization_id",
+        "started_at",
+        "completed_at",
+        "dry_run",
+        "status",
+        "attempts",
+        "validation",
+        "commit",
+        "recovery",
+        "capacity",
+        "savings",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.execution-run.v1"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "plan_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "authorization_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "dry_run": {
+          "const": true
+        },
+        "status": {
+          "enum": [
+            "validating",
+            "validated",
+            "rejected",
+            "interrupted"
+          ]
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attempt"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "validation": {
+          "$ref": "#/$defs/validation"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "recovery": {
+          "$ref": "#/$defs/recovery"
+        },
+        "capacity": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capacity"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "savings": {
+          "$ref": "#/$defs/savings"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "validating"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "status": {
+                    "const": "validating"
+                  }
+                }
+              },
+              "completed_at": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "validated"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "status": {
+                    "const": "validated"
+                  }
+                }
+              },
+              "completed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "rejected"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "status": {
+                    "const": "rejected"
+                  }
+                }
+              },
+              "completed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "interrupted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validation": {
+                "properties": {
+                  "status": {
+                    "const": "interrupted"
+                  }
+                }
+              },
+              "completed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "validated"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "attempts": {
+                "minItems": 1,
+                "items": {
+                  "properties": {
+                    "status": {
+                      "const": "validated"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/plan"
+    },
+    {
+      "$ref": "#/$defs/approval"
+    },
+    {
+      "$ref": "#/$defs/run"
+    },
+    {
+      "$ref": "#/$defs/attempt"
+    },
+    {
+      "$ref": "#/$defs/validation"
+    },
+    {
+      "$ref": "#/$defs/commit"
+    },
+    {
+      "$ref": "#/$defs/recovery"
+    }
+  ]
+}

@@ -201,3 +201,17 @@ esac
 Exit status is never mutation authorization. Any future apply operation must
 independently revalidate every candidate against current metadata, a complete
 hash, and byte-for-byte confirmation.
+
+## Approved execution preview (development source)
+
+`plan execution` captures explicitly selected keeper/candidate paths into a new
+execution contract. `plan approve` records explicit fingerprint-bound approval.
+`apply --plan FILE --approval FILE --dry-run` validates it and saves evidence;
+live apply is refused. See the [complete dry-run contract](execution-dry-run.md)
+for flags, bounds, diagnostic classes and unsupported guarantees. Human output
+prints the same execution result object that JSON includes under `result`.
+
+Execution artifact kinds `execution_plan` and `execution_approval`, plus stable
+`execution_*` diagnostic codes, are additive command-result v1 values. Scan
+run/report/review-plan versions and existing outcome/exit-code meanings remain
+unchanged.

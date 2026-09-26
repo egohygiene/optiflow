@@ -44,7 +44,15 @@ fn render_human(result: &CommandResult) -> Result<()> {
             artifact.path.display()
         )?;
     }
-    if result.command.starts_with("config ") || result.command.starts_with("extensions ") {
+    if result.command.starts_with("config ")
+        || result.command.starts_with("extensions ")
+        || result.command == "apply"
+        || (result.command == "plan"
+            && result
+                .result
+                .as_ref()
+                .is_some_and(|v| v.get("schema").is_some()))
+    {
         if let Some(value) = &result.result {
             writeln!(
                 stdout,

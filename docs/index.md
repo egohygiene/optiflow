@@ -13,8 +13,9 @@ produces immutable plans for human review.
 
 !!! note "Read-only by design"
 
-    The `v0.1.x` product has no apply, delete, replace, move, quarantine, or
-    optimization command. A finding never becomes mutation authority.
+    Source mutation is disabled. Development source adds an
+    [approved execution dry run](execution-dry-run.md); the published v0.1.1
+    bundle predates it. A finding never becomes mutation authority.
 
 ## Choose a path
 

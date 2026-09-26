@@ -1,0 +1,10 @@
+{
+  "schema": "optiflow.execution-approval.v1",
+  "authorization_id": "47d39d3bdae4ff3e9aaa87ca4f5b2e62e0b468ed2398cef1a294237ad6586643",
+  "body": {
+    "plan_fingerprint": "af5b47827d3dd0e27c45e65cffe21c9fe824725ebb4a64a5698543a1b0c6cb03",
+    "authority": "quarantine_exact_duplicates",
+    "approved_by": "synthetic fixture operator",
+    "approved_at": "2026-09-26T00:01:00Z"
+  }
+}

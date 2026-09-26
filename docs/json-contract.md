@@ -107,3 +107,15 @@ Plans contain no executable mutation in `v0.1.0`. Each action includes:
 `flow` should retain both the report and plan as provenance artifacts when it
 invokes `optiflow`. Other consumers should do the same when reproducibility
 matters.
+
+## Execution evidence v1 (development source)
+
+`schemas/execution-v1.schema.json` contains closed definitions for
+`optiflow.execution-plan.v1`, `execution-approval.v1`, `execution-run.v1`,
+`execution-attempt.v1`, `execution-validation.v1`, `execution-commit.v1` and
+`execution-recovery.v1` (all with the `optiflow.` prefix). Runtime validation
+checks both schemas and fingerprint/scope/authority invariants. Existing review
+plans are not migrated to execution authority. Future versions and unknown or
+duplicate keys fail closed. See [execution previews](execution-dry-run.md) for
+canonical fingerprints, examples and compatibility rules. Frozen examples live
+in `tests/fixtures/execution-v1/`.

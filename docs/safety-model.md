@@ -83,3 +83,12 @@ See the [handle-bound observation protocol](observation-protocol.md) for the
 stage checks, cache binding, retry behavior, and filesystem limits.
 See [media-profile evidence](media-profiles.md) for the first profile's exact
 claim boundary and required future-output validations.
+
+## Approved dry-run boundary
+
+Current development source can validate explicitly selected and separately
+approved execution plans through [a non-mutating dry run](execution-dry-run.md).
+This changes no source authority: live apply is disabled. Approval binds every
+selection, root/subtree, policy, location and bound; a review suggestion is never
+authorization. State/evidence must stay outside protected roots and quarantine.
+Physical savings stay unknown, and v1 commit evidence cannot claim mutation.
