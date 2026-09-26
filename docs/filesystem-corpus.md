@@ -20,14 +20,14 @@ the Linux/macOS adversarial workflow. Weekly scheduled runs and the explicit
 `corpus_tier=scheduled` workflow input run the heavier tier on Linux only;
 they do not also launch the ordinary matrix or fuzz jobs.
 
-[`cases.json`](../tests/fixtures/filesystem/cases.json) is the reviewed recipe
+[`cases.json`](https://github.com/egohygiene/optiflow/blob/main/tests/fixtures/filesystem/cases.json) is the reviewed recipe
 and expected-outcome catalog. Every entry has a stable ID, fixed seed (zero;
 these recipes do not use randomness), recipe, proof selector, source, MIT
 license, and cleanup contract. No downloaded or personal media is required.
 Temporary native paths, inode/device numbers, timestamps, and run UUIDs are
 intentionally not golden values.
 
-[`index.json`](../tests/fixtures/filesystem/index.json) binds each recipe,
+[`index.json`](https://github.com/egohygiene/optiflow/blob/main/tests/fixtures/filesystem/index.json) binds each recipe,
 expected outcome, literal payload, and proof source with SHA-256, plus the
 generator and `Cargo.lock`. The recipe digest describes a logical fixture,
 not a portable serialized filesystem image. Sparse zero regions and integer
@@ -59,14 +59,14 @@ limitations. It is checkpoint evidence, not a claim about future CI runs.
 | --- | --- | --- |
 | `fs88-identities` | 3 paths, 2 independent objects, 1 alias; 30 logical duplicate bytes, physical savings unknown; plan is read-only | [Safety](safety-model.md), [report schema](../schemas/report.schema.json) |
 | `fs88-paths` | Repeated/overlapping roots coalesce; Unicode, non-UTF-8, newline and 32-deep paths round-trip; symlinks and broken links are excluded | [Observation](observation-protocol.md), [JSON](json-contract.md) |
-| `fs88-allocation` | Sparse recipe reports actual `st_blocks × 512`; injected allocation gap and clone uncertainty remain unknown | [Filesystem identity](../src/filesystem/identity.rs), report schema |
+| `fs88-allocation` | Sparse recipe reports actual `st_blocks × 512`; injected allocation gap and clone uncertainty remain unknown | [Filesystem identity](https://github.com/egohygiene/optiflow/blob/main/src/filesystem/identity.rs), report schema |
 | `fs88-volume` | 0444 file/0555 root scanned with separate state; unavailable root produces no artifacts; reconnect succeeds | [State](state-model.md), [CLI](cli-contract.md) |
 | `fs88-permission` | Injected `PermissionDenied` before open; two attempts, unreadable/unavailable, no content or identity evidence | Observation protocol |
 | `fs88-disconnect` | Rename synthetic volume after open; discard evidence, then freshly observe reconnected path | Observation protocol |
 | `fs88-replacement` | Same-sized path replacement after open cannot publish current hash | Observation protocol |
 | `fs88-resize` | Truncation and growth reject the entire observation | Observation protocol |
 | `fs88-metadata-race` | Explicit mode change after evidence rejects current status | Observation protocol |
-| `fs88-boundary` | Distinct device IDs respect opt-in crossing; unknown device keeps the existing documented policy | [Discovery](../src/discovery.rs) |
+| `fs88-boundary` | Distinct device IDs respect opt-in crossing; unknown device keeps the existing documented policy | [Discovery](https://github.com/egohygiene/optiflow/blob/main/src/discovery.rs) |
 | `fs88-state` | Same-path replacement misses cache; old plans remain review-only; tampered report/plan sets are incomplete and cannot feed a new plan | State model, [artifact sets](artifact-set-protocol.md) |
 | `fs88-cache-signature` | Provider/ctime mismatch and legacy null identity rows miss cache | State model, migrations 0002–0005 |
 | `fs88-capacity` | ENOSPC at four staged bytes exposes no committed set; cleanup is idempotent; restored capacity permits publication | Artifact-set protocol |

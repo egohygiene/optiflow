@@ -109,19 +109,25 @@ must also satisfy the current semantic evidence contract.
 Each platform archive contains one executable named `optiflow` plus `LICENSE`. The signed
 bundle also contains:
 
-- `release-subjects.sha256`, covering every platform archive plus the SBOM and
-  provenance;
+- `release-subjects.sha256`, covering every platform archive plus the SBOM,
+  provenance, and (from `v0.1.1`) pilot qualification;
 - `signature.json`, a keyless Sigstore/Cosign bundle for that subject manifest;
 - `sbom.spdx.json`, an SPDX 2.3 inventory of the resolved Cargo graph bound to
   every archive digest;
 - `provenance.json`, SLSA v1 provenance binding every archive to the repository,
-  commit, lockfile, targets, and release workflow; and
+  commit, lockfile, targets, and release workflow;
+- `pilot-qualification.json` (from `v0.1.1`), complete native trial receipts
+  for all three targets, bound to the source revision and the exact installed
+  archive and executable digests; and
 - `SHA256SUMS`, covering every other file in the Relay input bundle.
 
 The archive writer fixes member order, ownership, permissions, and timestamps.
-The provenance timestamp derives from the source commit, so rerunning the same
-release request produces identical unsigned bytes. The keyless signature is
-the only intentionally fresh cryptographic evidence.
+The provenance timestamp derives from the source commit. Identical binaries,
+qualification receipts, source, and timestamp produce identical unsigned
+bundle bytes. Fresh pilot trials record new measurements, so a new trial is
+not expected to reproduce an earlier receipt or its signed manifest byte for
+byte. The builder copies the exact qualified native archives into the bundle;
+it never repackages a different archive after qualification.
 
 ## Release procedure
 
@@ -132,10 +138,14 @@ the only intentionally fresh cryptographic evidence.
    release-evidence failure before continuing.
 3. From the Actions page, dispatch **Publish signed binary release** on `main`
    with the matching unused `vMAJOR.MINOR.PATCH` value.
-4. The workflow builds the three supported targets from the locked graph,
-   smoke-tests native binaries, prepares deterministic archives and evidence,
-   signs and verifies `release-subjects.sha256`, and uploads one complete
-   bundle.
+4. The workflow builds the three supported targets from the locked graph and
+   requires execution on matching native Linux, Intel macOS, and Apple silicon
+   macOS hosts. Each host clean-installs its archive and runs the
+   [bounded pilot](external-drive-pilot.md#release-qualification), including
+   upgrade and rollback against signature-verified `v0.1.0`. Missing, failed,
+   cross-target, or mismatched receipts block bundle preparation and signing.
+   It then prepares the SBOM and provenance, signs and verifies
+   `release-subjects.sha256`, and uploads one complete bundle.
 5. Relay's full-SHA-pinned `binary` profile revalidates the bundle and current
    default-branch identity before creating an annotated immutable tag and
    GitHub Release. A moved branch, reused contradictory tag, bad digest,
@@ -145,6 +155,12 @@ the only intentionally fresh cryptographic evidence.
 
 The release workflow does not publish crates.io packages, Homebrew formulas,
 installers, or mutable “latest” aliases.
+
+Preparing a pull request does not require an agent to poll hosted CI. Release
+publication is a separate maintainer checkpoint on merged `main`: keep #89
+open until native qualification, signed publication, and independent download
+verification are complete. Update the README, install examples, and changelog
+to the verified release only after that evidence exists.
 
 ## Independent verification
 
@@ -175,6 +191,8 @@ cosign verify-blob \
 Also inspect `release-evidence.json`, `provenance.json`, and `sbom.spdx.json`.
 Their repository, source revision, release version, workflow identity, and
 archive digests must agree with the release you intended to install.
+For `v0.1.1`, also inspect the signed `pilot-qualification.json`: all three
+targets must pass and name this same source revision and these archive digests.
 
 ## Rollback and correction
 
@@ -192,7 +210,11 @@ For a bad release:
 4. link the corrective release from the affected release notes while retaining
    all original evidence for audit and incident review.
 
-Because OptiFlow has no package-manager channel yet, rollback means withdrawing
-recommendation of the affected version and publishing a corrective successor.
-Local source media and OptiFlow state are never modified as part of a release
-rollback.
+Distribution rollback withdraws the recommendation of the affected version
+and publishes a corrective successor; it never rewrites a release. Local
+operator rollback is separate: stop OptiFlow, retain the upgraded state, restore
+the complete pre-upgrade state backup at its original path, and use the retained
+verified old binary. Artifact references can contain absolute paths. Do not
+point an older binary at newly migrated state and assume compatibility. The
+[pilot guide](external-drive-pilot.md#upgrade-and-rollback) gives the tested
+procedure; it never changes source media.

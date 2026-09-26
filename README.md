@@ -6,14 +6,18 @@
 proving byte-identical duplicate groups, calculating reclaimable storage, and
 producing immutable review plans.
 
-Version `0.1.0` is deliberately read-only. It has no apply, delete, replace,
+The `v0.1.x` product is deliberately read-only. It has no apply, delete, replace,
 move, quarantine, or optimization command.
 
 ## Current capabilities
 
-The capabilities below describe [merged source at `5be461c`](https://github.com/egohygiene/optiflow/tree/5be461c413fc34515cd70f41d4178eb8243525d9),
-checked on 2026-09-17. They are not a promise about every installed `0.1.0`
-binary: this source includes work added after the `v0.1.0` release tag.
+The capabilities below describe [merged source at `ddc4b01`](https://github.com/egohygiene/optiflow/tree/ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea),
+checked on 2026-09-26. The latest published binary is still
+[`v0.1.0`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0);
+later extensions, media profiles, PNG validation, and performance work are
+available in source. This checkout prepares **`v0.1.1`, pending signed
+publication**, with a [read-only external-drive pilot](docs/external-drive-pilot.md).
+A version bump or merged PR alone does not make a release available.
 
 - Scan one or more files and directories without modifying them.
 - Exclude hidden trees, symbolic links, filesystem crossings, and optiflow's

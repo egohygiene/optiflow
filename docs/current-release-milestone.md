@@ -117,10 +117,13 @@ lossless-PNG replacement release.
 
 ## Next checkpoint
 
-[#88](https://github.com/egohygiene/optiflow/issues/88) is next. It must build
-the deterministic filesystem and removable-volume corpus without adding any
-mutation, deletion, quarantine, restore, candidate-production, or optimization
-authority.
+[#88](https://github.com/egohygiene/optiflow/issues/88) is complete through
+[PR #101](https://github.com/egohygiene/optiflow/pull/101), merged at
+`ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea`. [#89](https://github.com/egohygiene/optiflow/issues/89)
+is active: the [pilot guide](external-drive-pilot.md) and mandatory native
+qualification prepare `v0.1.1`. The issue remains open until all three targets
+qualify and the signed release is published and independently verified.
+Then #90 adds execution/approval contracts and a non-mutating dry run.
 
 The Flow-suite coordinator is
 [`flow#11`](https://github.com/egohygiene/flow/issues/11).
