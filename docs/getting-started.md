@@ -12,14 +12,15 @@ artifact SBOM and provenance. Follow the
 before installing a downloaded binary. Rust is required only when building
 from source, and `ffprobe` is optional for stream-level media metadata.
 
-The currently published [`v0.1.0`
-bundle](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0) targets
-source revision `f04c82a0b0c677a2939ea351c4219602cd7181af`. A build from
+The currently published [`v0.1.1`
+bundle](https://github.com/egohygiene/optiflow/releases/tag/v0.1.1) targets
+source revision `b82599a2231e997d42fd9f26f4b59587f4ae14cf`. A build from
 current `main` can contain later read-only features; preserve its exact source
 revision when comparing behavior with the release.
 
-The `v0.1.1` candidate adds native external-drive pilot qualification; it is
-not yet a published release. Use the [pilot operator guide](external-drive-pilot.md)
+The release passed native pilot qualification on all three supported targets
+and [independent bundle verification](validation/optiflow-v0.1.1-release.json).
+Use the [pilot operator guide](external-drive-pilot.md)
 for separate local state, a first scan without probing, private report handling,
 and interruption, reconnect, upgrade, and rollback procedures.
 
@@ -38,7 +39,7 @@ Then extract that archive, copy the binary into a user-owned executable
 directory, and run the read-only environment check:
 
 ```bash
-release_version="v0.1.0"
+release_version="v0.1.1"
 release_target="x86_64-unknown-linux-gnu"
 unpack_directory="optiflow-${release_version}-${release_target}"
 
@@ -91,9 +92,9 @@ runs/<run-id>/
 └── report.json
 ```
 
-When building current `main`, the default probe policy and an available
+In `v0.1.1`, the default probe policy and an available
 `ffprobe` allow report v6 to include read-only lossless-PNG profile evidence.
-That post-release capability is not present in the `v0.1.0` binary. Pass
+That capability is not present in the earlier `v0.1.0` binary. Pass
 `--no-probe` to record that this analysis was not requested. See
 [media-profile evidence](media-profiles.md) before interpreting a review
 candidate; it is not an output or savings guarantee.

@@ -11,13 +11,16 @@ move, quarantine, or optimization command.
 
 ## Current capabilities
 
-The capabilities below describe [merged source at `ddc4b01`](https://github.com/egohygiene/optiflow/tree/ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea),
-checked on 2026-09-26. The latest published binary is still
-[`v0.1.0`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0);
-later extensions, media profiles, PNG validation, and performance work are
-available in source. This checkout prepares **`v0.1.1`, pending signed
-publication**, with a [read-only external-drive pilot](docs/external-drive-pilot.md).
-A version bump or merged PR alone does not make a release available.
+The latest published release is
+**[`v0.1.1`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.1)**,
+from [source `b82599a`](https://github.com/egohygiene/optiflow/tree/b82599a2231e997d42fd9f26f4b59587f4ae14cf),
+published and independently verified on 2026-09-26. All three native targets
+passed the [read-only external-drive pilot](docs/external-drive-pilot.md).
+The [verification record](docs/validation/optiflow-v0.1.1-release.json) binds
+the signed bundle, qualification receipts, and independent Linux installation.
+The capabilities below describe that release's source and its documented
+CLI/library boundaries. Future `main` changes are not automatically part of
+this immutable release; `v0.1.0` predates the later read-only additions.
 
 - Scan one or more files and directories without modifying them.
 - Exclude hidden trees, symbolic links, filesystem crossings, and optiflow's
