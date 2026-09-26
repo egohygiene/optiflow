@@ -12,6 +12,7 @@ extra_css = ["stylesheets/extra.css"]
 nav = [
   { "Home" = "index.md" },
   { "Getting started" = "getting-started.md" },
+  { "External-drive read-only pilot" = "external-drive-pilot.md" },
   { "Media capabilities and optimizer strategy" = "optimizer-strategy.md" },
   { "Architecture" = "architecture.md" },
   { "Core concepts" = [

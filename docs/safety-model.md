@@ -2,7 +2,7 @@
 
 ## Current authority
 
-optiflow `v0.1.0` has read authority only. It can create state and report
+optiflow `v0.1.x` has read authority only. It can create state and report
 artifacts in its configured state directory, but it cannot change source media.
 
 ## Invariants

@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.7
+version: 0.1.8
 status: draft
 owners:
   - egohygiene
@@ -24,7 +24,7 @@ supersedes: []
 
 # OptiFlow Roadmap
 
-## 2026-09-25 live suite handoff
+## 2026-09-26 live suite handoff
 
 > [!IMPORTANT]
 > This is the current agent handoff for Optiflow's contribution to the Flow
@@ -55,9 +55,12 @@ supersedes: []
 1. [#88](https://github.com/egohygiene/optiflow/issues/88) supplies the
    [filesystem corpus](docs/filesystem-corpus.md): 17 deterministic filesystem,
    path, state, and removable-volume recipes, with bounded PR/scheduled tiers
-   and no mutation authority. After its PR is reviewed and merged, #89 is next.
+   and no mutation authority. Completed through PR #101, merged at `ddc4b01`.
 2. [#89](https://github.com/egohygiene/optiflow/issues/89) qualifies and
-   publishes the immutable read-only external-drive `v0.1.1` pilot. This is
+   publishes the immutable read-only external-drive `v0.1.1` pilot. Its
+   [qualification and operator guide](docs/external-drive-pilot.md) are the
+   active checkpoint; all three native targets and signed publication must
+   pass before the issue closes. This is
    sufficient for the first read-only
    [Flow #50](https://github.com/egohygiene/flow/issues/50) integration work.
 3. [#90](https://github.com/egohygiene/optiflow/issues/90) through
@@ -94,9 +97,9 @@ updated: 2026-09-25
 
 **Lifecycle:** released read-only `v0.1.0`; post-release `main` remains read-only
 
-**Current gate:** Complete #88's filesystem and removable-volume corpus, then
-qualify the current read-only product through #89 before granting any mutation
-authority.
+**Current gate:** #88 is merged. Qualify the current read-only product through
+#89 and publish its signed `v0.1.1` bundle before claiming that release is
+available. This checkpoint grants no mutation authority.
 
 **Validation handoff:** Review focused local corpus evidence and the PR without
 waiting on hosted CI. The operator will handle the broader CI/lint sweep;
@@ -324,8 +327,8 @@ This produces four ordered product milestones:
 | State | Exact evidence or owner |
 | --- | --- |
 | Released | `v0.1.0` source `f04c82a0b0c677a2939ea351c4219602cd7181af`, annotated tag object `1e0381cb9e92616fabda2828f201ef1c1f2d4688`, and signed release-bundle evidence. The Git tag object itself is not claimed to be signed. |
-| Merged after release | `main` at `7de8483b64387542a05214004c19a9cd05628908`, including completed #75, #78, #80, #83, and #85 evidence. These additions are not retroactively present in `v0.1.0`. |
-| Planned | #88 through #96 in the dependency order above. Planned work is not supported behavior. |
+| Merged after release | `main` at `ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea`, including completed #75, #78, #80, #83, #85, and #88 evidence. These additions are not retroactively present in `v0.1.0`. |
+| Active / planned | #89 prepares the read-only pilot; #90 through #96 follow the dependency order above. Planned work is not supported behavior. |
 | Unsupported today | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
 
 [Issue #60](https://github.com/egohygiene/optiflow/issues/60) remains gated on

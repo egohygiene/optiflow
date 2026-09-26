@@ -3,9 +3,19 @@
 All notable changes to OptiFlow are documented here. The project is pre-1.0;
 public contracts still receive explicit migration notes.
 
-## Unreleased
+## 0.1.1 — pending publication
+
+This section describes the release candidate. The latest published release
+remains `v0.1.0` until the signed `v0.1.1` bundle is independently verified.
 
 ### Added
+
+- Added native read-only pilot qualification for all three release targets,
+  covering clean installation, 4,096 files, two materialized 256 MiB files,
+  cache reuse, partial coverage, disconnect/reconnect, cancellation/restart,
+  and upgrade/rollback from signature-verified `v0.1.0`. Signing requires
+  receipts bound to the exact tested archives and source revision. Added an
+  external-drive operator guide; source authority and CLI schemas are unchanged.
 
 - Added the #88 versioned filesystem/path/removable-volume corpus: 17 synthetic
   recipes with source/payload/expected-evidence digests, typed refusal and recovery

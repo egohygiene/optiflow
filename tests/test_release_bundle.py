@@ -13,6 +13,9 @@ import unittest
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT / "scripts"))
+import pilot_contract as pilot
+import release_bundle as release
 SCRIPT = REPOSITORY_ROOT / "scripts" / "release_bundle.py"
 RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 SOURCE_REVISION = "a" * 40
@@ -49,6 +52,27 @@ def fixture_binaries(root: Path) -> Path:
         (directory / "optiflow").write_bytes(
             f"synthetic optiflow for {target}\n".encode()
         )
+        archive = directory / f"optiflow-v0.1.1-{target}.tar.gz"
+        release.deterministic_archive(directory / "optiflow", REPOSITORY_ROOT / "LICENSE", archive)
+        scenarios = {name: {"exit_code": code, "outcome": outcome, "elapsed_seconds": 0.1}
+                     for name, (code, outcome) in pilot.OUTCOMES.items()}
+        scenarios["tree_cold"]["files"] = 4096
+        scenarios["tree_warm"]["cache_hits"] = 4096
+        scenarios["large_cold"].update(logical_bytes=536870912, groups=1)
+        scenarios["large_warm"]["cache_hits"] = 2
+        scenarios["plan"]["mutates_files"] = False
+        scenarios["partial"]["coverage"] = "partial"
+        scenarios["interrupted"]["run_status"] = "interrupted"
+        scenarios["restart"]["new_run"] = True
+        receipt = {"schema": pilot.SCHEMA, "target": target, "native_target": target,
+                   "release_version": "v0.1.1", "source_revision": SOURCE_REVISION,
+                   "profile": pilot.PROFILE, "scenarios": scenarios, "passed": True,
+                   "source_unchanged": True, "cleanup_complete": True, "json_stdout_clean": True,
+                   "previous_signature_verified": True, "previous_version": pilot.PREVIOUS_VERSION,
+                   "previous_revision": pilot.PREVIOUS_REVISION, "source_digest": "b" * 64,
+                   "peak_child_rss_bytes": 12345, "state_bytes": 6789,
+                   "archive_sha256": release.sha256(archive), "binary_sha256": pilot.archive_binary(archive)}
+        release.write_json(directory / "qualification.json", receipt)
     return inputs
 
 
@@ -64,7 +88,7 @@ def prepare(root: Path, name: str) -> Path:
         "--output-directory",
         str(output),
         "--release-version",
-        "v0.1.0",
+        "v0.1.1",
         "--source-revision",
         SOURCE_REVISION,
         "--created-at",
@@ -96,6 +120,38 @@ def workflow_step_script(workflow: str, step_name: str) -> str:
 
 
 class ReleaseBundleTests(unittest.TestCase):
+    def test_failed_or_unbound_native_qualification_cannot_be_signed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            inputs = fixture_binaries(Path(temporary))
+            target = TARGETS[0]
+            directory = inputs / f"optiflow-{target}"
+            archive = directory / f"optiflow-v0.1.1-{target}.tar.gz"
+            valid = json.loads((directory / "qualification.json").read_text())
+            for field, bad in [("passed", False), ("native_target", TARGETS[1]),
+                               ("source_revision", "c" * 40), ("archive_sha256", "d" * 64),
+                               ("binary_sha256", "e" * 64), ("previous_signature_verified", False),
+                               ("cleanup_complete", "true"), ("scenarios", {})]:
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    pilot.validate_receipt({**valid, field: bad}, target, "v0.1.1", SOURCE_REVISION, archive)
+
+    def test_missing_qualification_blocks_bundle_preparation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            inputs = fixture_binaries(root)
+            (inputs / f"optiflow-{TARGETS[1]}" / "qualification.json").unlink()
+            result = run_bundle("prepare", "--repository-root", str(REPOSITORY_ROOT),
+                                "--input-directory", str(inputs), "--output-directory", str(root / "bundle"),
+                                "--release-version", "v0.1.1", "--source-revision", SOURCE_REVISION,
+                                "--created-at", CREATED_AT, expect_success=False)
+            self.assertEqual(result.returncode, 2)
+
+    def test_native_targets_cannot_skip_installation_trials(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text()
+        self.assertIn("os: macos-15-intel", workflow)
+        self.assertNotIn("native smoke test not applicable", workflow)
+        self.assertIn("scripts/qualify-read-only-pilot.py", workflow)
+        self.assertIn("dist/qualified/${{ matrix.target }}", workflow)
+
     def test_publish_job_pins_the_released_relay_contract(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
         policy = (REPOSITORY_ROOT / "docs/release-policy.md").read_text(
@@ -135,7 +191,7 @@ class ReleaseBundleTests(unittest.TestCase):
         completed = subprocess.run(
             ["bash", "--noprofile", "--norc", "-n"],
             input=workflow_step_script(
-                workflow, "Smoke-test native release binary"
+                workflow, "Require native execution and fetch immutable rollback baseline"
             ),
             check=False,
             capture_output=True,
@@ -171,7 +227,7 @@ class ReleaseBundleTests(unittest.TestCase):
                 "--bundle-directory",
                 str(bundle),
                 "--release-version",
-                "v0.1.0",
+                "v0.1.1",
                 "--source-revision",
                 SOURCE_REVISION,
                 "--skip-signature-verification",
@@ -180,7 +236,7 @@ class ReleaseBundleTests(unittest.TestCase):
     def test_tampered_archive_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             bundle = prepare(Path(temporary), "tampered")
-            archive = bundle / "optiflow-v0.1.0-x86_64-unknown-linux-gnu.tar.gz"
+            archive = bundle / "optiflow-v0.1.1-x86_64-unknown-linux-gnu.tar.gz"
             archive.write_bytes(archive.read_bytes() + b"tampered")
             completed = run_bundle(
                 "verify",
@@ -189,7 +245,7 @@ class ReleaseBundleTests(unittest.TestCase):
                 "--bundle-directory",
                 str(bundle),
                 "--release-version",
-                "v0.1.0",
+                "v0.1.1",
                 "--source-revision",
                 SOURCE_REVISION,
                 "--skip-signature-verification",
@@ -210,7 +266,7 @@ class ReleaseBundleTests(unittest.TestCase):
                 "--output-directory",
                 str(root / "bundle"),
                 "--release-version",
-                "v0.1.1",
+                "v0.1.2",
                 "--source-revision",
                 SOURCE_REVISION,
                 "--created-at",

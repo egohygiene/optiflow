@@ -18,6 +18,11 @@ source revision `f04c82a0b0c677a2939ea351c4219602cd7181af`. A build from
 current `main` can contain later read-only features; preserve its exact source
 revision when comparing behavior with the release.
 
+The `v0.1.1` candidate adds native external-drive pilot qualification; it is
+not yet a published release. Use the [pilot operator guide](external-drive-pilot.md)
+for separate local state, a first scan without probing, private report handling,
+and interruption, reconnect, upgrade, and rollback procedures.
+
 ## Install a verified prebuilt binary
 
 First complete the [independent verification
