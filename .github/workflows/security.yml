@@ -92,4 +92,4 @@ jobs:
           toolchain: "1.85.0"
 
       - name: Test deterministic release evidence
-        run: python3 -m unittest tests/test_release_bundle.py
+        run: python3 -m unittest tests/test_release_bundle.py tests/test_read_only_pilot.py

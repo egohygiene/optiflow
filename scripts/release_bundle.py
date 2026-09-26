@@ -16,6 +16,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 import tomllib
+import shutil
+
+import pilot_contract as pilot
 
 PACKAGE_NAME = "optiflow"
 REPOSITORY = "https://github.com/egohygiene/optiflow"
@@ -30,6 +33,7 @@ SUPPORTED_TARGETS = (
     "aarch64-apple-darwin",
 )
 PRIMARY_EVIDENCE = ("provenance.json", "sbom.spdx.json")
+PILOT_EVIDENCE = "pilot-qualification.json"
 SUBJECTS_MANIFEST = "release-subjects.sha256"
 SIGNATURE = "signature.json"
 COMPLETE_MANIFEST = "SHA256SUMS"
@@ -347,13 +351,29 @@ def prepare(args: argparse.Namespace) -> None:
     output_directory.mkdir(parents=True, exist_ok=True)
 
     archives = []
+    qualifications = {}
     for target in SUPPORTED_TARGETS:
         binary = input_directory / f"{PACKAGE_NAME}-{target}" / PACKAGE_NAME
         archive = (
             output_directory / f"{PACKAGE_NAME}-{args.release_version}-{target}.tar.gz"
         )
-        deterministic_archive(binary, repository_root / "LICENSE", archive)
+        if args.release_version == "v0.1.0":
+            deterministic_archive(binary, repository_root / "LICENSE", archive)
+        else:
+            qualified_directory = input_directory / f"{PACKAGE_NAME}-{target}"
+            qualified_archive = qualified_directory / archive.name
+            receipt = pilot.read_receipt(qualified_directory / "qualification.json")
+            try:
+                pilot.validate_receipt(receipt, target, args.release_version, args.source_revision, qualified_archive)
+            except ValueError as error:
+                raise BundleError(str(error)) from error
+            # Preserve the exact native archive that was clean-installed and tested.
+            shutil.copyfile(qualified_archive, archive)
+            qualifications[target] = receipt
         archives.append(archive)
+
+    if qualifications:
+        write_json(output_directory / PILOT_EVIDENCE, {"schema": "optiflow.pilot-qualification-set.v1", "targets": qualifications})
 
     metadata = cargo_metadata(repository_root)
     write_json(
@@ -374,7 +394,7 @@ def prepare(args: argparse.Namespace) -> None:
     )
     write_checksum_manifest(
         output_directory,
-        [archive.name for archive in archives] + list(PRIMARY_EVIDENCE),
+        [archive.name for archive in archives] + list(primary_evidence(args.release_version)),
         SUBJECTS_MANIFEST,
     )
 
@@ -422,6 +442,10 @@ def archive_names(release_version: str) -> set[str]:
     }
 
 
+def primary_evidence(release_version: str) -> set[str]:
+    return set(PRIMARY_EVIDENCE) | (set() if release_version == "v0.1.0" else {PILOT_EVIDENCE})
+
+
 def verify_evidence(
     directory: Path, release_version: str, source_revision: str, archives: set[str]
 ) -> None:
@@ -466,6 +490,16 @@ def verify_evidence(
         raise BundleError("SBOM contains no resolved Cargo components")
     if release_version not in sbom.get("name", ""):
         raise BundleError("SBOM release identity does not match the requested version")
+    if release_version != "v0.1.0":
+        qualification = pilot.read_receipt(directory / PILOT_EVIDENCE)
+        if qualification.get("schema") != "optiflow.pilot-qualification-set.v1" or set(qualification.get("targets", {})) != set(SUPPORTED_TARGETS):
+            raise BundleError("pilot qualification target inventory mismatch")
+        for target, receipt in qualification["targets"].items():
+            try:
+                pilot.validate_receipt(receipt, target, release_version, source_revision,
+                                       directory / f"{PACKAGE_NAME}-{release_version}-{target}.tar.gz")
+            except ValueError as error:
+                raise BundleError(str(error)) from error
 
 
 def finalize(args: argparse.Namespace) -> None:
@@ -486,7 +520,7 @@ def verify(args: argparse.Namespace) -> None:
         args.repository_root.resolve(), args.release_version, args.source_revision
     )
     archives = archive_names(args.release_version)
-    expected_subjects = archives | set(PRIMARY_EVIDENCE)
+    expected_subjects = archives | primary_evidence(args.release_version)
     expected_complete = expected_subjects | {SUBJECTS_MANIFEST, SIGNATURE}
     actual = {path.name for path in directory.iterdir() if path.is_file()}
     if actual != expected_complete | {COMPLETE_MANIFEST}:
@@ -555,7 +589,7 @@ def main() -> int:
     args = parser().parse_args()
     try:
         args.function(args)
-    except (BundleError, FileNotFoundError, json.JSONDecodeError, KeyError) as error:
+    except (BundleError, FileNotFoundError, ValueError, KeyError, tarfile.TarError) as error:
         print(f"release bundle error: {error}", file=sys.stderr)
         return 2
     return 0
