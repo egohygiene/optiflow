@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.5
+version: 0.1.6
 status: draft
 owners:
   - egohygiene
@@ -23,6 +23,60 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-09-25 live suite handoff
+
+> [!IMPORTANT]
+> This is the current agent handoff for Optiflow's contribution to the Flow
+> suite. The operator-ready execution chain below remains authoritative for
+> product work; this section adds the cross-repository convergence points.
+
+### Immediate Optiflow chain
+
+```text
+#88
+ ↓
+#89 ─────────────────────────────→ Flow #50 read-only adapter
+ ↓
+#90
+ ↓
+#91
+ ↓
+#92
+ ↓
+#96
+ ↓
+#93 ─────────────────────────────→ Flow #50 mutation-capable extension
+
+#65 relevant fixtures → #94
+                    #93 + #94 → #95
+```
+
+1. [#88](https://github.com/egohygiene/optiflow/issues/88) is the exact next
+   product checkpoint: deterministic filesystem, path, state, and
+   removable-volume corpus foundations with no mutation authority.
+2. [#89](https://github.com/egohygiene/optiflow/issues/89) qualifies and
+   publishes the immutable read-only external-drive `v0.1.1` pilot. This is
+   sufficient for the first read-only
+   [Flow #50](https://github.com/egohygiene/flow/issues/50) integration work.
+3. [#90](https://github.com/egohygiene/optiflow/issues/90) through
+   [#93](https://github.com/egohygiene/optiflow/issues/93), in the order
+   #90 → #91 → #92 → #96 → #93, earn bounded transactional authority and
+   publish the exact-deduplication `v0.2.0` release. Flow must not infer this
+   authority from the earlier read-only release.
+4. [#94](https://github.com/egohygiene/optiflow/issues/94) may proceed after the
+   relevant fixture families under
+   [#65](https://github.com/egohygiene/optiflow/issues/65) are ready. It
+   produces source-preserving OxiPNG candidates only.
+5. [#95](https://github.com/egohygiene/optiflow/issues/95) joins #93 and #94 to
+   reuse the proven transaction engine for independently validated lossless PNG
+   replacement.
+
+[#60](https://github.com/egohygiene/optiflow/issues/60) remains gated on the
+shared ADR system and is outside this product critical path.
+[#61](https://github.com/egohygiene/optiflow/issues/61) remains the
+post-roadmap repository/backlog/Identity audit and should run after the active
+product/release lane, before the final suite-level Flow audit.
 
 <!-- BEGIN ROADMAP EXECUTION SNAPSHOT -->
 <!-- roadmap-manifest
