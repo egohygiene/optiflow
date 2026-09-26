@@ -1,5 +1,10 @@
 # Adversarial testing
 
+The versioned [filesystem and removable-volume corpus](filesystem-corpus.md)
+indexes the #88 foundation cases, reuses the fault proofs below, and adds
+budgeted PR/scheduled execution with provenance and expected-evidence drift
+checks. Run it with `python3 scripts/filesystem-corpus.py --check --tier pr`.
+
 OptiFlow's adversarial suite turns the read-only safety claims into a bounded,
 repeatable test matrix. It complements the ordinary unit, integration, and
 end-to-end suites; it does not grant permission to mutate source media.

@@ -51,8 +51,12 @@ run_fuzz() {
     -max_total_time=15 -timeout=5 -max_len=65536
 }
 
+run_corpus() {
+  run_case "filesystem-corpus" python3 scripts/filesystem-corpus.py --check --tier pr
+}
+
 if [[ $# -eq 0 ]]; then
-  set -- properties faults
+  set -- properties faults corpus
 fi
 
 for suite in "$@"; do
@@ -65,6 +69,9 @@ for suite in "$@"; do
       ;;
     fuzz)
       run_fuzz
+      ;;
+    corpus)
+      run_corpus
       ;;
     *)
       printf "unknown adversarial suite: %s\n" "${suite}" >&2

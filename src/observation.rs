@@ -27,6 +27,7 @@ pub struct ObservationResult {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ObservationStage {
+    BeforeOpen,
     AfterOpen,
     AfterEvidence,
 }
@@ -61,7 +62,7 @@ pub fn observe(
         probe_media,
         ffprobe,
         signals,
-        &mut |_, _| {},
+        &mut |_, _| Ok(()),
     )
 }
 
@@ -75,7 +76,7 @@ fn observe_with_hook<F>(
     hook: &mut F,
 ) -> ObservationResult
 where
-    F: FnMut(ObservationStage, &Path),
+    F: FnMut(ObservationStage, &Path) -> std::io::Result<()>,
 {
     let mut first_failure: Option<String> = None;
     let mut final_failure: Option<AttemptFailure> = None;
@@ -162,7 +163,7 @@ fn attempt_once<F>(
     hook: &mut F,
 ) -> Result<AttemptSuccess, AttemptFailure>
 where
-    F: FnMut(ObservationStage, &Path),
+    F: FnMut(ObservationStage, &Path) -> std::io::Result<()>,
 {
     if signals.is_cancelled() {
         return Err(interrupted());
@@ -197,12 +198,14 @@ where
         "path changed after discovery",
     )?;
 
-    let mut file = File::open(&discovered.path).map_err(|error| AttemptFailure {
-        stability: ObservationStability::Unreadable,
-        validity: EvidenceValidity::Unavailable,
-        message: format!("failed to open discovered file: {error}"),
-        interrupted: false,
-    })?;
+    let mut file = hook(ObservationStage::BeforeOpen, &discovered.path)
+        .and_then(|()| File::open(&discovered.path))
+        .map_err(|error| AttemptFailure {
+            stability: ObservationStability::Unreadable,
+            validity: EvidenceValidity::Unavailable,
+            message: format!("failed to open discovered file: {error}"),
+            interrupted: false,
+        })?;
     let opened_metadata = file.metadata().map_err(|error| AttemptFailure {
         stability: ObservationStability::MetadataUnavailable,
         validity: EvidenceValidity::Unavailable,
@@ -227,7 +230,7 @@ where
         "opened handle did not match the inspected path",
     )?;
 
-    hook(ObservationStage::AfterOpen, &discovered.path);
+    hook(ObservationStage::AfterOpen, &discovered.path).map_err(hook_failure)?;
 
     let cache_hit = cached.is_some();
     let mut analysis = match cached {
@@ -254,7 +257,7 @@ where
         }
     }
 
-    hook(ObservationStage::AfterEvidence, &discovered.path);
+    hook(ObservationStage::AfterEvidence, &discovered.path).map_err(hook_failure)?;
 
     let final_handle_metadata = file.metadata().map_err(|error| AttemptFailure {
         stability: ObservationStability::MetadataUnavailable,
@@ -319,6 +322,15 @@ where
         signature: final_handle_signature,
         cache_hit,
     })
+}
+
+fn hook_failure(error: std::io::Error) -> AttemptFailure {
+    AttemptFailure {
+        stability: ObservationStability::Unreadable,
+        validity: EvidenceValidity::Unavailable,
+        message: format!("observation hook failed: {error}"),
+        interrupted: false,
+    }
 }
 
 fn require_regular_identity(
@@ -490,6 +502,7 @@ mod tests {
                     fs::write(observed_path, b"replacement!!").unwrap();
                     replaced = true;
                 }
+                Ok(())
             },
         );
 
@@ -499,6 +512,9 @@ mod tests {
         );
         assert_ne!(result.analysis.evidence_validity, EvidenceValidity::Current);
         assert!(result.analysis.content_hash.is_none());
+        assert_eq!(fs::read(&displaced).unwrap(), b"original bytes");
+        assert_eq!(fs::read(&path).unwrap(), b"replacement!!");
+        directory.close().unwrap();
     }
 
     #[test]
@@ -522,6 +538,7 @@ mod tests {
                         fs::write(observed_path, replacement).unwrap();
                         changed = true;
                     }
+                    Ok(())
                 },
             );
 
@@ -530,6 +547,9 @@ mod tests {
                 ObservationStability::ChangedDuringHash
             );
             assert_ne!(result.analysis.evidence_validity, EvidenceValidity::Current);
+            assert!(result.analysis.content_hash.is_none());
+            assert_eq!(fs::read(&path).unwrap(), replacement);
+            directory.close().unwrap();
         }
     }
 
@@ -541,6 +561,7 @@ mod tests {
         let directory = tempdir().unwrap();
         let path = directory.path().join("metadata.bin");
         fs::write(&path, b"content").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
         let discovered = discovered(&path);
         let mut changed = false;
 
@@ -558,10 +579,13 @@ mod tests {
                     fs::set_permissions(observed_path, permissions).unwrap();
                     changed = true;
                 }
+                Ok(())
             },
         );
 
         assert_ne!(result.analysis.evidence_validity, EvidenceValidity::Current);
+        assert_eq!(fs::read(&path).unwrap(), b"content");
+        directory.close().unwrap();
     }
 
     #[test]
@@ -654,5 +678,105 @@ mod tests {
         assert_eq!(result.analysis.evidence_validity, EvidenceValidity::Current);
         assert_eq!(before, fs::read(&path).unwrap());
         assert_eq!(buffer, before);
+    }
+
+    #[test]
+    fn corpus_permission_denied_is_bounded_and_publishes_no_evidence() {
+        let directory = tempdir().unwrap();
+        let path = directory.path().join("denied.bin");
+        fs::write(&path, b"permission fixture").unwrap();
+        let discovered = discovered(&path);
+        let before = discovered.signature.clone();
+        let mut opens = 0;
+        let result = observe_with_hook(
+            &discovered,
+            None,
+            true,
+            false,
+            None,
+            &SignalState::default(),
+            &mut |stage, _| {
+                assert_eq!(stage, ObservationStage::BeforeOpen);
+                opens += 1;
+                Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied))
+            },
+        );
+        assert_eq!(opens, 2);
+        assert_eq!(result.analysis.attempt_count, 2);
+        assert_eq!(
+            result.analysis.observation_stability,
+            ObservationStability::Unreadable
+        );
+        assert_eq!(
+            result.analysis.evidence_validity,
+            EvidenceValidity::Unavailable
+        );
+        assert!(result.analysis.content_hash.is_none());
+        assert!(result.analysis.media.is_none());
+        assert!(result.filesystem_metadata.is_none());
+        assert!(result.signature.is_none());
+        assert!(!result.cache_hit);
+        assert_eq!(fs::read(&path).unwrap(), b"permission fixture");
+        assert_eq!(
+            FileStateSignature::from_symlink_metadata(&fs::symlink_metadata(&path).unwrap()),
+            before
+        );
+        directory.close().unwrap();
+    }
+
+    #[test]
+    fn corpus_disconnect_after_open_rejects_then_reconnects() {
+        let directory = tempdir().unwrap();
+        let volume = directory.path().join("volume");
+        let detached = directory.path().join("detached");
+        fs::create_dir(&volume).unwrap();
+        let path = volume.join("file.bin");
+        fs::write(&path, b"volume fixture").unwrap();
+        let original = discovered(&path);
+        let result = observe_with_hook(
+            &original,
+            None,
+            true,
+            false,
+            None,
+            &SignalState::default(),
+            &mut |stage, _| {
+                if stage == ObservationStage::AfterOpen {
+                    fs::rename(&volume, &detached).unwrap();
+                }
+                Ok(())
+            },
+        );
+        assert_eq!(
+            result.analysis.observation_stability,
+            ObservationStability::DisappearedDuringScan
+        );
+        assert_eq!(
+            result.analysis.evidence_validity,
+            EvidenceValidity::Unavailable
+        );
+        assert_eq!(result.analysis.attempt_count, 2);
+        assert!(result.analysis.content_hash.is_none());
+        assert!(result.filesystem_metadata.is_none());
+        fs::rename(&detached, &volume).unwrap();
+        let reconnected = observe(
+            &discovered(&path),
+            None,
+            true,
+            false,
+            None,
+            &SignalState::default(),
+        );
+        assert_eq!(
+            reconnected.analysis.evidence_validity,
+            EvidenceValidity::Current
+        );
+        assert_eq!(
+            reconnected.analysis.content_hash,
+            Some(blake3::hash(b"volume fixture").to_hex().to_string())
+        );
+        assert_eq!(original.signature, discovered(&path).signature);
+        assert_eq!(fs::read(&path).unwrap(), b"volume fixture");
+        directory.close().unwrap();
     }
 }

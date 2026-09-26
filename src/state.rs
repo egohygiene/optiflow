@@ -792,6 +792,13 @@ mod tests {
                 .expect("legacy-row lookup")
                 .is_none()
         );
+        assert_eq!(fs::read(&path).unwrap(), b"stable cache bytes");
+        assert_eq!(
+            FileStateSignature::from_symlink_metadata(&fs::symlink_metadata(&path).unwrap()),
+            signature
+        );
+        drop(store);
+        directory.close().unwrap();
     }
 
     fn migration_count(connection: &Connection, version: i64) -> i64 {

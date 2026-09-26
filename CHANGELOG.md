@@ -7,6 +7,12 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added the #88 versioned filesystem/path/removable-volume corpus: 17 synthetic
+  recipes with source/payload/expected-evidence digests, typed refusal and recovery
+  checks, source-preservation checks, bounded Linux/macOS PR execution and a
+  weekly Linux stress tier. No new public contract, release, or source-media
+  mutation authority is introduced.
+
 - Added a source-pinned README media capability matrix and optimizer-strategy
   reference, separating inventory, conditional probing, review evidence, PNG
   byte validation, planned production and future transactions. Documents

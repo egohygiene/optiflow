@@ -1,0 +1,391 @@
+{
+  "schema": "optiflow.filesystem-corpus.v1",
+  "generator": "scripts/filesystem-corpus.py",
+  "platforms": [
+    "linux",
+    "darwin"
+  ],
+  "budgets": {
+    "pr": {
+      "repetitions": 2,
+      "wall_seconds": 120,
+      "case_seconds": 20,
+      "memory_bytes": 2147483648,
+      "file_bytes": 8388608,
+      "workspace_bytes": 67108864,
+      "evidence_bytes": 8388608
+    },
+    "scheduled": {
+      "repetitions": 10,
+      "wall_seconds": 600,
+      "case_seconds": 30,
+      "memory_bytes": 2147483648,
+      "file_bytes": 16777216,
+      "workspace_bytes": 134217728,
+      "evidence_bytes": 16777216
+    }
+  },
+  "cases": [
+    {
+      "id": "fs88-identities",
+      "tier": "pr",
+      "target": "filesystem_corpus",
+      "test": "independent_duplicates_and_hard_links",
+      "source": "tests/filesystem_corpus.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Write one payload, copy it into an independent object, add a hard-link alias; scan and make a read-only plan.",
+        "content_utf8": [
+          "optiflow filesystem corpus v1\n"
+        ]
+      },
+      "expected": {
+        "outcome": "success",
+        "paths": 3,
+        "objects": 2,
+        "aliases": 1,
+        "logical_savings": 30,
+        "physical": "unknown"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-paths",
+      "tier": "pr",
+      "target": "filesystem_corpus",
+      "test": "native_overlapping_deep_roots_and_links",
+      "source": "tests/filesystem_corpus.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "32 deep components below Unicode/space/decomposed-name root; raw Unix ff byte and newline filename; overlapping/repeated roots; valid and broken symlinks excluded.",
+        "content_utf8": [
+          "optiflow filesystem corpus v1\n",
+          "other"
+        ]
+      },
+      "expected": {
+        "outcome": "success",
+        "coverage": "complete",
+        "paths": 2,
+        "native_path_roundtrip": true
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-allocation",
+      "tier": "pr",
+      "target": "filesystem_corpus",
+      "test": "sparse_allocation_and_clone_uncertainty",
+      "source": "tests/filesystem_corpus.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Two 1 MiB zero files made with set_len; verify st_blocks accounting without assuming holes. Inject missing allocated-size evidence with unknown extent sharing.",
+        "content_utf8": []
+      },
+      "expected": {
+        "logical_savings": 1048576,
+        "physical": "unknown",
+        "reasons": [
+          "allocation_metadata_unavailable",
+          "extent_sharing_unknown"
+        ]
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-volume",
+      "tier": "pr",
+      "target": "filesystem_corpus",
+      "test": "read_only_volume_and_reconnect",
+      "source": "tests/filesystem_corpus.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "chmod file 0444 and root 0555; scan with external state, rename volume away, scan unavailable root, restore root and rescan. Mode bits do not emulate a kernel read-only mount.",
+        "content_utf8": [
+          "optiflow filesystem corpus v1\n"
+        ]
+      },
+      "expected": {
+        "initial": "success",
+        "disconnected": "invalid_input",
+        "reconnected": "success",
+        "disconnected_artifacts": 0
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-state",
+      "tier": "pr",
+      "target": "filesystem_corpus",
+      "test": "stale_cache_report_and_plan",
+      "source": "tests/filesystem_corpus.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Cold/warm scans of identical files; replace one object at same path and size; old plan stays review-only. Tamper report and plan bytes; refuse corrupted artifact sets.",
+        "content_utf8": [
+          "optiflow filesystem corpus v1\n",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      },
+      "expected": {
+        "cache_hits_after_replace": 1,
+        "groups_after_replace": 0,
+        "corrupt_report": "incomplete",
+        "corrupt_plan": "incomplete",
+        "plan_from_corrupt_source": "stale_state"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-stress",
+      "tier": "scheduled",
+      "target": "filesystem_corpus",
+      "test": "bounded_many_file_inventory",
+      "source": "tests/filesystem_corpus.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "512 independent files across 16 buckets; file i contains u32 little-endian i, i=0..511.",
+        "content_utf8": []
+      },
+      "expected": {
+        "outcome": "success",
+        "paths": 512,
+        "groups": 0
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-permission",
+      "tier": "pr",
+      "target": "lib",
+      "test": "observation::tests::corpus_permission_denied_is_bounded_and_publishes_no_evidence",
+      "source": "src/observation.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Inject PermissionDenied immediately before read-only open on each attempt; no chmod skip, root-independent.",
+        "content_utf8": [
+          "permission fixture"
+        ]
+      },
+      "expected": {
+        "stability": "unreadable",
+        "validity": "unavailable",
+        "attempts": 2,
+        "hash": null
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-disconnect",
+      "tier": "pr",
+      "target": "lib",
+      "test": "observation::tests::corpus_disconnect_after_open_rejects_then_reconnects",
+      "source": "src/observation.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "AfterOpen rename volume away with handle still open; bounded rejection, restore mount path, fresh observation succeeds.",
+        "content_utf8": [
+          "volume fixture"
+        ]
+      },
+      "expected": {
+        "stability": "disappeared_during_scan",
+        "validity": "unavailable",
+        "attempts": 2,
+        "reconnected": "current"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-replacement",
+      "tier": "pr",
+      "target": "lib",
+      "test": "observation::tests::rename_replacement_is_rejected_after_open",
+      "source": "src/observation.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "AfterOpen displace file, write independent same-sized replacement at original path.",
+        "content_utf8": [
+          "original bytes",
+          "replacement!!"
+        ]
+      },
+      "expected": {
+        "stability": "replaced_during_scan",
+        "current": false,
+        "hash": null
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-resize",
+      "tier": "pr",
+      "target": "lib",
+      "test": "observation::tests::truncation_and_growth_are_rejected",
+      "source": "src/observation.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "AfterOpen truncate then grow in separate temp workspaces; reject each changed signature.",
+        "content_utf8": [
+          "original",
+          "x",
+          "substantially longer bytes"
+        ]
+      },
+      "expected": {
+        "stability": "changed_during_hash",
+        "current": false
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-metadata-race",
+      "tier": "pr",
+      "target": "lib",
+      "test": "observation::tests::metadata_race_is_rejected",
+      "source": "src/observation.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "AfterEvidence change explicit 0644 permissions to 0600; reject metadata change.",
+        "content_utf8": [
+          "content"
+        ]
+      },
+      "expected": {
+        "current": false
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-boundary",
+      "tier": "pr",
+      "target": "lib",
+      "test": "discovery::tests::mount_boundary_requires_an_explicit_cross_filesystem_policy",
+      "source": "src/discovery.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Pure device IDs 1 and 2 exercise the walker boundary policy; no privileged mount.",
+        "content_utf8": []
+      },
+      "expected": {
+        "different_device_default": false,
+        "different_device_opt_in": true,
+        "same_device": true,
+        "unknown_device": true
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-cache-signature",
+      "tier": "pr",
+      "target": "lib",
+      "test": "state::tests::cache_reuse_requires_the_complete_handle_signature",
+      "source": "src/state.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Change cached provider/ctime signature; null pre-migration identity columns. Reject mismatched or legacy cache.",
+        "content_utf8": [
+          "stable cache bytes"
+        ]
+      },
+      "expected": {
+        "matching": "hit",
+        "changed_signature": "miss",
+        "legacy_identity": "miss"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-capacity",
+      "tier": "pr",
+      "target": "lib",
+      "test": "artifact_set::tests::disk_full_during_staging_exposes_no_final_set",
+      "source": "src/artifact_set.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Inject ENOSPC after 4 staging bytes; incomplete set, idempotent cleanup, capacity restored, same publication commits.",
+        "content_utf8": []
+      },
+      "expected": {
+        "before_recovery": "incomplete",
+        "cleanup_counts": [
+          1,
+          0
+        ],
+        "after_recovery": "committed"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-artifact-state",
+      "tier": "pr",
+      "target": "lib",
+      "test": "artifact_set::tests::readers_distinguish_incomplete_and_incompatible_sets",
+      "source": "src/artifact_set.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Remove report from a committed synthetic set; replace marker with unsupported v99.",
+        "content_utf8": []
+      },
+      "expected": {
+        "missing_member": "incomplete",
+        "unsupported_marker": "incompatible"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-run-recovery",
+      "tier": "pr",
+      "target": "cli_outcomes",
+      "test": "committed_scan_set_recovers_a_running_database_row",
+      "source": "tests/cli_outcomes.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Scan one file; remove promoted database observations/groups and mark run running; reopen report to recover committed set.",
+        "content_utf8": [
+          "unique"
+        ]
+      },
+      "expected": {
+        "recovered": "success",
+        "database_status": "completed"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    },
+    {
+      "id": "fs88-missing-run",
+      "tier": "pr",
+      "target": "cli_outcomes",
+      "test": "malformed_and_missing_run_references_have_distinct_outcomes",
+      "source": "tests/cli_outcomes.rs",
+      "recipe": {
+        "seed": 0,
+        "steps": "Malformed run ID versus well-formed absent UUID 018f47a2-4f17-7b00-8000-000000000000.",
+        "content_utf8": []
+      },
+      "expected": {
+        "malformed": "invalid_command_input",
+        "missing": "stored_run_not_found",
+        "missing_class": "stale_state"
+      },
+      "license": "MIT",
+      "cleanup": "tempfile workspace removed; harness faults are confined to synthetic paths"
+    }
+  ]
+}

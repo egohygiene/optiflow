@@ -7,6 +7,16 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      corpus_tier:
+        description: Filesystem corpus budget tier
+        type: choice
+        default: pr
+        options:
+          - pr
+          - scheduled
+  schedule:
+    - cron: "23 5 * * 1"
 
 permissions:
   contents: read
@@ -17,6 +27,7 @@ concurrency:
 
 jobs:
   properties-and-faults:
+    if: github.event_name != 'schedule' && inputs.corpus_tier != 'scheduled'
     name: Properties and faults (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -39,7 +50,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run bounded property and fault suites
-        run: ./scripts/run-adversarial-tests.sh properties faults
+        run: |
+          python3 -m unittest tests/test_filesystem_corpus.py
+          ./scripts/run-adversarial-tests.sh properties faults corpus
 
       - name: Upload adversarial evidence
         if: always()
@@ -51,6 +64,7 @@ jobs:
           retention-days: 30
 
   fuzz:
+    if: github.event_name != 'schedule' && inputs.corpus_tier != 'scheduled'
     name: Bounded parser and reader fuzzing
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -85,3 +99,23 @@ jobs:
             fuzz/artifacts/
           if-no-files-found: warn
           retention-days: 30
+
+  filesystem-stress:
+    name: Scheduled filesystem corpus (Linux)
+    if: github.event_name == 'schedule' || inputs.corpus_tier == 'scheduled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run budgeted scheduled corpus
+        run: python3 scripts/filesystem-corpus.py --check --tier scheduled
+      - name: Upload bounded corpus evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: filesystem-stress-Linux
+          path: target/adversarial-evidence/filesystem/
+          if-no-files-found: error
+          retention-days: 14
