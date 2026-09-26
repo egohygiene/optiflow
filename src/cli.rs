@@ -235,7 +235,7 @@ pub struct ApplyArgs {
     pub plan: PathBuf,
     #[arg(long, value_name = "FILE")]
     pub approval: Option<PathBuf>,
-    /// Mandatory: live apply is not implemented.
+    /// Preview only. Omit to execute the approved bounded quarantine transaction.
     #[arg(long)]
     pub dry_run: bool,
 }

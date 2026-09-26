@@ -6,6 +6,7 @@ use rusqlite::{OptionalExtension, params};
 
 use super::filesystem as fs;
 use super::model::*;
+use super::mutation::{MutationRun, MutationStatus};
 use super::{Result, failure};
 use crate::contracts::{self, Contract};
 use crate::outcome::DiagnosticCode as Code;
@@ -72,7 +73,7 @@ impl Journal {
                     |r| r.get(0),
                 )
                 .map_err(state_error)?;
-            if newest > 6 {
+            if newest > 7 {
                 return Err(failure(
                     Code::StoredStateIncompatible,
                     "state was migrated by a newer execution implementation",
@@ -101,9 +102,14 @@ impl Journal {
         })?;
         fs::check_directory(&plan.body.state)?;
         let store = StateStore::open_execution(&path).map_err(state_error)?;
+        store
+            .connection
+            .pragma_update(None, "synchronous", "FULL")
+            .map_err(state_error)?;
         directory.sync_all().map_err(state_error)?;
         let mut journal = Self { store, _lock: lock };
         journal.recover()?;
+        journal.recover_mutations()?;
         Ok(journal)
     }
     #[cfg(not(unix))]
@@ -145,6 +151,112 @@ impl Journal {
             run.recovery.status = "interrupted_dry_run".to_owned();
             run.completed_at = Some(Utc::now().to_rfc3339());
             self.save(&run)?;
+        }
+        Ok(())
+    }
+
+    fn recover_mutations(&mut self) -> Result<()> {
+        let ids: Vec<String> = self
+            .store
+            .connection
+            .prepare("SELECT run_id FROM execution_mutation_runs WHERE status = 'running'")
+            .map_err(state_error)?
+            .query_map([], |row| row.get(0))
+            .map_err(state_error)?
+            .collect::<std::result::Result<_, _>>()
+            .map_err(state_error)?;
+        for id in ids {
+            let mut run = read_mutation(&self.store.connection, &id)?.ok_or_else(|| {
+                failure(
+                    Code::StoredStateIncompatible,
+                    "mutation evidence disappeared",
+                )
+            })?;
+            run.status = MutationStatus::Interrupted;
+            run.completed_at = Some(Utc::now().to_rfc3339());
+            run.diagnostics.push(*failure(Code::OperationInterrupted,
+                "prior mutation stopped without terminal evidence; inspect the recorded source, temporary and destination paths before manual recovery"));
+            self.save_mutation(&run)?;
+        }
+        Ok(())
+    }
+
+    pub fn begin_mutation(
+        &mut self,
+        plan: &ExecutionPlan,
+        approval: &Approval,
+        run: &MutationRun,
+    ) -> Result<()> {
+        let transaction = self.store.connection.transaction().map_err(state_error)?;
+        for (table, key_name, key, json) in [
+            (
+                "execution_plans",
+                "fingerprint",
+                &plan.fingerprint,
+                encode(plan)?,
+            ),
+            (
+                "execution_approvals",
+                "authorization_id",
+                &approval.authorization_id,
+                encode(approval)?,
+            ),
+        ] {
+            let existing: Option<String> = transaction
+                .query_row(
+                    &format!("SELECT document_json FROM {table} WHERE {key_name} = ?1"),
+                    [key],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(state_error)?;
+            if let Some(existing) = existing {
+                if existing != json {
+                    return Err(failure(
+                        Code::ExecutionPlanInvalid,
+                        "immutable execution evidence identity collision",
+                    ));
+                }
+            } else if table == "execution_plans" {
+                transaction
+                    .execute(
+                        "INSERT INTO execution_plans VALUES (?1, ?2)",
+                        params![key, json],
+                    )
+                    .map_err(state_error)?;
+            } else {
+                transaction
+                    .execute(
+                        "INSERT INTO execution_approvals VALUES (?1, ?2, ?3)",
+                        params![key, plan.fingerprint, json],
+                    )
+                    .map_err(state_error)?;
+            }
+        }
+        transaction
+            .execute(
+                "INSERT INTO execution_mutation_runs VALUES (?1, ?2, ?3, 'running', ?4)",
+                params![
+                    run.run_id,
+                    run.plan_fingerprint,
+                    run.authorization_id,
+                    encode_mutation(run)?
+                ],
+            )
+            .map_err(state_error)?;
+        transaction.commit().map_err(state_error)
+    }
+
+    pub fn save_mutation(&mut self, run: &MutationRun) -> Result<()> {
+        let status = serde_json::to_value(run.status).map_err(state_error)?;
+        let changed = self.store.connection.execute(
+            "UPDATE execution_mutation_runs SET status = ?2, document_json = ?3 WHERE run_id = ?1 AND status = 'running'",
+            params![run.run_id, status.as_str(), encode_mutation(run)?]).map_err(state_error)?;
+        if changed != 1 {
+            return Err(failure(
+                Code::ExecutionSourceStale,
+                "terminal mutation evidence is immutable",
+            ));
         }
         Ok(())
     }
@@ -226,6 +338,54 @@ impl Journal {
         }
         Ok(())
     }
+}
+
+fn encode_mutation(run: &MutationRun) -> Result<String> {
+    contracts::validate(Contract::ExecutionMutation, run).map_err(state_error)?;
+    serde_json::to_string(run).map_err(state_error)
+}
+
+pub fn load_mutation(state: &Path, run_id: &str) -> Result<Option<MutationRun>> {
+    let connection = rusqlite::Connection::open_with_flags(
+        state.join("state.sqlite3"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .map_err(state_error)?;
+    read_mutation(&connection, run_id)
+}
+
+fn read_mutation(connection: &rusqlite::Connection, run_id: &str) -> Result<Option<MutationRun>> {
+    let record: Option<(String, String, String, String)> = connection.query_row(
+        "SELECT plan_fingerprint, authorization_id, status, document_json FROM execution_mutation_runs WHERE run_id = ?1",
+        [run_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .optional().map_err(state_error)?;
+    record
+        .map(|(plan, approval, status, document)| {
+            let raw: serde_json::Value = serde_json::from_str(&document).map_err(state_error)?;
+            contracts::validate(Contract::ExecutionMutation, &raw).map_err(state_error)?;
+            let run: MutationRun = serde_json::from_str(&document).map_err(state_error)?;
+            if run.run_id != run_id
+                || run.plan_fingerprint != plan
+                || run.authorization_id != approval
+                || run.committed_actions
+                    != run
+                        .attempts
+                        .iter()
+                        .filter(|attempt| attempt.committed)
+                        .count() as u64
+                || serde_json::to_value(run.status)
+                    .map_err(state_error)?
+                    .as_str()
+                    != Some(status.as_str())
+            {
+                return Err(failure(
+                    Code::StoredStateIncompatible,
+                    "mutation row and evidence disagree",
+                ));
+            }
+            Ok(run)
+        })
+        .transpose()
 }
 
 pub fn load_execution(state: &Path, run_id: &str) -> Result<Option<ExecutionRun>> {

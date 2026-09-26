@@ -7,6 +7,10 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Linux-only bounded, sequential exact-duplicate quarantine from explicit
+  approved plans, with durable v2 mutation evidence, interruption classification,
+  same-filesystem no-replace moves and verified property-preserving cross-filesystem
+  copies. No permanent deletion or automatic restore.
 - Explicit path-selected exact-duplicate execution plans and separate,
   fingerprint-bound operator approvals. Review-plan keep defaults never grant
   authority.

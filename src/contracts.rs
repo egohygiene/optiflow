@@ -6,6 +6,7 @@ use serde_json::Value;
 #[derive(Debug, Clone, Copy)]
 pub enum Contract {
     Execution,
+    ExecutionMutation,
     ArtifactSet,
     Run,
     Report,
@@ -25,7 +26,7 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
     let instance = serde_json::to_value(value).context("failed to serialize contract value")?;
     let schema_document = schema(contract)?;
     let validator = match contract {
-        Contract::Execution => jsonschema::options()
+        Contract::Execution | Contract::ExecutionMutation => jsonschema::options()
             .should_validate_formats(true)
             .build(&schema_document)
             .context("failed to compile execution schema")?,
@@ -63,6 +64,7 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
 pub fn schema(contract: Contract) -> Result<Value> {
     let source = match contract {
         Contract::Execution => include_str!("../schemas/execution-v1.schema.json"),
+        Contract::ExecutionMutation => include_str!("../schemas/execution-mutation-v2.schema.json"),
         Contract::ArtifactSet => include_str!("../schemas/artifact-set-v1.schema.json"),
         Contract::Run => include_str!("../schemas/run.schema.json"),
         Contract::Report => include_str!("../schemas/report.schema.json"),

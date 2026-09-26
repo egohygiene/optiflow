@@ -1,8 +1,9 @@
 # Approved exact-duplicate dry runs
 
-This development feature implements #90. It is **not included in the immutable
+This development preview implements #90. It is **not included in the immutable
 v0.1.1 release**. Build the current source to use it. It never moves, deletes,
-quarantines, replaces, or restores a source file. Live `apply` remains disabled.
+quarantines, replaces, or restores a source file. Live quarantine is separately
+specified in [the #91 protocol](execution-quarantine.md).
 
 ## Select, review, approve, validate
 
@@ -48,7 +49,9 @@ optiflow --no-config --state-directory /local/optiflow-state --json \
 Both documents are create-only: existing destinations are refused. To change a
 selection, policy, scope, location, or limit, create and review a new plan and
 approval. Omitting `--approval` fails with `execution_approval_required`.
-Omitting `--dry-run` fails with `execution_unsupported` before starting a run.
+Omitting `--dry-run` selects the separately versioned, Linux-only
+[#91 quarantine transaction](execution-quarantine.md). Review the approval and
+plan before taking that consequential action.
 
 Roots and subtrees can be repeated; overlapping roots or subtrees are rejected.
 If no subtree is given, each declared root is the allowed subtree. The default
@@ -115,8 +118,8 @@ Approval is a separate document naming the complete plan fingerprint and an
 explicit `quarantine_exact_duplicates` authority scope. Its own deterministic
 fingerprint binds that scope, operator label, timestamp and plan. It is a local
 audit record, **not a signature or authentication service**. Protect the state
-and evidence directories from concurrent/untrusted writers. The runtime still
-has no source-mutation capability, even with an approved plan.
+and evidence directories from concurrent/untrusted writers. This preview
+command has no source-mutation capability, even with an approved plan.
 
 ## Durable state and recovery
 
@@ -142,7 +145,7 @@ initialization returns a typed diagnostic without fabricating a durable run.
 
 This is point-in-time evidence, not a reservation or a future commit token.
 Reads may update access times. No source or quarantine content is written.
-The tool writes only its external evidence/state. It cannot guarantee safety
+The dry run writes only its external evidence/state. It cannot guarantee safety
 against concurrent hostile changes to the operator-owned state directory.
 
 The dry run cannot test rename atomicity, synchronization after a future write,
@@ -152,7 +155,6 @@ atomic. No mutation recovery guarantee is claimed: every commit record says
 `not_started`, zero actions, and `source_mutated: false`; the only current
 recovery guarantee is `no_source_mutation`.
 
-#91 must revalidate immediately before each consequential step, establish its
-metadata-preservation and recovery guarantees, and refuse unsupported hosts.
-These v1 commit/recovery contracts intentionally cannot encode a successful
-mutation. Any later mutation authority needs an explicit contract evolution.
+The v1 commit/recovery contracts intentionally cannot encode a successful
+mutation. The separate #91 v2 journal and recovery boundaries are documented
+in [bounded quarantine](execution-quarantine.md); v1 records remain immutable.

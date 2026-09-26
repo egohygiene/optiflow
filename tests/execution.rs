@@ -426,27 +426,16 @@ fn cli(f: &Fixture, tail: &[&str]) -> std::process::Output {
     .unwrap()
 }
 #[test]
-fn cli_requires_approval_and_dry_run_and_matches_human_and_json_evidence() {
+fn cli_requires_approval_and_matches_human_and_json_dry_run_evidence() {
     let f = Fixture::new();
     let p = f.documents();
     let plan = f.args.output.to_str().unwrap();
     let approval = f.base.join("approval.json");
     let approval = approval.to_str().unwrap();
-    for (tail, code) in [
-        (
-            vec!["--json", "apply", "--plan", plan, "--dry-run"],
-            "execution_approval_required",
-        ),
-        (
-            vec!["--json", "apply", "--plan", plan, "--approval", approval],
-            "execution_unsupported",
-        ),
-    ] {
-        let o = cli(&f, &tail);
-        assert!(!o.status.success());
-        let v: Value = serde_json::from_slice(&o.stdout).unwrap();
-        assert_eq!(v["diagnostics"][0]["code"], code);
-    }
+    let o = cli(&f, &["--json", "apply", "--plan", plan, "--dry-run"]);
+    assert!(!o.status.success());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["diagnostics"][0]["code"], "execution_approval_required");
     let o = cli(
         &f,
         &[
@@ -595,7 +584,7 @@ fn newer_state_schema_is_not_modified_or_opened_for_execution() {
     let _store = optiflow::state::StateStore::open(&f.state).unwrap();
     let connection = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
     connection
-        .execute("INSERT INTO schema_migrations VALUES (7,'future')", [])
+        .execute("INSERT INTO schema_migrations VALUES (8,'future')", [])
         .unwrap();
     drop(connection);
     let before = fs::read(f.state.join("state.sqlite3")).unwrap();
@@ -664,5 +653,214 @@ fn empty_duplicates_are_valid_without_inventing_savings() {
     let run = f.run(&p).unwrap();
     assert_eq!(run.status, Status::Validated);
     assert_eq!(run.savings.selected_logical_bytes, 0);
+    assert_eq!(run.savings.physical_reclaimed_bytes, None);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn approved_quarantine_moves_synthetic_duplicates_one_at_a_time_with_durable_v2_evidence() {
+    let mut f = Fixture::new();
+    let second = f.args.root[0].join("second.bin");
+    fs::write(&second, fs::read(&f.args.keep).unwrap()).unwrap();
+    f.args.candidate.push(second);
+    let p = f.plan();
+    let source_states: Vec<_> = p
+        .body
+        .actions
+        .iter()
+        .map(|a| {
+            let path = a.candidate.path.to_path_buf();
+            (path.clone(), source(&path))
+        })
+        .collect();
+    let run = execution::apply_quarantine(
+        &p,
+        &f.approval(&p),
+        &f.state,
+        &f.policy,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(run.status, execution::MutationStatus::Completed);
+    assert_eq!(run.committed_actions, 2);
+    assert!(run.attempts.iter().all(|a| a.committed));
+    for ((original, before), attempt) in source_states.iter().zip(&run.attempts) {
+        assert!(!original.exists());
+        let moved = attempt.destination.to_path_buf();
+        let after = source(&moved);
+        assert_eq!(before.0, after.0);
+        assert_eq!((before.1, before.2, before.5), (after.1, after.2, after.5));
+    }
+    assert!(f.args.keep.exists());
+    assert_eq!(run.savings.immediate_logical_reclaimed_bytes, 0);
+    assert_eq!(run.savings.physical_reclaimed_bytes, None);
+    contracts::validate(Contract::ExecutionMutation, &run).unwrap();
+    let mut future = serde_json::to_value(&run).unwrap();
+    future["schema"] = json!("optiflow.execution-mutation.v3");
+    assert!(contracts::validate(Contract::ExecutionMutation, &future).is_err());
+    let mut invented = serde_json::to_value(&run).unwrap();
+    invented["attempts"][0]["implicit_cleanup"] = json!(true);
+    assert!(contracts::validate(Contract::ExecutionMutation, &invented).is_err());
+    let mut false_commit = serde_json::to_value(&run).unwrap();
+    false_commit["attempts"][0]["phase"] = json!("rename_pending");
+    assert!(contracts::validate(Contract::ExecutionMutation, &false_commit).is_err());
+    assert_eq!(
+        execution::load_mutation(&f.state, &run.run_id)
+            .unwrap()
+            .unwrap()
+            .committed_actions,
+        2
+    );
+    // The same approval cannot silently reuse an occupied quarantine namespace.
+    assert_eq!(
+        execution::apply_quarantine(
+            &p,
+            &f.approval(&p),
+            &f.state,
+            &f.policy,
+            &SignalState::default()
+        )
+        .unwrap_err()
+        .code,
+        Code::ExecutionDestinationOccupied
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn live_apply_refuses_stale_missing_links_bounds_and_wrong_authority() {
+    for case in 0..5 {
+        let f = Fixture::new();
+        let mut p = f.plan();
+        let mut approval = f.approval(&p);
+        let candidate = &f.args.candidate[0];
+        match case {
+            0 => fs::write(candidate, b"same-length-but-different-content").unwrap(),
+            1 => {
+                fs::remove_file(candidate).unwrap();
+                symlink(&f.args.keep, candidate).unwrap();
+            }
+            2 => {
+                fs::hard_link(candidate, f.base.join("alias")).unwrap();
+            }
+            3 => {
+                p.body.bounds.max_actions = 0;
+                seal(&mut p);
+            }
+            _ => {
+                approval.body.plan_fingerprint = "0".repeat(64);
+            }
+        }
+        let before = fs::symlink_metadata(candidate).unwrap();
+        let result = execution::apply_quarantine(
+            &p,
+            &approval,
+            &f.state,
+            &f.policy,
+            &SignalState::default(),
+        );
+        if let Ok(run) = result {
+            assert_ne!(run.status, execution::MutationStatus::Completed);
+        }
+        assert_eq!(fs::symlink_metadata(candidate).unwrap().ino(), before.ino());
+        assert!(
+            !f.args
+                .quarantine
+                .join(&p.fingerprint)
+                .join("action-000001")
+                .exists()
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn live_cli_requires_approval_and_reports_same_versioned_result() {
+    let f = Fixture::new();
+    let p = f.documents();
+    let no_approval = cli(
+        &f,
+        &["--json", "apply", "--plan", f.args.output.to_str().unwrap()],
+    );
+    assert!(!no_approval.status.success());
+    let v: Value = serde_json::from_slice(&no_approval.stdout).unwrap();
+    assert_eq!(v["diagnostics"][0]["code"], "execution_approval_required");
+    let output = cli(
+        &f,
+        &[
+            "--json",
+            "apply",
+            "--plan",
+            f.args.output.to_str().unwrap(),
+            "--approval",
+            f.base.join("approval.json").to_str().unwrap(),
+        ],
+    );
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let v: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(v["result"]["plan_fingerprint"], p.fingerprint);
+    assert_eq!(v["result"]["status"], "completed");
+    contracts::validate(Contract::ExecutionMutation, &v["result"]).unwrap();
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn cross_filesystem_copy_commits_destination_before_source_removal_when_available() {
+    let mut f = Fixture::new();
+    let alternate = Path::new("/dev/shm");
+    if !alternate.is_dir()
+        || fs::metadata(alternate).unwrap().dev() == fs::metadata(&f.base).unwrap().dev()
+    {
+        return;
+    }
+    let quarantine = tempfile::tempdir_in(alternate).unwrap();
+    f.args.quarantine = fs::canonicalize(quarantine.path()).unwrap();
+    fs::set_permissions(&f.args.candidate[0], fs::Permissions::from_mode(0o640)).unwrap();
+    rustix::fs::setxattr(
+        &f.args.candidate[0],
+        "user.optiflow_test",
+        b"preserved",
+        rustix::fs::XattrFlags::CREATE,
+    )
+    .unwrap();
+    let p = f.plan();
+    assert_eq!(p.body.actions[0].topology, Topology::CrossFilesystem);
+    let original = source(&f.args.candidate[0]);
+    let run = execution::apply_quarantine(
+        &p,
+        &f.approval(&p),
+        &f.state,
+        &f.policy,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        run.status,
+        execution::MutationStatus::Completed,
+        "{:?}",
+        run.diagnostics
+    );
+    assert!(!f.args.candidate[0].exists());
+    let copied = source(&run.attempts[0].destination.to_path_buf());
+    assert_eq!(copied.0, original.0);
+    assert_eq!(copied.5, original.5);
+    assert_eq!(
+        fs::metadata(run.attempts[0].destination.to_path_buf())
+            .unwrap()
+            .mtime(),
+        fs::metadata(&f.args.keep).unwrap().mtime()
+    );
+    let mut attribute = vec![0u8; 64];
+    let length = rustix::fs::getxattr(
+        run.attempts[0].destination.to_path_buf(),
+        "user.optiflow_test",
+        &mut attribute,
+    )
+    .unwrap();
+    assert_eq!(&attribute[..length], b"preserved");
     assert_eq!(run.savings.physical_reclaimed_bytes, None);
 }
