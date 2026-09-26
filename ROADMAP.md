@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.6
+version: 0.1.7
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-25
+updated: 2026-09-26
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -52,9 +52,10 @@ supersedes: []
                     #93 + #94 → #95
 ```
 
-1. [#88](https://github.com/egohygiene/optiflow/issues/88) is the exact next
-   product checkpoint: deterministic filesystem, path, state, and
-   removable-volume corpus foundations with no mutation authority.
+1. [#88](https://github.com/egohygiene/optiflow/issues/88) supplies the
+   [filesystem corpus](docs/filesystem-corpus.md): 17 deterministic filesystem,
+   path, state, and removable-volume recipes, with bounded PR/scheduled tiers
+   and no mutation authority. After its PR is reviewed and merged, #89 is next.
 2. [#89](https://github.com/egohygiene/optiflow/issues/89) qualifies and
    publishes the immutable read-only external-drive `v0.1.1` pilot. This is
    sufficient for the first read-only
@@ -96,6 +97,11 @@ updated: 2026-09-25
 **Current gate:** Complete #88's filesystem and removable-volume corpus, then
 qualify the current read-only product through #89 before granting any mutation
 authority.
+
+**Validation handoff:** Review focused local corpus evidence and the PR without
+waiting on hosted CI. The operator will handle the broader CI/lint sweep;
+hosted workflow completion is not a blocking agent polling loop. #65 remains
+open for the later media, provider, perceptual, and candidate families.
 
 **North-star outcome:** A trustworthy optimization protocol that begins read-only, binds observations to native handles, and advances to reviewed transactions.
 

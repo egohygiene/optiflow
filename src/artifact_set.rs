@@ -856,7 +856,25 @@ mod tests {
             .is_err()
         );
         assert!(!final_directory.exists());
+        assert_eq!(
+            inspect_scan_set(&final_directory).status,
+            ArtifactSetStatus::Incomplete
+        );
         assert_eq!(recover_scan_staging(directory.path()).unwrap(), 1);
+        assert_eq!(recover_scan_staging(directory.path()).unwrap(), 0);
+        // Simulate capacity returning: the same publication succeeds after cleanup.
+        commit_scan_set(
+            &final_directory,
+            RUN_ID,
+            SOURCE_SET_ID,
+            scan_payloads(SOURCE_SET_ID),
+        )
+        .unwrap();
+        assert_eq!(
+            inspect_scan_set(&final_directory).status,
+            ArtifactSetStatus::Committed
+        );
+        directory.close().unwrap();
     }
 
     #[test]

@@ -1,0 +1,140 @@
+{
+  "schema": "optiflow.filesystem-corpus-local-validation.v1",
+  "date": "2026-09-26",
+  "base_commit": "cc9b4aff492e340220dabcba1fc5242a74e035c6",
+  "index_sha256": "54927a7a590ddc4ad0a935e0a8377b6b9ef3a583941c822c985cb464f3e07d51",
+  "authority": "synthetic read-only inventory and review plans; test harness faults only",
+  "corpus": [
+    {
+      "tier": "pr",
+      "status": "passed",
+      "executions": 32,
+      "per_fixture_executions": {
+        "fs88-identities": 2,
+        "fs88-paths": 2,
+        "fs88-allocation": 2,
+        "fs88-volume": 2,
+        "fs88-state": 2,
+        "fs88-permission": 2,
+        "fs88-disconnect": 2,
+        "fs88-replacement": 2,
+        "fs88-resize": 2,
+        "fs88-metadata-race": 2,
+        "fs88-boundary": 2,
+        "fs88-cache-signature": 2,
+        "fs88-capacity": 2,
+        "fs88-artifact-state": 2,
+        "fs88-run-recovery": 2,
+        "fs88-missing-run": 2
+      },
+      "toolchain": "rustc 1.85.0 (4d91de4e4 2025-02-17)",
+      "platform": "linux",
+      "elapsed_seconds": 2.023,
+      "budgets": {
+        "case_seconds": 20,
+        "evidence_bytes": 8388608,
+        "file_bytes": 8388608,
+        "memory_bytes": 2147483648,
+        "repetitions": 2,
+        "wall_seconds": 120,
+        "workspace_bytes": 67108864
+      },
+      "evidence_bytes": 26510,
+      "peak_workspace_bytes_sampled": 2174939,
+      "receipt_sha256": "b0029d7eb741b5af2c374f6359d9d6bcde2581e66dd8f5f9bfb8851998e15072"
+    },
+    {
+      "tier": "scheduled",
+      "status": "passed",
+      "executions": 170,
+      "per_fixture_executions": {
+        "fs88-identities": 10,
+        "fs88-paths": 10,
+        "fs88-allocation": 10,
+        "fs88-volume": 10,
+        "fs88-state": 10,
+        "fs88-stress": 10,
+        "fs88-permission": 10,
+        "fs88-disconnect": 10,
+        "fs88-replacement": 10,
+        "fs88-resize": 10,
+        "fs88-metadata-race": 10,
+        "fs88-boundary": 10,
+        "fs88-cache-signature": 10,
+        "fs88-capacity": 10,
+        "fs88-artifact-state": 10,
+        "fs88-run-recovery": 10,
+        "fs88-missing-run": 10
+      },
+      "toolchain": "rustc 1.85.0 (4d91de4e4 2025-02-17)",
+      "platform": "linux",
+      "elapsed_seconds": 15.57,
+      "budgets": {
+        "case_seconds": 30,
+        "evidence_bytes": 16777216,
+        "file_bytes": 16777216,
+        "memory_bytes": 2147483648,
+        "repetitions": 10,
+        "wall_seconds": 600,
+        "workspace_bytes": 134217728
+      },
+      "evidence_bytes": 137306,
+      "peak_workspace_bytes_sampled": 2322880,
+      "receipt_sha256": "5fc598a859b3a87dbc92a1c9af57bd9b996d16cb2427f5b0f3d30fdb13fdb16b"
+    }
+  ],
+  "checks": [
+    {
+      "command": "RUSTUP_TOOLCHAIN=1.85.0 python3 scripts/filesystem-corpus.py --check --tier pr",
+      "status": "passed"
+    },
+    {
+      "command": "RUSTUP_TOOLCHAIN=1.85.0 python3 scripts/filesystem-corpus.py --check --tier scheduled",
+      "status": "passed"
+    },
+    {
+      "command": "cargo +1.85.0 test --locked --lib --test filesystem_corpus --test cli_outcomes --test properties --jobs 2",
+      "status": "passed",
+      "counts": {
+        "library": 89,
+        "cli_outcomes": 17,
+        "filesystem_pr": 5,
+        "properties": 5,
+        "scheduled_explicitly_ignored": 1
+      }
+    },
+    {
+      "command": "python3 -m unittest tests/test_filesystem_corpus.py",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "command": "cargo clippy --locked --lib --test filesystem_corpus --test cli_outcomes --test properties --jobs 2 -- -D warnings",
+      "status": "passed",
+      "toolchain": "stable 1.98.1"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/filesystem-corpus.py --check",
+      "status": "passed"
+    },
+    {
+      "command": "bash -n scripts/run-adversarial-tests.sh; git diff --check",
+      "status": "passed"
+    },
+    {
+      "check": "Workflow YAML, documentation navigation TOML, corpus documentation relative links",
+      "status": "passed"
+    }
+  ],
+  "limitations": [
+    "Hosted CI was not waited on or polled; macOS was not executed locally.",
+    "Stable 1.98.1 runtime compilation encountered a local archive-generation error: failed to map object file: memory map must have a non-zero length. Runtime proofs use Rust 1.85.0; stable Clippy succeeds.",
+    "Synthetic disconnect, capacity, permission and shared-extent models do not prove physical USB behavior, kernel read-only mounts, APFS/reflink detection or actual reclaimed bytes.",
+    "Linux memory budget is a hard per-process address-space limit. macOS uses a sampled process-group RSS watchdog; sampled aggregate limits may transiently overshoot.",
+    "Umbrella #65 remains open for remaining media/provider/perceptual/candidate families."
+  ]
+}

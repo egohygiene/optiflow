@@ -312,6 +312,9 @@ fn committed_scan_set_recovers_a_running_database_row() {
         )
         .expect("recovered status");
     assert_eq!(recovered, "completed");
+    assert_eq!(fs::read(input.join("unique.bin")).unwrap(), b"unique");
+    drop(connection);
+    workspace.close().unwrap();
 }
 
 #[test]
