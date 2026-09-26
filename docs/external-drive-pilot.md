@@ -5,10 +5,12 @@ description: Run bounded read-only trials with local state, private reports, and
 
 # External-drive read-only pilot
 
-`v0.1.1` is a release candidate until [#89](https://github.com/egohygiene/optiflow/issues/89)
-records signed publication and independent verification. The latest published
-binary remains [`v0.1.0`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0).
-Both have read authority only: scans, reports, and review plans do not delete,
+[`v0.1.1`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.1) was
+published and independently verified on 2026-09-26 for
+[#89](https://github.com/egohygiene/optiflow/issues/89). Its signed receipts
+record all 13 pilot scenarios passing on each of the three native targets.
+See the [release verification record](validation/optiflow-v0.1.1-release.json).
+It retains read authority only: scans, reports, and review plans do not delete,
 replace, move, quarantine, optimize, or reclaim space. Later source features
 are not retroactively available in the old binary.
 
@@ -183,8 +185,10 @@ digest, profile, outcomes, and measurements. Bundle preparation and independent
 verification require all three matching receipts. The signed subject manifest
 covers `pilot-qualification.json` as well as the archives, SBOM, and provenance.
 The [local Linux validation record](validation/optiflow-89-local.json) retains
-the candidate receipt and explicitly lists pending macOS/publication checks.
+the historical candidate receipt and checks that were pending at that time.
+The [published-release record](validation/optiflow-v0.1.1-release.json) records
+completed native qualification, signed publication, independent bundle
+verification, and an independent Linux clean installation.
 Unit-test receipts are explicitly synthetic; they cannot stand in for native
-workflow execution. #89 stays open until native release qualification, signed
-publication, and independent download verification complete. #90 follows with
+workflow execution. #90 follows the read-only release with
 non-mutating execution and approval contracts.

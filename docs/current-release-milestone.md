@@ -6,7 +6,18 @@ safe external-drive space reclamation.
 remains the long-horizon product roadmap; live issue acceptance criteria and
 merged evidence remain authoritative.
 
-## Exact reconciliation pins
+## Verified read-only release
+
+[`v0.1.1`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.1) was
+published on 2026-09-26 from `b82599a2231e997d42fd9f26f4b59587f4ae14cf`.
+[Release run 36264382086](https://github.com/egohygiene/optiflow/actions/runs/36264382086)
+passed all eight jobs, including native qualification on Linux, Intel macOS,
+and Apple silicon macOS. The downloaded signature, checksums, source/SBOM
+bindings, and all 39 pilot scenario results passed independent verification;
+the published Linux executable also passed a fresh scan/plan installation check.
+See the [release record](validation/optiflow-v0.1.1-release.json).
+
+## Historical reconciliation pins
 
 The starting evidence snapshot was captured on 2026-09-25 before this change.
 
@@ -37,11 +48,11 @@ all succeeded.
 | State | What it means now |
 | --- | --- |
 | Released in `v0.1.0` | Read-only inventory, exact-duplicate proof, conservative reclaimable-byte evidence, and immutable review planning from the released source pin. |
-| Merged after `v0.1.0` | Extension, media-profile, bounded PNG-validation, documentation, and performance evidence on `main`. These additions are not retroactively present in the `v0.1.0` binary. |
+| Released in `v0.1.1` | Extension, media-profile, bounded PNG library-validation, documentation, performance, filesystem-corpus, and native pilot work from the immutable released source. Each feature retains its documented CLI/library boundary. |
 | Planned | The issue-owned operator chain below. A plan or closed design issue does not make behavior available. |
 | Unsupported | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
 
-Version `0.1.0` and current `main` are read-only with respect to source media.
+Version `0.1.1` and current `main` are read-only with respect to source media.
 A review plan is evidence for an operator; it is never write authorization.
 
 ## Completed evidence chain
@@ -120,10 +131,11 @@ lossless-PNG replacement release.
 [#88](https://github.com/egohygiene/optiflow/issues/88) is complete through
 [PR #101](https://github.com/egohygiene/optiflow/pull/101), merged at
 `ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea`. [#89](https://github.com/egohygiene/optiflow/issues/89)
-is active: the [pilot guide](external-drive-pilot.md) and mandatory native
-qualification prepare `v0.1.1`. The issue remains open until all three targets
-qualify and the signed release is published and independently verified.
-Then #90 adds execution/approval contracts and a non-mutating dry run.
+now has the [pilot guide](external-drive-pilot.md), completed native
+qualification, and the independently verified signed `v0.1.1` release above.
+[#90](https://github.com/egohygiene/optiflow/issues/90) is next: execution/approval
+contracts and a non-mutating `apply --dry-run` path. It grants no source-change
+authority; that remains owned by later transaction checkpoints.
 
 The Flow-suite coordinator is
 [`flow#11`](https://github.com/egohygiene/flow/issues/11).

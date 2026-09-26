@@ -1,0 +1,553 @@
+{
+  "download_verification": {
+    "certificate_identity": "https://github.com/egohygiene/optiflow/.github/workflows/release.yml@refs/heads/main",
+    "cosign_binary_sha256": "c956e5dfcac53d52bcf058360d579472f0c1d2d9b69f55209e256fe7783f4c74",
+    "exact_bundle_inventory": "passed",
+    "github_asset_digests": "passed",
+    "inner_checksums": "passed",
+    "oidc_issuer": "https://token.actions.githubusercontent.com",
+    "outer_checksum": "passed",
+    "qualification_source_and_archive_bindings": "passed",
+    "relay_file_inventory": "passed",
+    "sbom_and_provenance": "passed",
+    "signature": "verified with Cosign 3.0.6"
+  },
+  "independent_linux_install": {
+    "binary_sha256": "46af9399f3785607f835d9a805a8daa42c93597772c6ee812911615ea4b76280",
+    "cleanup_complete": true,
+    "exact_duplicate_groups": 1,
+    "files": 2,
+    "json_stdout_clean": true,
+    "plan_mutates_files": false,
+    "scan_outcome": "success",
+    "source_digests_unchanged": true,
+    "target": "x86_64-unknown-linux-gnu",
+    "version": "optiflow 0.1.1"
+  },
+  "limits": [
+    "macOS clean installation and pilot evidence come from the signed native workflow receipts; the independent local installation ran on Linux only.",
+    "Preservation is bounded content/metadata comparison and read-only contracts, not a physical USB/power-loss or kernel syscall audit.",
+    "Signed release-bundle evidence does not claim a cryptographically signed Git tag.",
+    "This verification does not assert unrelated hosted CI is green or organization trust-policy adoption is conformant."
+  ],
+  "native_qualification": {
+    "aarch64-apple-darwin": {
+      "archive_sha256": "f83fa18a98e99198e535e37dd93e1584024985df4960f2defd8124d52e656ab1",
+      "binary_sha256": "2a2411dbbafd5c22a2b398f13eaf4f0be84e5dedb8f4c9d80f7df418522c6ca3",
+      "cleanup_complete": true,
+      "json_stdout_clean": true,
+      "native_target": "aarch64-apple-darwin",
+      "passed": true,
+      "peak_child_rss_bytes": 83148800,
+      "previous_revision": "f04c82a0b0c677a2939ea351c4219602cd7181af",
+      "previous_signature_verified": true,
+      "previous_version": "v0.1.0",
+      "profile": {
+        "large_file_bytes": 268435456,
+        "large_members": 2,
+        "seed": 89,
+        "tree_files": 4096
+      },
+      "release_version": "v0.1.1",
+      "scenarios": {
+        "disconnected": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.007933,
+          "exit_code": 2,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "invalid_input"
+        },
+        "interrupted": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.024041,
+          "exit_code": 130,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "interrupted",
+          "run_status": "interrupted"
+        },
+        "large_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.617868,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 77719
+        },
+        "large_warm": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.420499,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 102188
+        },
+        "partial": {
+          "cache_hits": 0,
+          "coverage": "partial",
+          "elapsed_seconds": 2.713454,
+          "exit_code": 3,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "partial_success"
+        },
+        "plan": {
+          "cache_hits": null,
+          "coverage": "complete",
+          "elapsed_seconds": 0.023772,
+          "exit_code": 0,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "mutates_files": false,
+          "outcome": "success"
+        },
+        "reconnected": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.383499,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "report": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.01926,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "restart": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.377992,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "new_run": true,
+          "outcome": "success"
+        },
+        "rollback": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.091779,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        },
+        "tree_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 4.273735,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 18104706
+        },
+        "tree_warm": {
+          "cache_hits": 4096,
+          "coverage": "complete",
+          "elapsed_seconds": 2.638047,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 33493773
+        },
+        "upgrade": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.085411,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        }
+      },
+      "schema": "optiflow.read-only-pilot.v1",
+      "source_digest": "80b72910cb339b8c88cabf2bbdf655d383bd82b92c4dd05d1edf9b1811b8c805",
+      "source_revision": "b82599a2231e997d42fd9f26f4b59587f4ae14cf",
+      "source_unchanged": true,
+      "state_bytes": 69906893,
+      "target": "aarch64-apple-darwin"
+    },
+    "x86_64-apple-darwin": {
+      "archive_sha256": "71f1cc9be7ec7d3373807e012114bb64aba62f550fd9da6b4ddccda62397c694",
+      "binary_sha256": "a3097b5060ae05a361c97dd004857e7152a019f3f11dc0459b993183a6cf2135",
+      "cleanup_complete": true,
+      "json_stdout_clean": true,
+      "native_target": "x86_64-apple-darwin",
+      "passed": true,
+      "peak_child_rss_bytes": 81854464,
+      "previous_revision": "f04c82a0b0c677a2939ea351c4219602cd7181af",
+      "previous_signature_verified": true,
+      "previous_version": "v0.1.0",
+      "profile": {
+        "large_file_bytes": 268435456,
+        "large_members": 2,
+        "seed": 89,
+        "tree_files": 4096
+      },
+      "release_version": "v0.1.1",
+      "scenarios": {
+        "disconnected": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.048793,
+          "exit_code": 2,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "invalid_input"
+        },
+        "interrupted": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.075035,
+          "exit_code": 130,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "interrupted",
+          "run_status": "interrupted"
+        },
+        "large_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.468631,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 77735
+        },
+        "large_warm": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.345982,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 102220
+        },
+        "partial": {
+          "cache_hits": 0,
+          "coverage": "partial",
+          "elapsed_seconds": 11.308214,
+          "exit_code": 3,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "partial_success"
+        },
+        "plan": {
+          "cache_hits": null,
+          "coverage": "complete",
+          "elapsed_seconds": 0.045204,
+          "exit_code": 0,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "mutates_files": false,
+          "outcome": "success"
+        },
+        "reconnected": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.427347,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "report": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.026097,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "restart": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.358823,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "new_run": true,
+          "outcome": "success"
+        },
+        "rollback": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.358669,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        },
+        "tree_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 12.832367,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 18198914
+        },
+        "tree_warm": {
+          "cache_hits": 4096,
+          "coverage": "complete",
+          "elapsed_seconds": 10.068837,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 33657613
+        },
+        "upgrade": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.353774,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        }
+      },
+      "schema": "optiflow.read-only-pilot.v1",
+      "source_digest": "80b72910cb339b8c88cabf2bbdf655d383bd82b92c4dd05d1edf9b1811b8c805",
+      "source_revision": "b82599a2231e997d42fd9f26f4b59587f4ae14cf",
+      "source_unchanged": true,
+      "state_bytes": 70259213,
+      "target": "x86_64-apple-darwin"
+    },
+    "x86_64-unknown-linux-gnu": {
+      "archive_sha256": "5e8a0eea84f5ab55fe75fc8a8abc2e9d36e3512537b754262b1f34a9c40aae31",
+      "binary_sha256": "46af9399f3785607f835d9a805a8daa42c93597772c6ee812911615ea4b76280",
+      "cleanup_complete": true,
+      "json_stdout_clean": true,
+      "native_target": "x86_64-unknown-linux-gnu",
+      "passed": true,
+      "peak_child_rss_bytes": 86806528,
+      "previous_revision": "f04c82a0b0c677a2939ea351c4219602cd7181af",
+      "previous_signature_verified": true,
+      "previous_version": "v0.1.0",
+      "profile": {
+        "large_file_bytes": 268435456,
+        "large_members": 2,
+        "seed": 89,
+        "tree_files": 4096
+      },
+      "release_version": "v0.1.1",
+      "scenarios": {
+        "disconnected": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.00535,
+          "exit_code": 2,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "invalid_input"
+        },
+        "interrupted": {
+          "cache_hits": null,
+          "coverage": null,
+          "elapsed_seconds": 0.032932,
+          "exit_code": 130,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "outcome": "interrupted",
+          "run_status": "interrupted"
+        },
+        "large_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.308678,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 77325
+        },
+        "large_warm": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.291699,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success",
+          "state_bytes": 101400
+        },
+        "partial": {
+          "cache_hits": 0,
+          "coverage": "partial",
+          "elapsed_seconds": 4.866423,
+          "exit_code": 3,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "partial_success"
+        },
+        "plan": {
+          "cache_hits": null,
+          "coverage": "complete",
+          "elapsed_seconds": 0.007987,
+          "exit_code": 0,
+          "files": null,
+          "groups": null,
+          "logical_bytes": null,
+          "mutates_files": false,
+          "outcome": "success"
+        },
+        "reconnected": {
+          "cache_hits": 2,
+          "coverage": "complete",
+          "elapsed_seconds": 0.291528,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "report": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.006778,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "outcome": "success"
+        },
+        "restart": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.294127,
+          "exit_code": 0,
+          "files": 2,
+          "groups": 1,
+          "logical_bytes": 536870912,
+          "new_run": true,
+          "outcome": "success"
+        },
+        "rollback": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.145209,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        },
+        "tree_cold": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 5.06558,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 16994488
+        },
+        "tree_warm": {
+          "cache_hits": 4096,
+          "coverage": "complete",
+          "elapsed_seconds": 4.729215,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success",
+          "state_bytes": 31928697
+        },
+        "upgrade": {
+          "cache_hits": 0,
+          "coverage": "complete",
+          "elapsed_seconds": 0.14173,
+          "exit_code": 0,
+          "files": 4096,
+          "groups": 0,
+          "logical_bytes": 69632,
+          "outcome": "success"
+        }
+      },
+      "schema": "optiflow.read-only-pilot.v1",
+      "source_digest": "80b72910cb339b8c88cabf2bbdf655d383bd82b92c4dd05d1edf9b1811b8c805",
+      "source_revision": "b82599a2231e997d42fd9f26f4b59587f4ae14cf",
+      "source_unchanged": true,
+      "state_bytes": 66119628,
+      "target": "x86_64-unknown-linux-gnu"
+    }
+  },
+  "published_assets": {
+    "binary-v0.1.1.tar.gz": {
+      "bytes": 13089850,
+      "sha256": "f576131f2695a218fabfaa5167fd16f17641c267194254a9e624303a8cf23e07"
+    },
+    "release-asset.sha256": {
+      "bytes": 87,
+      "sha256": "3237a290df587d61790757893b8ba7f9ba73f3ba074cf5a06f95f03d005f1c4c"
+    },
+    "release-evidence.json": {
+      "bytes": 2345,
+      "sha256": "6ebc87605568dd7667f4240b707d95191ba3b3970583b80f37e1684879fe22e2"
+    }
+  },
+  "published_at": "2026-09-26T19:09:10Z",
+  "release_url": "https://github.com/egohygiene/optiflow/releases/tag/v0.1.1",
+  "release_version": "v0.1.1",
+  "release_workflow": {
+    "id": 36264382086,
+    "jobs_succeeded": 8,
+    "url": "https://github.com/egohygiene/optiflow/actions/runs/36264382086"
+  },
+  "schema": "optiflow.release-verification.v1",
+  "source_revision": "b82599a2231e997d42fd9f26f4b59587f4ae14cf",
+  "tag_object": "e14acbcdf14a92e28f4efed7ebaf2a3f3d905cf0",
+  "verified_on": "2026-09-26"
+}

@@ -7,7 +7,7 @@ description: Dependency admission, security gates, signed binary publication, su
 
 OptiFlow is an organization trust-policy class `R2` command-line application.
 Its current adoption state is **piloting**: repository checks and the immutable
-release path are enforced by their workflows. The public `v0.1.0` release is
+release path are enforced by their workflows. The public `v0.1.1` release is
 complete; promotion to `conformant` still waits for organization ruleset
 evidence.
 
@@ -19,7 +19,7 @@ evidence.
 | Organization policy | `egohygiene/.github` trust policy at `b415c8029bf2fb5d474f367e7129791588ba3860` |
 | Relay profile | `binary` from Relay `v1.5.0`, pinned to `1eada5142f7fc7da7862f335589e3b8f5884ffaf` |
 | Effective state | `piloting` from 2026-09-12 |
-| Latest public release | [`v0.1.0`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.0) from `f04c82a0b0c677a2939ea351c4219602cd7181af` |
+| Latest public release | [`v0.1.1`](https://github.com/egohygiene/optiflow/releases/tag/v0.1.1) from `b82599a2231e997d42fd9f26f4b59587f4ae14cf` |
 | Bot exemptions | Dependabot-authored lockfile and immutable action-pin updates; review and checks remain required |
 | Active exceptions | None |
 
@@ -157,10 +157,11 @@ The release workflow does not publish crates.io packages, Homebrew formulas,
 installers, or mutable “latest” aliases.
 
 Preparing a pull request does not require an agent to poll hosted CI. Release
-publication is a separate maintainer checkpoint on merged `main`: keep #89
-open until native qualification, signed publication, and independent download
-verification are complete. Update the README, install examples, and changelog
-to the verified release only after that evidence exists.
+publication is a separate maintainer checkpoint on merged `main`. The #89
+native qualification, signed publication, and independent download checks
+completed for `v0.1.1`; retain the [verification record](validation/optiflow-v0.1.1-release.json).
+For later releases, update the README, install examples, and changelog only
+after equivalent evidence exists.
 
 ## Independent verification
 
@@ -168,7 +169,7 @@ Install GitHub CLI and Cosign, then verify the outer Relay artifact and inner
 OptiFlow bundle. Replace the version as needed.
 
 ```bash
-release_version="v0.1.0"
+release_version="v0.1.1"
 gh release download "${release_version}" \
   --repo "egohygiene/optiflow" \
   --pattern "binary-${release_version}.tar.gz" \

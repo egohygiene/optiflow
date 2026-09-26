@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.8
+version: 0.1.9
 status: draft
 owners:
   - egohygiene
@@ -56,12 +56,12 @@ supersedes: []
    [filesystem corpus](docs/filesystem-corpus.md): 17 deterministic filesystem,
    path, state, and removable-volume recipes, with bounded PR/scheduled tiers
    and no mutation authority. Completed through PR #101, merged at `ddc4b01`.
-2. [#89](https://github.com/egohygiene/optiflow/issues/89) qualifies and
-   publishes the immutable read-only external-drive `v0.1.1` pilot. Its
-   [qualification and operator guide](docs/external-drive-pilot.md) are the
-   active checkpoint; all three native targets and signed publication must
-   pass before the issue closes. This is
-   sufficient for the first read-only
+2. [#89](https://github.com/egohygiene/optiflow/issues/89) delivered the
+   immutable read-only external-drive `v0.1.1` pilot from `b82599a`.
+   All three native targets qualified, the signed bundle was published, and
+   [independent verification](docs/validation/optiflow-v0.1.1-release.json)
+   passed. The [operator guide](docs/external-drive-pilot.md) explains its
+   boundaries. This release is sufficient for the first read-only
    [Flow #50](https://github.com/egohygiene/flow/issues/50) integration work.
 3. [#90](https://github.com/egohygiene/optiflow/issues/90) through
    [#93](https://github.com/egohygiene/optiflow/issues/93), in the order
@@ -89,17 +89,17 @@ repository: egohygiene/optiflow
 visibility: public
 publication: composed
 route: /roadmap/
-updated: 2026-09-25
+updated: 2026-09-26
 -->
-## 2026-09-25 execution snapshot
+## 2026-09-26 execution snapshot
 
 > This evidence-reconciled snapshot is the issue-generation and visual-roadmap handoff. The longer-horizon strategy below remains canonical context; generated HTML, JSON, progress, issue plans, and commit lists are projections.
 
-**Lifecycle:** released read-only `v0.1.0`; post-release `main` remains read-only
+**Lifecycle:** released and verified read-only `v0.1.1`; `main` remains read-only
 
-**Current gate:** #88 is merged. Qualify the current read-only product through
-#89 and publish its signed `v0.1.1` bundle before claiming that release is
-available. This checkpoint grants no mutation authority.
+**Current gate:** #88 is merged and #89's signed `v0.1.1` is published and
+independently verified. #90 is next: execution/approval evidence and a fully
+non-mutating dry run before the first transaction can change a source file.
 
 **Validation handoff:** Review focused local corpus evidence and the PR without
 waiting on hosted CI. The operator will handle the broader CI/lint sweep;
@@ -112,12 +112,12 @@ open for the later media, provider, perceptual, and candidate families.
 
 **Mode:** `composed`  
 **Route:** `/roadmap/`  
-**Current publication evidence:** The public `v0.1.0` release targets
-`f04c82a0b0c677a2939ea351c4219602cd7181af` and includes signed, verified
-release-bundle evidence. The reconciled starting `main` revision is
-`7de8483b64387542a05214004c19a9cd05628908`; its CI, adversarial,
-documentation, site, security, and Identity workflows are green. Issue #28
-completed production publication and rollback evidence.
+**Current publication evidence:** The public `v0.1.1` release targets
+`b82599a2231e997d42fd9f26f4b59587f4ae14cf` and includes signed, independently
+verified release-bundle evidence and native pilot receipts for all three
+targets. [Run 36264382086](https://github.com/egohygiene/optiflow/actions/runs/36264382086)
+passed all eight release jobs. This does not assert unrelated hosted CI is
+green. Issue #28 completed production site publication and rollback evidence.
 
 Compose dist/roadmap/ into the repository's existing final site artifact at /roadmap/. The current Pages workflow remains the only deployer.
 
@@ -326,9 +326,9 @@ This produces four ordered product milestones:
 
 | State | Exact evidence or owner |
 | --- | --- |
-| Released | `v0.1.0` source `f04c82a0b0c677a2939ea351c4219602cd7181af`, annotated tag object `1e0381cb9e92616fabda2828f201ef1c1f2d4688`, and signed release-bundle evidence. The Git tag object itself is not claimed to be signed. |
-| Merged after release | `main` at `ddc4b010caf5ad51c3d3f4b04e6b967a87ff8eea`, including completed #75, #78, #80, #83, #85, and #88 evidence. These additions are not retroactively present in `v0.1.0`. |
-| Active / planned | #89 prepares the read-only pilot; #90 through #96 follow the dependency order above. Planned work is not supported behavior. |
+| Released | `v0.1.1` source `b82599a2231e997d42fd9f26f4b59587f4ae14cf`, annotated tag object `e14acbcdf14a92e28f4efed7ebaf2a3f3d905cf0`, and verified signed release-bundle evidence. The Git tag itself is not claimed to be signed. |
+| Included since `v0.1.0` | #75, #78, #80, #83, #85, #88, and #89 preparation are included in the immutable `v0.1.1` source. Later `main` changes require their own release evidence. |
+| Next / planned | #90 adds non-mutating execution/approval contracts; #91 through #96 follow the dependency order above. Planned work is not supported behavior. |
 | Unsupported today | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
 
 [Issue #60](https://github.com/egohygiene/optiflow/issues/60) remains gated on
@@ -497,7 +497,8 @@ Every release must preserve these rules:
 | Release | Theme | Primary outcome |
 | --- | --- | --- |
 | `v0.1.0` | Read-only proof | Inventory and exact duplicate plans. |
-| `v0.1.x` | Foundation | Accuracy, diagnostics, security, and packaging. |
+| `v0.1.1` | Read-only pilot | Published native qualification, signed packaging, and verified upgrade/rollback. |
+| Later `v0.1.x` | Foundation | Further accuracy, diagnostics, security, and packaging. |
 | `v0.2.0` | Transactions | Recoverable exact duplicate resolution. |
 | `v0.3.0` | Lossless images | Transactional image optimization. |
 | `v0.4.0` | Image profiles | Archive, delivery, and pipeline conversions. |
@@ -508,7 +509,7 @@ Every release must preserve these rules:
 | `v0.9.0` | Stable beta | Freeze and prove intended `v1` contracts. |
 | `v1.0.0` | General availability | Stable macOS and Linux tool. |
 
-Versions after `v0.1.0` describe intended sequencing. A release may be split
+Versions after `v0.1.1` describe intended sequencing. A release may be split
 when doing so produces a smaller independently safe increment.
 
 ## Cross-cutting workstreams

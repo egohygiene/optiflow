@@ -3,10 +3,12 @@
 All notable changes to OptiFlow are documented here. The project is pre-1.0;
 public contracts still receive explicit migration notes.
 
-## 0.1.1 — pending publication
+## 0.1.1 — 2026-09-26
 
-This section describes the release candidate. The latest published release
-remains `v0.1.0` until the signed `v0.1.1` bundle is independently verified.
+Published from `b82599a2231e997d42fd9f26f4b59587f4ae14cf` through
+[release run 36264382086](https://github.com/egohygiene/optiflow/actions/runs/36264382086).
+All three native targets qualified; the downloaded signed bundle and an
+independent Linux installation passed [verification](docs/validation/optiflow-v0.1.1-release.json).
 
 ### Added
 
