@@ -58,7 +58,7 @@
       "source": "tests/filesystem_corpus.rs",
       "recipe": {
         "seed": 0,
-        "steps": "32 deep components below Unicode/space/decomposed-name root; raw Unix ff byte and newline filename; overlapping/repeated roots; valid and broken symlinks excluded.",
+        "steps": "32 deep components below Unicode/space/decomposed-name root; raw Unix ff byte round-trips in memory on all Unix and in the Linux filesystem; macOS uses a UTF-8 newline filename because APFS rejects invalid bytes; overlapping/repeated roots; valid and broken symlinks excluded.",
         "content_utf8": [
           "optiflow filesystem corpus v1\n",
           "other"

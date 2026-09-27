@@ -154,7 +154,18 @@ fn native_overlapping_deep_roots_and_links() {
     let nested = fixture.input.join("space 🌌 e\u{301}");
     let deep = (0..32).fold(nested.clone(), |path, _| path.join("deep"));
     fs::create_dir_all(&deep).unwrap();
-    let unusual = deep.join(OsString::from_vec(b"control\ninvalid-\xff.bin".to_vec()));
+    let raw_path = deep.join(OsString::from_vec(b"control\ninvalid-\xff.bin".to_vec()));
+    assert!(matches!(
+        NativePath::from_path(&raw_path),
+        NativePath::UnixBytes { .. }
+    ));
+    assert_eq!(NativePath::from_path(&raw_path).to_path_buf(), raw_path);
+    // APFS refuses ill-formed filename bytes with EILSEQ. Keep their native
+    // encoding proof in memory; exercise the filesystem scan with a newline.
+    #[cfg(target_os = "macos")]
+    let unusual = deep.join("control\nvalid.bin");
+    #[cfg(not(target_os = "macos"))]
+    let unusual = raw_path;
     fs::write(&unusual, BYTES).unwrap();
     fs::write(nested.join("other.bin"), b"other").unwrap();
     symlink(&unusual, fixture.input.join("link")).unwrap();

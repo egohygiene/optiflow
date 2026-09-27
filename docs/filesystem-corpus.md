@@ -58,7 +58,7 @@ limitations. It is checkpoint evidence, not a claim about future CI runs.
 | Fixture ID | Evidence and expected boundary | Owning contract |
 | --- | --- | --- |
 | `fs88-identities` | 3 paths, 2 independent objects, 1 alias; 30 logical duplicate bytes, physical savings unknown; plan is read-only | [Safety](safety-model.md), [report schema](../schemas/report.schema.json) |
-| `fs88-paths` | Repeated/overlapping roots coalesce; Unicode, non-UTF-8, newline and 32-deep paths round-trip; symlinks and broken links are excluded | [Observation](observation-protocol.md), [JSON](json-contract.md) |
+| `fs88-paths` | Repeated/overlapping roots coalesce; Unicode, newline and 32-deep filesystem paths round-trip; raw non-UTF-8 paths round-trip in memory on Unix and through the filesystem on Linux; symlinks and broken links are excluded | [Observation](observation-protocol.md), [JSON](json-contract.md) |
 | `fs88-allocation` | Sparse recipe reports actual `st_blocks × 512`; injected allocation gap and clone uncertainty remain unknown | [Filesystem identity](https://github.com/egohygiene/optiflow/blob/main/src/filesystem/identity.rs), report schema |
 | `fs88-volume` | 0444 file/0555 root scanned with separate state; unavailable root produces no artifacts; reconnect succeeds | [State](state-model.md), [CLI](cli-contract.md) |
 | `fs88-permission` | Injected `PermissionDenied` before open; two attempts, unreadable/unavailable, no content or identity evidence | Observation protocol |
@@ -79,6 +79,10 @@ The catalog reuses observation, discovery, cache, artifact, and recovery tests
 from the [adversarial matrix](adversarial-testing.md). Existing property,
 fuzz, smoke, schema, migration, and [performance](performance.md) evidence
 remain complementary. This corpus does not replace their coverage.
+APFS rejects the invalid UTF-8 filename used by `fs88-paths` on Linux, so the
+macOS filesystem case uses a UTF-8 filename with a newline. The macOS test
+still checks lossless `NativePath` encoding of invalid Unix bytes in memory;
+it does not claim that APFS accepts such a filename.
 
 ## Resource and cleanup contract
 
