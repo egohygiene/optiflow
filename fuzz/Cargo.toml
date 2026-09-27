@@ -16,7 +16,7 @@ toml = "1.1"
 
 [dependencies.optiflow]
 path = ".."
-version = "=0.1.0"
+version = "=0.1.1"
 
 [[bin]]
 name = "artifact-set-reader"

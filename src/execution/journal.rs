@@ -181,6 +181,7 @@ impl Journal {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
     pub fn begin_mutation(
         &mut self,
         plan: &ExecutionPlan,
