@@ -102,3 +102,9 @@ v2 evidence. Migration 0008 appends immutable v3 recovery transitions under
 Historical v2 rows without that binding remain inspection-only. The
 [recovery protocol](execution-recovery.md) defines status, restore, resume,
 empty namespace cleanup and ambiguous interruption handling.
+
+Migration 0009 adds immutable `execution_finalization_events` with v4
+`removal_pending` and `removed` evidence. It leaves v1-v3 documents intact;
+the [finalization protocol](execution-finalization.md) requires a separate
+preview and authorization, and a pending removal never becomes committed by
+status inspection.

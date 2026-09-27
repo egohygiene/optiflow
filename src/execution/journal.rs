@@ -5,6 +5,7 @@ use chrono::Utc;
 use rusqlite::{OptionalExtension, params};
 
 use super::filesystem as fs;
+use super::finalization::FinalizationEvent;
 use super::model::*;
 use super::mutation::{MutationRun, MutationStatus};
 use super::recovery::RecoveryEvent;
@@ -74,7 +75,7 @@ impl Journal {
                     |r| r.get(0),
                 )
                 .map_err(state_error)?;
-            if newest > 8 {
+            if newest > 9 {
                 return Err(failure(
                     Code::StoredStateIncompatible,
                     "state was migrated by a newer execution implementation",
@@ -269,6 +270,40 @@ impl Journal {
 
     pub fn recovery_events(&self, run_id: &str) -> Result<Vec<RecoveryEvent>> {
         read_recovery_events(&self.store.connection, run_id)
+    }
+
+    pub fn finalization_events(&self, run_id: &str) -> Result<Vec<FinalizationEvent>> {
+        read_finalization_events(&self.store.connection, run_id)
+    }
+
+    pub fn append_finalization(
+        &mut self,
+        event: &FinalizationEvent,
+        max_actions: u64,
+        budget: u64,
+    ) -> Result<()> {
+        contracts::validate(Contract::ExecutionFinalizationEvent, event).map_err(state_error)?;
+        let document = serde_json::to_string(event).map_err(state_error)?;
+        let (count, bytes): (i64, i64) = self.store.connection.query_row(
+            "SELECT COUNT(*), COALESCE(SUM(LENGTH(document_json)), 0) FROM execution_finalization_events WHERE run_id = ?1",
+            [&event.run_id], |row| Ok((row.get(0)?, row.get(1)?)),
+        ).map_err(state_error)?;
+        if count < 0
+            || count as u64 >= max_actions.saturating_mul(2)
+            || bytes < 0
+            || (bytes as u64).saturating_add(document.len() as u64) > budget
+        {
+            return Err(failure(
+                Code::ExecutionBoundsExceeded,
+                "finalization journal bound exceeded",
+            ));
+        }
+        self.store.connection.execute(
+            "INSERT INTO execution_finalization_events (event_id, run_id, action_id, phase, preview_fingerprint, authorization_id, document_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![event.event_id, event.run_id, event.action_id, event.phase,
+                event.preview_fingerprint, event.authorization_id, document],
+        ).map_err(state_error)?;
+        Ok(())
     }
 
     pub fn stored_authority(&self, plan: &ExecutionPlan, approval: &Approval) -> Result<()> {
@@ -485,7 +520,7 @@ pub(super) fn read_recovery_events(
     if version < 8 {
         return Ok(Vec::new());
     }
-    if version > 8 {
+    if version > 9 {
         return Err(failure(
             Code::StoredStateIncompatible,
             "state was migrated by a newer recovery implementation",
@@ -531,6 +566,68 @@ pub(super) fn read_recovery_events(
         return Err(failure(
             Code::ExecutionBoundsExceeded,
             "recovery event limit exceeded",
+        ));
+    }
+    Ok(events)
+}
+
+pub(super) fn read_finalization_events(
+    connection: &rusqlite::Connection,
+    run_id: &str,
+) -> Result<Vec<FinalizationEvent>> {
+    let version: i64 = connection
+        .query_row(
+            "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
+            [],
+            |r| r.get(0),
+        )
+        .map_err(state_error)?;
+    if version < 9 {
+        return Ok(Vec::new());
+    }
+    if version > 9 {
+        return Err(failure(
+            Code::StoredStateIncompatible,
+            "future finalization state version",
+        ));
+    }
+    let mut query = connection.prepare("SELECT event_id, action_id, phase, preview_fingerprint, authorization_id, document_json FROM execution_finalization_events WHERE run_id = ?1 ORDER BY sequence LIMIT 2001").map_err(state_error)?;
+    let rows = query
+        .query_map([run_id], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, String>(4)?,
+                r.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(state_error)?;
+    let mut events = Vec::new();
+    for row in rows {
+        let (id, action, phase, preview, authorization, json) = row.map_err(state_error)?;
+        let raw: serde_json::Value = serde_json::from_str(&json).map_err(state_error)?;
+        contracts::validate(Contract::ExecutionFinalizationEvent, &raw).map_err(state_error)?;
+        let event: FinalizationEvent = serde_json::from_str(&json).map_err(state_error)?;
+        if event.event_id != id
+            || event.run_id != run_id
+            || event.action_id != action
+            || event.phase != phase
+            || event.preview_fingerprint != preview
+            || event.authorization_id != authorization
+        {
+            return Err(failure(
+                Code::StoredStateIncompatible,
+                "finalization row and document disagree",
+            ));
+        }
+        events.push(event);
+    }
+    if events.len() > 2000 {
+        return Err(failure(
+            Code::ExecutionBoundsExceeded,
+            "finalization event limit exceeded",
         ));
     }
     Ok(events)

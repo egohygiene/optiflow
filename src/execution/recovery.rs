@@ -99,7 +99,7 @@ pub fn status(state: &Path, run_id: &str) -> Result<RecoveryReport> {
     report(&plan, mutation, events)
 }
 
-fn report(
+pub(super) fn report(
     plan: &ExecutionPlan,
     mutation: MutationRun,
     events: Vec<RecoveryEvent>,
@@ -396,7 +396,7 @@ pub(super) fn bind_apply(
 }
 
 #[cfg(target_os = "linux")]
-fn locked(
+pub(super) fn locked(
     plan: &ExecutionPlan,
     approval: &Approval,
     state: &Path,
@@ -445,7 +445,7 @@ fn locked(
 }
 
 #[cfg(target_os = "linux")]
-fn identity(file: &File) -> Result<FilesystemIdentity> {
+pub(super) fn identity(file: &File) -> Result<FilesystemIdentity> {
     crate::filesystem::identity::FileStateSignature::from_file_metadata(&fs::metadata(file)?)
         .identity
         .ok_or_else(|| {
@@ -477,7 +477,7 @@ fn journal_error(error: std::io::Error) -> Box<crate::outcome::Diagnostic> {
 }
 
 #[cfg(target_os = "linux")]
-fn compare(left: &File, right: &File, size: u64, signals: &SignalState) -> Result<()> {
+pub(super) fn compare(left: &File, right: &File, size: u64, signals: &SignalState) -> Result<()> {
     use std::io::Seek;
     let mut left = left.try_clone().map_err(journal_error)?;
     let mut right = right.try_clone().map_err(journal_error)?;
@@ -505,7 +505,7 @@ fn compare(left: &File, right: &File, size: u64, signals: &SignalState) -> Resul
 }
 
 #[cfg(target_os = "linux")]
-fn verify_content(
+pub(super) fn verify_content(
     action: &ExactAction,
     file: &mut File,
     signals: &SignalState,
@@ -583,7 +583,11 @@ fn verify_quarantined(
 }
 
 #[cfg(target_os = "linux")]
-fn check_properties(action: &ExactAction, file: &File, report: &RecoveryReport) -> Result<()> {
+pub(super) fn check_properties(
+    action: &ExactAction,
+    file: &File,
+    report: &RecoveryReport,
+) -> Result<()> {
     let expected = report
         .events
         .iter()
@@ -1059,6 +1063,16 @@ pub fn restore(
     use rustix::fs::renameat_with;
     let (mut journal, run, events) = locked(plan, approval, state, policy, run_id)?;
     let current = report(plan, run.clone(), events)?;
+    if journal
+        .finalization_events(run_id)?
+        .iter()
+        .any(|event| event.action_id == action_id)
+    {
+        return Err(failure(
+            Code::ExecutionSourceStale,
+            "irreversible finalization has begun for this action; inspect v4 status",
+        ));
+    }
     if current.status == "attention_required" || current.status == "cleaned" {
         return Err(failure(
             Code::ExecutionSourceStale,

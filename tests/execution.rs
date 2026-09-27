@@ -584,7 +584,7 @@ fn newer_state_schema_is_not_modified_or_opened_for_execution() {
     let _store = optiflow::state::StateStore::open(&f.state).unwrap();
     let connection = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
     connection
-        .execute("INSERT INTO schema_migrations VALUES (9,'future')", [])
+        .execute("INSERT INTO schema_migrations VALUES (10,'future')", [])
         .unwrap();
     drop(connection);
     let before = fs::read(f.state.join("state.sqlite3")).unwrap();
@@ -1318,4 +1318,550 @@ fn cross_filesystem_restore_recreates_source_and_retains_verified_quarantine_cop
     )
     .unwrap();
     assert_eq!(restored.events.len(), repeated.events.len());
+}
+
+#[cfg(target_os = "linux")]
+fn retained_cross_fixture() -> Option<(
+    Fixture,
+    tempfile::TempDir,
+    ExecutionPlan,
+    Approval,
+    String,
+    PathBuf,
+)> {
+    retained_cross_fixture_with_json(false)
+}
+
+#[cfg(target_os = "linux")]
+fn retained_cross_fixture_with_json(
+    json: bool,
+) -> Option<(
+    Fixture,
+    tempfile::TempDir,
+    ExecutionPlan,
+    Approval,
+    String,
+    PathBuf,
+)> {
+    let mut f = Fixture::new();
+    if json {
+        let cli = Cli::parse_from([
+            "optiflow",
+            "--no-config",
+            "--state-directory",
+            f.state.to_str()?,
+            "--json",
+            "doctor",
+        ]);
+        f.policy = configuration::resolve(&cli).ok()?.policy;
+    }
+    let alternate = Path::new("/dev/shm");
+    if !alternate.is_dir()
+        || fs::metadata(alternate).ok()?.dev() == fs::metadata(&f.base).ok()?.dev()
+    {
+        return None;
+    }
+    let quarantine = tempfile::tempdir_in(alternate).ok()?;
+    f.args.quarantine = fs::canonicalize(quarantine.path()).ok()?;
+    let plan = f.plan();
+    let approval = f.approval(&plan);
+    let run = execution::apply_quarantine(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(run.status, execution::MutationStatus::Completed);
+    let destination = run.attempts[0].destination.to_path_buf();
+    let restored = execution::restore(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &plan.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.actions[0].state, "restored_retained");
+    Some((f, quarantine, plan, approval, run.run_id, destination))
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn finalization_preview_is_read_only_and_commit_is_durable_and_idempotent() {
+    use optiflow::execution::finalization;
+    let Some((f, _quarantine, plan, approval, run, destination)) = retained_cross_fixture() else {
+        return;
+    };
+    let selected = vec![plan.body.actions[0].action_id.clone()];
+    let before_source = source(&f.args.candidate[0]);
+    let before_destination = source(&destination);
+    let state_meta = fs::metadata(f.state.join("state.sqlite3"))
+        .unwrap()
+        .modified()
+        .unwrap();
+    let preview = finalization::preview(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &run,
+        &selected,
+        &SignalState::default(),
+    )
+    .unwrap();
+    contracts::validate(Contract::ExecutionFinalizationPreview, &preview).unwrap();
+    assert_eq!(source(&f.args.candidate[0]), before_source);
+    assert_eq!(source(&destination), before_destination);
+    assert_eq!(
+        fs::metadata(f.state.join("state.sqlite3"))
+            .unwrap()
+            .modified()
+            .unwrap(),
+        state_meta
+    );
+    assert!(finalization::authorize(&preview, "incorrect", "operator").is_err());
+    let auth = finalization::authorize(&preview, &preview.fingerprint, "fixture operator").unwrap();
+    contracts::validate(Contract::ExecutionFinalizationAuthorization, &auth).unwrap();
+    let committed = finalization::commit(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &preview,
+        &auth,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(committed.status, "finalized_irreversible");
+    assert_eq!(committed.actions[0].state, "finalized_irreversible");
+    assert_eq!(committed.events.len(), 2);
+    assert_eq!(committed.events[0].phase, "removal_pending");
+    assert_eq!(committed.events[1].phase, "removed");
+    assert_eq!(
+        committed.logical_bytes_removed,
+        before_destination.0.len() as u64
+    );
+    assert_eq!(committed.physical_reclaimed_bytes, None);
+    assert_eq!(committed.shared_extent_bytes, None);
+    assert_eq!(
+        committed.events[1].target_free_space_change_bytes,
+        i64::try_from(
+            i128::from(committed.events[1].target_available_after.unwrap())
+                - i128::from(committed.events[1].target_available_before)
+        )
+        .ok()
+    );
+    assert!(!destination.exists());
+    assert_eq!(source(&f.args.candidate[0]), before_source);
+    assert_eq!(fs::read(&f.args.keep).unwrap(), before_source.0);
+    let stored = finalization::status(&f.state, &run).unwrap();
+    assert_eq!(stored.status, committed.status);
+    assert_eq!(stored.events.len(), 2);
+    let repeated = finalization::commit(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &preview,
+        &auth,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(repeated.events.len(), 2);
+    assert!(
+        execution::restore(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &run,
+            &selected[0],
+            &SignalState::default()
+        )
+        .is_err()
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn finalization_refuses_missing_or_changed_survivor_and_tampered_manifest() {
+    use optiflow::execution::finalization;
+    for case in 0..3 {
+        let Some((f, _quarantine, plan, approval, run, destination)) = retained_cross_fixture()
+        else {
+            return;
+        };
+        let selected = vec![plan.body.actions[0].action_id.clone()];
+        let preview = finalization::preview(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &run,
+            &selected,
+            &SignalState::default(),
+        )
+        .unwrap();
+        let auth =
+            finalization::authorize(&preview, &preview.fingerprint, "fixture operator").unwrap();
+        match case {
+            0 => fs::remove_file(&f.args.candidate[0]).unwrap(),
+            1 => fs::write(&f.args.candidate[0], b"different synthetic bytes size").unwrap(),
+            _ => {
+                let mut altered = preview.clone();
+                altered.body.entries[0].logical_bytes += 1;
+                assert!(
+                    finalization::commit(
+                        &plan,
+                        &approval,
+                        &f.state,
+                        &f.policy,
+                        &altered,
+                        &auth,
+                        &SignalState::default()
+                    )
+                    .is_err()
+                );
+            }
+        }
+        if case < 2 {
+            assert!(
+                finalization::commit(
+                    &plan,
+                    &approval,
+                    &f.state,
+                    &f.policy,
+                    &preview,
+                    &auth,
+                    &SignalState::default()
+                )
+                .is_err()
+            );
+        }
+        assert!(destination.exists());
+        assert!(
+            finalization::status(&f.state, &run)
+                .unwrap()
+                .events
+                .is_empty()
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn pending_finalization_never_retries_or_claims_removal() {
+    use optiflow::execution::finalization::{self, FinalizationEvent};
+    let Some((f, _quarantine, plan, approval, run, destination)) = retained_cross_fixture() else {
+        return;
+    };
+    let selected = vec![plan.body.actions[0].action_id.clone()];
+    let preview = finalization::preview(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &run,
+        &selected,
+        &SignalState::default(),
+    )
+    .unwrap();
+    let auth = finalization::authorize(&preview, &preview.fingerprint, "fixture operator").unwrap();
+    let item = &preview.body.entries[0];
+    let event = FinalizationEvent {
+        schema: finalization::EVENT_SCHEMA.to_owned(),
+        event_id: uuid::Uuid::now_v7().to_string(),
+        run_id: run.clone(),
+        action_id: selected[0].clone(),
+        phase: "removal_pending".to_owned(),
+        preview_fingerprint: preview.fingerprint.clone(),
+        authorization_id: auth.authorization_id.clone(),
+        manifest_digest: preview.body.quarantine_manifest_digest.clone(),
+        recorded_at: chrono::Utc::now().to_rfc3339(),
+        binary_version: env!("CARGO_PKG_VERSION").to_owned(),
+        configuration_fingerprint: f.policy.fingerprints.effective_configuration.value.clone(),
+        policy_fingerprint: f.policy.fingerprints.evidence_policy.value.clone(),
+        quarantine_identity: item.quarantine_identity.clone(),
+        survivor_identity: item.survivor_identity.clone(),
+        logical_bytes: item.logical_bytes,
+        observed_allocated_bytes_before: item.observed_allocated_bytes,
+        target_available_before: 1,
+        target_available_after: None,
+        target_free_space_change_bytes: None,
+        shared_extent_bytes: None,
+        physical_reclaimed_bytes: None,
+        recoverability: "irreversible_pending_inspection".to_owned(),
+        reason: "synthetic interruption".to_owned(),
+    };
+    let connection = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
+    connection.execute("INSERT INTO execution_finalization_events (event_id, run_id, action_id, phase, preview_fingerprint, authorization_id, document_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![event.event_id, event.run_id, event.action_id, event.phase,
+            event.preview_fingerprint, event.authorization_id, serde_json::to_string(&event).unwrap()]).unwrap();
+    drop(connection);
+    let status = finalization::status(&f.state, &run).unwrap();
+    assert_eq!(status.status, "attention_required");
+    assert_eq!(status.actions[0].state, "pending_irreversible_inspection");
+    assert_eq!(status.logical_bytes_removed, 0);
+    assert!(
+        finalization::commit(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &preview,
+            &auth,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert!(destination.exists());
+    assert!(
+        execution::restore(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &run,
+            &selected[0],
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    // Model a process exit after unlink but before the durable completion row.
+    fs::remove_file(&destination).unwrap();
+    let ambiguous = finalization::status(&f.state, &run).unwrap();
+    assert_eq!(ambiguous.status, "attention_required");
+    assert_eq!(ambiguous.logical_bytes_removed, 0);
+    assert!(
+        finalization::commit(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &preview,
+            &auth,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn finalization_rejects_other_authority_aliases_and_stale_quarantine() {
+    use optiflow::execution::finalization;
+    let Some((f, _quarantine, plan, approval, run, destination)) = retained_cross_fixture() else {
+        return;
+    };
+    let selected = vec![plan.body.actions[0].action_id.clone()];
+    assert!(
+        finalization::preview(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &run,
+            &[selected[0].clone(), selected[0].clone()],
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    let preview = finalization::preview(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &run,
+        &selected,
+        &SignalState::default(),
+    )
+    .unwrap();
+    let auth = finalization::authorize(&preview, &preview.fingerprint, "fixture operator").unwrap();
+    let mut other = auth.clone();
+    other.body.selected_actions.clear();
+    assert!(
+        finalization::commit(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &preview,
+            &other,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    fs::hard_link(
+        &destination,
+        destination.with_file_name("unexpected-hardlink"),
+    )
+    .unwrap();
+    assert!(
+        finalization::commit(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &preview,
+            &auth,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert!(destination.exists());
+    assert!(
+        finalization::status(&f.state, &run)
+            .unwrap()
+            .events
+            .is_empty()
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn finalization_refuses_same_filesystem_restore_without_retained_copy() {
+    use optiflow::execution::finalization;
+    let f = Fixture::new();
+    let plan = f.plan();
+    let approval = f.approval(&plan);
+    let run = execution::apply_quarantine(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &SignalState::default(),
+    )
+    .unwrap();
+    execution::restore(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &plan.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    let selected = vec![plan.body.actions[0].action_id.clone()];
+    assert!(
+        finalization::preview(
+            &plan,
+            &approval,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &selected,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn finalization_cli_requires_explicit_preview_and_separate_authorization() {
+    use std::process::Command;
+    let Some((f, _quarantine, plan, approval, run, destination)) =
+        retained_cross_fixture_with_json(true)
+    else {
+        return;
+    };
+    let plan_path = f.base.join("plan.json");
+    let approval_path = f.base.join("approval.json");
+    let preview_path = f.base.join("finalization-preview.json");
+    let authorization_path = f.base.join("finalization-authorization.json");
+    execution::write_document(&plan_path, &plan, &plan).unwrap();
+    execution::write_document(&approval_path, &approval, &plan).unwrap();
+    let command = || {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_optiflow"));
+        cmd.arg("--no-config")
+            .arg("--state-directory")
+            .arg(&f.state)
+            .arg("--json");
+        cmd
+    };
+    let preview = command()
+        .arg("execution")
+        .arg("finalize")
+        .arg("--plan")
+        .arg(&plan_path)
+        .arg("--approval")
+        .arg(&approval_path)
+        .arg("--run")
+        .arg(&run)
+        .arg("--action")
+        .arg("action-000001")
+        .arg("--output")
+        .arg(&preview_path)
+        .output()
+        .unwrap();
+    assert!(
+        preview.status.success(),
+        "{} {}",
+        String::from_utf8_lossy(&preview.stderr),
+        String::from_utf8_lossy(&preview.stdout)
+    );
+    assert!(destination.exists());
+    let report: Value = serde_json::from_slice(&preview.stdout).unwrap();
+    let fingerprint = report["result"]["fingerprint"].as_str().unwrap();
+    let unauthorized = command()
+        .arg("execution")
+        .arg("finalize")
+        .arg("--commit")
+        .arg("--plan")
+        .arg(&plan_path)
+        .arg("--approval")
+        .arg(&approval_path)
+        .arg("--preview")
+        .arg(&preview_path)
+        .output()
+        .unwrap();
+    assert!(!unauthorized.status.success());
+    assert!(destination.exists());
+    let recorded = command()
+        .arg("execution")
+        .arg("authorize-finalization")
+        .arg("--plan")
+        .arg(&plan_path)
+        .arg("--preview")
+        .arg(&preview_path)
+        .arg("--fingerprint")
+        .arg(fingerprint)
+        .arg("--approved-by")
+        .arg("fixture operator")
+        .arg("--output")
+        .arg(&authorization_path)
+        .output()
+        .unwrap();
+    assert!(
+        recorded.status.success(),
+        "{}",
+        String::from_utf8_lossy(&recorded.stderr)
+    );
+    let committed = command()
+        .arg("execution")
+        .arg("finalize")
+        .arg("--commit")
+        .arg("--plan")
+        .arg(&plan_path)
+        .arg("--approval")
+        .arg(&approval_path)
+        .arg("--preview")
+        .arg(&preview_path)
+        .arg("--authorization")
+        .arg(&authorization_path)
+        .output()
+        .unwrap();
+    assert!(
+        committed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&committed.stderr)
+    );
+    let result: Value = serde_json::from_slice(&committed.stdout).unwrap();
+    assert_eq!(result["result"]["status"], "finalized_irreversible");
+    assert!(!destination.exists());
 }

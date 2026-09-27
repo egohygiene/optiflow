@@ -27,7 +27,7 @@ fn contract<T: Serialize>(value: &T) -> Result<()> {
         .map_err(|e| failure(Code::ExecutionPlanInvalid, e.to_string()))
 }
 
-fn read_document<T: DeserializeOwned + Serialize>(path: &Path) -> Result<T> {
+fn read_document_with<T: DeserializeOwned + Serialize>(path: &Path, kind: Contract) -> Result<T> {
     let canonical = fs::canonical_input(path)?;
     let mut file = fs::open(&canonical, false)?;
     let before = fs::metadata(&file)?;
@@ -57,12 +57,25 @@ fn read_document<T: DeserializeOwned + Serialize>(path: &Path) -> Result<T> {
     // identity/path types whose serde implementations permit unknown fields.
     let raw: serde_json::Value = serde_json::from_slice(&bytes)
         .map_err(|e| failure(Code::ExecutionPlanInvalid, e.to_string()))?;
-    contract(&raw)?;
+    contracts::validate(kind, &raw)
+        .map_err(|e| failure(Code::ExecutionPlanInvalid, e.to_string()))?;
     // Deserialize directly into strict structs: duplicate keys also fail.
     let document: T = serde_json::from_slice(&bytes)
         .map_err(|e| failure(Code::ExecutionPlanInvalid, e.to_string()))?;
-    contract(&document)?;
+    contracts::validate(kind, &document)
+        .map_err(|e| failure(Code::ExecutionPlanInvalid, e.to_string()))?;
     Ok(document)
+}
+
+fn read_document<T: DeserializeOwned + Serialize>(path: &Path) -> Result<T> {
+    read_document_with(path, Contract::Execution)
+}
+
+pub(super) fn read_finalization_document<T: DeserializeOwned + Serialize>(
+    path: &Path,
+    kind: Contract,
+) -> Result<T> {
+    read_document_with(path, kind)
 }
 
 pub fn load_plan(path: &Path) -> Result<ExecutionPlan> {
@@ -336,8 +349,19 @@ pub(super) fn validate_plan(plan: &ExecutionPlan) -> Result<()> {
 /// quarantine trees. A plan or approval can never silently overwrite a file.
 #[cfg(unix)]
 pub fn write_document<T: Serialize>(path: &Path, document: &T, plan: &ExecutionPlan) -> Result<()> {
+    write_document_with(path, document, plan, Contract::Execution)
+}
+
+#[cfg(unix)]
+pub(crate) fn write_document_with<T: Serialize>(
+    path: &Path,
+    document: &T,
+    plan: &ExecutionPlan,
+    kind: Contract,
+) -> Result<()> {
     use rustix::fs::{Mode, OFlags, openat};
-    contract(document)?;
+    contracts::validate(kind, document)
+        .map_err(|e| failure(Code::ExecutionPlanInvalid, e.to_string()))?;
     let parent = std::fs::canonicalize(
         path.parent()
             .filter(|p| !p.as_os_str().is_empty())
@@ -405,6 +429,19 @@ pub fn write_document<T: Serialize>(
     Err(failure(
         Code::ExecutionUnsupported,
         "execution documents require supported filesystem identity",
+    ))
+}
+
+#[cfg(not(unix))]
+pub(crate) fn write_document_with<T: Serialize>(
+    _path: &Path,
+    _document: &T,
+    _plan: &ExecutionPlan,
+    _kind: Contract,
+) -> Result<()> {
+    Err(failure(
+        Code::ExecutionUnsupported,
+        "finalization documents require Unix filesystem identity",
     ))
 }
 

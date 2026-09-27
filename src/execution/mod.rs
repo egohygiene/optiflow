@@ -1,5 +1,6 @@
-//! Approved exact-duplicate dry runs. Mutation and restore remain unsupported.
+//! Bounded exact-duplicate execution, recovery, and explicit finalization.
 mod filesystem;
+pub mod finalization;
 mod journal;
 pub mod model;
 mod mutation;
@@ -9,6 +10,7 @@ mod validation;
 pub use journal::load_execution;
 pub use mutation::{MutationRun, MutationStatus, apply_quarantine, load_mutation};
 pub use recovery::{RecoveryReport, cleanup, restore, resume, status as execution_status};
+pub(crate) use validation::write_document_with as write_finalization_document;
 pub use validation::{approve, create_plan, dry_run, load_approval, load_plan, write_document};
 
 use crate::outcome::{

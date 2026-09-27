@@ -66,6 +66,8 @@ impl Cli {
                 ExecutionCommand::Resume(_) => "execution resume",
                 ExecutionCommand::Restore(_) => "execution restore",
                 ExecutionCommand::Cleanup(_) => "execution cleanup",
+                ExecutionCommand::Finalize(_) => "execution finalize",
+                ExecutionCommand::AuthorizeFinalization(_) => "execution authorize-finalization",
             },
             Command::Cache(_) => "cache",
             Command::Config(arguments) => match &arguments.command {
@@ -265,6 +267,55 @@ pub enum ExecutionCommand {
     Restore(ExecutionRestoreArgs),
     /// Remove an empty owned namespace after every action is restored.
     Cleanup(ExecutionRecoveryArgs),
+    /// Preview explicitly selected retained copies; --commit requires separate authorization.
+    Finalize(ExecutionFinalizeArgs),
+    /// Bind a reviewed finalization preview fingerprint to a local audit label.
+    AuthorizeFinalization(ExecutionFinalizeAuthorizeArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionFinalizeArgs {
+    #[arg(long, value_name = "FILE")]
+    pub plan: PathBuf,
+    #[arg(long, value_name = "FILE")]
+    pub approval: PathBuf,
+    /// Irreversible mode requires both the reviewed preview and authorization.
+    #[arg(long)]
+    pub commit: bool,
+    #[arg(
+        long,
+        value_name = "UUID",
+        required_unless_present = "commit",
+        conflicts_with = "commit"
+    )]
+    pub run: Option<String>,
+    #[arg(long, action = clap::ArgAction::Append, value_name = "ACTION-ID", required_unless_present = "commit", conflicts_with = "commit")]
+    pub action: Vec<String>,
+    #[arg(
+        long,
+        value_name = "FILE",
+        required_unless_present = "commit",
+        conflicts_with = "commit"
+    )]
+    pub output: Option<PathBuf>,
+    #[arg(long, value_name = "FILE", requires = "commit")]
+    pub preview: Option<PathBuf>,
+    #[arg(long, value_name = "FILE", requires = "commit")]
+    pub authorization: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionFinalizeAuthorizeArgs {
+    #[arg(long, value_name = "FILE")]
+    pub plan: PathBuf,
+    #[arg(long, value_name = "FILE")]
+    pub preview: PathBuf,
+    #[arg(long)]
+    pub fingerprint: String,
+    #[arg(long)]
+    pub approved_by: String,
+    #[arg(long, value_name = "FILE")]
+    pub output: PathBuf,
 }
 
 #[derive(Debug, Args)]
