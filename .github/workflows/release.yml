@@ -44,6 +44,15 @@ jobs:
             printf "release-version must be an exact vMAJOR.MINOR.PATCH value\n" >&2
             exit 2
           fi
+          # Only the historical published read-only sources can use this pilot.
+          # Current main contains Linux mutation code, regardless of its version.
+          if [[ ! ( "${RELEASE_VERSION}" == "v0.1.0" && \
+                    "${GITHUB_SHA}" == "f04c82a0b0c677a2939ea351c4219602cd7181af" ) && \
+                ! ( "${RELEASE_VERSION}" == "v0.1.1" && \
+                    "${GITHUB_SHA}" == "b82599a2231e997d42fd9f26f4b59587f4ae14cf" ) ]]; then
+            printf "new source requires mutation qualification; refusing publication\n" >&2
+            exit 2
+          fi
           manifest_version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
           if [[ "${RELEASE_VERSION}" != "v${manifest_version}" ]]; then
             printf "release %s does not match Cargo.toml version %s\n" \

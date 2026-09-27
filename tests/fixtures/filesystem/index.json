@@ -7,7 +7,7 @@
       "payload_sha256": [
         "08c1ddaafde8b5e630653e2cfa5911823d8df45e45526637605c5b9d5fc8cae4"
       ],
-      "proof_source_sha256": "402af18a4f645270e800f70f52f76500a8b0cc1a31983a809c55fdb0a25557e2",
+      "proof_source_sha256": "ad32b7e3369125d6421eac50822b4c263ecaa15ea1228e28c297be42e5975714",
       "recipe_sha256": "5824ae445013dd93f2fc2d9d87c2631ee31ee0b6ef1a2255d0e4332eb2e20183"
     },
     {
@@ -17,14 +17,14 @@
         "08c1ddaafde8b5e630653e2cfa5911823d8df45e45526637605c5b9d5fc8cae4",
         "d9298a10d1b0735837dc4bd85dac641b0f3cef27a47e5d53a54f2f3f5b2fcffa"
       ],
-      "proof_source_sha256": "402af18a4f645270e800f70f52f76500a8b0cc1a31983a809c55fdb0a25557e2",
-      "recipe_sha256": "a74cb458735413ed20b2d414a60b959564857cad845ca9c3a8c96a7787922188"
+      "proof_source_sha256": "ad32b7e3369125d6421eac50822b4c263ecaa15ea1228e28c297be42e5975714",
+      "recipe_sha256": "17bfddf88de0041fd77bba2eb613d0d318fbc0cb08085626b9864a642eaa29c8"
     },
     {
       "expected_sha256": "446cd7025d47f13c23c2538361ca11f5b342eff00c8dc045729b85d7a0e76b03",
       "id": "fs88-allocation",
       "payload_sha256": [],
-      "proof_source_sha256": "402af18a4f645270e800f70f52f76500a8b0cc1a31983a809c55fdb0a25557e2",
+      "proof_source_sha256": "ad32b7e3369125d6421eac50822b4c263ecaa15ea1228e28c297be42e5975714",
       "recipe_sha256": "b32e67de657b6de8c7b6b80d7182b4cf2284c282b08ccac4dff08e4e3760159b"
     },
     {
@@ -33,7 +33,7 @@
       "payload_sha256": [
         "08c1ddaafde8b5e630653e2cfa5911823d8df45e45526637605c5b9d5fc8cae4"
       ],
-      "proof_source_sha256": "402af18a4f645270e800f70f52f76500a8b0cc1a31983a809c55fdb0a25557e2",
+      "proof_source_sha256": "ad32b7e3369125d6421eac50822b4c263ecaa15ea1228e28c297be42e5975714",
       "recipe_sha256": "b8da3d37b162ac228ef6f6ce80f39817d6fabb62084afe89085973d4398dd0a9"
     },
     {
@@ -43,14 +43,14 @@
         "08c1ddaafde8b5e630653e2cfa5911823d8df45e45526637605c5b9d5fc8cae4",
         "666a596df2cf2181e69835c4f812f7c6117ecbe5136a3a6be2a07ef4aaccd343"
       ],
-      "proof_source_sha256": "402af18a4f645270e800f70f52f76500a8b0cc1a31983a809c55fdb0a25557e2",
+      "proof_source_sha256": "ad32b7e3369125d6421eac50822b4c263ecaa15ea1228e28c297be42e5975714",
       "recipe_sha256": "e97221ebe641430fa9cbc909640ef291056b8bfeeda2f3411cdceec374de86b5"
     },
     {
       "expected_sha256": "809da5a5e3adc9d4eac6e1f1eb189940485b3f03b8e12f483fa196ec58a36d33",
       "id": "fs88-stress",
       "payload_sha256": [],
-      "proof_source_sha256": "402af18a4f645270e800f70f52f76500a8b0cc1a31983a809c55fdb0a25557e2",
+      "proof_source_sha256": "ad32b7e3369125d6421eac50822b4c263ecaa15ea1228e28c297be42e5975714",
       "recipe_sha256": "f71ab4bdfb8dc391cfabb2a9a46e98fbfaa749272ee1ab49777c6bf65fe45a10"
     },
     {
@@ -148,8 +148,8 @@
       "recipe_sha256": "e09a424b25810925dd8b9b3bc2fd5e912d0f66e6cb42b4ea88ddff6cad7b8c31"
     }
   ],
-  "catalog_sha256": "c74fc54cc777759ce271a1b10699caad85a6ac60dbc3cdcf64dbbe245d44e020",
-  "generator_sha256": "e852c002bb57bbe7da27e85d572d9d3ecb49aac4cbcf0ff501a4640e71022227",
+  "catalog_sha256": "95725dbb520fc4a14fd636f9ee168799f96c5d32186c08303bb02b0e43c27b16",
+  "generator_sha256": "1c669b54f8dfe7bad0f15d1f791b454b5d622459365d7914fd9adbf5063f8005",
   "license": "MIT",
   "schema": "optiflow.filesystem-corpus-index.v1"
 }

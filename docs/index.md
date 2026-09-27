@@ -17,7 +17,8 @@ produces immutable plans for human review.
     [approved execution](execution-dry-run.md), [Linux quarantine](execution-quarantine.md)
     [operator recovery](execution-recovery.md), and separately authorized
     [irreversible finalization](execution-finalization.md). A finding never becomes
-    mutation authority.
+    mutation authority. [Disposable-volume qualification](external-drive-mutation-pilot.md)
+    for a mutation release remains pending.
 
 ## Choose a path
 

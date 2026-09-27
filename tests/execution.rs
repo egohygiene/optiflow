@@ -4,6 +4,7 @@ use clap::Parser;
 use optiflow::cli::{Cli, ExecutionPlanArgs};
 use optiflow::configuration::{self, EffectivePolicyV1};
 use optiflow::contracts::{self, Contract};
+use optiflow::domain::NativePath;
 use optiflow::execution::{self, model::*};
 use optiflow::outcome::DiagnosticCode as Code;
 use optiflow::signals::SignalState;
@@ -530,17 +531,42 @@ fn cli_creates_and_approves_explicit_paths_without_using_review_defaults() {
 }
 
 #[test]
-fn native_non_utf8_paths_round_trip_through_approval_and_validation() {
+fn native_paths_round_trip_through_approval_and_validation() {
     use std::ffi::OsString;
     use std::os::unix::ffi::OsStringExt;
     let mut f = Fixture::new();
-    let path = f.args.root[0].join(OsString::from_vec(b"duplicate-\xff.bin".to_vec()));
+    let raw_path = f.args.root[0].join(OsString::from_vec(b"duplicate-\xff.bin".to_vec()));
+    let raw = NativePath::from_path(&raw_path);
+    assert!(matches!(raw, NativePath::UnixBytes { .. }));
+    let encoded = serde_json::to_vec(&raw).unwrap();
+    let decoded: NativePath = serde_json::from_slice(&encoded).unwrap();
+    assert_eq!(decoded.to_path_buf(), raw_path);
+    // APFS refuses invalid UTF-8 filenames; keep the byte encoding proof
+    // above and use an actual Unicode path for the macOS filesystem proof.
+    #[cfg(target_os = "macos")]
+    let path = f.args.root[0].join("duplicate-🌌\n.bin");
+    #[cfg(not(target_os = "macos"))]
+    let path = raw_path;
     fs::rename(&f.args.candidate[0], &path).unwrap();
-    f.args.candidate = vec![path];
+    f.args.candidate = vec![path.clone()];
     let p = f.documents();
     let loaded = execution::load_plan(&f.args.output).unwrap();
     assert_eq!(p.fingerprint, loaded.fingerprint);
-    assert_eq!(f.run(&loaded).unwrap().status, Status::Validated);
+    assert_eq!(loaded.body.actions[0].candidate.path.to_path_buf(), path);
+    let approval = execution::load_approval(&f.base.join("approval.json")).unwrap();
+    assert_eq!(approval.body.plan_fingerprint, p.fingerprint);
+    assert_eq!(
+        execution::dry_run(
+            &loaded,
+            &approval,
+            &f.state,
+            &f.policy,
+            &SignalState::default()
+        )
+        .unwrap()
+        .status,
+        Status::Validated
+    );
 }
 
 #[test]

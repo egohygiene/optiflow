@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/synthetic-transaction-smoke-v1.schema.json",
+  "title": "Local synthetic exact-transaction smoke receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "qualified_for_release", "binary_sha256", "work_filesystem_id", "quarantine_filesystem_id", "synthetic_work", "synthetic_quarantine", "passed", "cleaned_synthetic_fixtures", "scenarios"],
+  "if": {"properties": {"passed": {"const": true}}, "required": ["passed"]},
+  "then": {
+    "properties": {
+      "cleaned_synthetic_fixtures": {"const": true},
+      "scenarios": {"required": ["cross_filesystem", "same_filesystem", "disconnected_before_action"]}
+    }
+  },
+  "properties": {
+    "schema": {"const": "optiflow.synthetic-transaction-smoke.v1"},
+    "qualified_for_release": {"const": false},
+    "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "work_filesystem_id": {"type": "integer", "minimum": 0},
+    "quarantine_filesystem_id": {"type": "integer", "minimum": 0},
+    "synthetic_work": {"type": "string"},
+    "synthetic_quarantine": {"type": "string"},
+    "passed": {"type": "boolean"},
+    "cleaned_synthetic_fixtures": {"type": "boolean"},
+    "error": {"type": "string"},
+    "scenarios": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "cross_filesystem": {
+          "type": "object", "additionalProperties": false,
+          "required": ["scan_run", "execution_run", "review_only", "dry_run", "approval_refused", "unauthorized_finalization_refused", "journal_phases", "logical_bytes_removed", "observed_allocated_bytes_removed", "shared_extent_bytes", "physical_reclaimed_bytes", "target_free_bytes_before", "target_free_bytes_after", "target_free_space_change_bytes", "event_free_space_change_bytes"],
+          "properties": {
+            "scan_run": {"type": "string"},
+            "execution_run": {"type": "string"},
+            "review_only": {"const": true},
+            "dry_run": {"const": "validated"},
+            "approval_refused": {"type": "integer", "minimum": 1},
+            "unauthorized_finalization_refused": {"type": "integer", "minimum": 1},
+            "journal_phases": {"const": ["removal_pending", "removed"]},
+            "logical_bytes_removed": {"type": "integer", "minimum": 1},
+            "observed_allocated_bytes_removed": {"type": "integer", "minimum": 1},
+            "shared_extent_bytes": {"const": null},
+            "physical_reclaimed_bytes": {"const": null},
+            "target_free_bytes_before": {"type": "integer", "minimum": 0},
+            "target_free_bytes_after": {"type": "integer", "minimum": 0},
+            "target_free_space_change_bytes": {"type": "integer"},
+            "event_free_space_change_bytes": {"type": ["integer", "null"]}
+          }
+        },
+        "same_filesystem": {
+          "type": "object", "additionalProperties": false,
+          "required": ["execution_run", "status"],
+          "properties": {"execution_run": {"type": "string"}, "status": {"const": "cleaned"}}
+        },
+        "disconnected_before_action": {
+          "type": "object", "additionalProperties": false,
+          "required": ["simulated_rename_only", "exit_code", "source_preserved"],
+          "properties": {
+            "simulated_rename_only": {"const": true},
+            "exit_code": {"type": "integer", "minimum": 1},
+            "source_preserved": {"const": true}
+          }
+        }
+      }
+    }
+  }
+}

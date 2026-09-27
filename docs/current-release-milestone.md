@@ -49,11 +49,15 @@ all succeeded.
 | --- | --- |
 | Released in `v0.1.0` | Read-only inventory, exact-duplicate proof, conservative reclaimable-byte evidence, and immutable review planning from the released source pin. |
 | Released in `v0.1.1` | Extension, media-profile, bounded PNG library-validation, documentation, performance, filesystem-corpus, and native pilot work from the immutable released source. Each feature retains its documented CLI/library boundary. |
-| Planned | The issue-owned operator chain below. A plan or closed design issue does not make behavior available. |
-| Unsupported | Candidate production, optimization execution, apply, replace, quarantine, restore, irreversible finalization, and measured physical-space reclamation. |
+| Development `main` after #96 | Explicit execution plans and approvals, dry-run validation, Linux-only bounded quarantine, status/resume/restore, and separately authorized finalization of restored retained copies. Not in `v0.1.1`. |
+| Planned | #93 disposable real-volume/native release qualification; #94 candidate production and #95 validated replacement remain separate. |
+| Unsupported | Mutation on macOS, PNG candidate production/replacement, direct original-path deletion, and causal physical-space reclamation claims. |
 
-Version `0.1.1` and current `main` are read-only with respect to source media.
-A review plan is evidence for an operator; it is never write authorization.
+Version `0.1.1` is read-only with respect to source media. A review plan is
+evidence for an operator; it is never write authorization. Development `main`
+can mutate on Linux only after explicit execution approval and retains the
+documented irreversible boundary. The existing signed release workflow refuses
+any new source/version pair until distinct qualification is ready.
 
 ## Completed evidence chain
 

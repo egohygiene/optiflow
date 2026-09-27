@@ -1,0 +1,42 @@
+{
+  "binary_sha256": "963ad13bd341b30f5f75b345b042ce6f883c669fe9f2de53eb0973078606316c",
+  "cleaned_synthetic_fixtures": true,
+  "passed": true,
+  "qualified_for_release": false,
+  "quarantine_filesystem_id": 26,
+  "scenarios": {
+    "cross_filesystem": {
+      "approval_refused": 2,
+      "dry_run": "validated",
+      "event_free_space_change_bytes": 0,
+      "execution_run": "01a0e24c-0298-7485-950d-281b4a4858b5",
+      "journal_phases": [
+        "removal_pending",
+        "removed"
+      ],
+      "logical_bytes_removed": 65536,
+      "observed_allocated_bytes_removed": 65536,
+      "physical_reclaimed_bytes": null,
+      "review_only": true,
+      "scan_run": "01a0e24c-0066-7208-acc9-e6b12a726cc7",
+      "shared_extent_bytes": null,
+      "target_free_bytes_after": 5225746432,
+      "target_free_bytes_before": 5225746432,
+      "target_free_space_change_bytes": 0,
+      "unauthorized_finalization_refused": 2
+    },
+    "disconnected_before_action": {
+      "exit_code": 5,
+      "simulated_rename_only": true,
+      "source_preserved": true
+    },
+    "same_filesystem": {
+      "execution_run": "01a0e24c-0824-7787-81e9-b4bd495726d8",
+      "status": "cleaned"
+    }
+  },
+  "schema": "optiflow.synthetic-transaction-smoke.v1",
+  "synthetic_quarantine": "/dev/shm/optiflow-synthetic-quarantine-7vioutdd",
+  "synthetic_work": "/workspace/scratch/be7f1f8a088f/optiflow-93/optiflow-synthetic-o3g3q4s_",
+  "work_filesystem_id": 27
+}

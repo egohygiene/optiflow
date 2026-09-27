@@ -38,6 +38,10 @@ SUBJECTS_MANIFEST = "release-subjects.sha256"
 SIGNATURE = "signature.json"
 COMPLETE_MANIFEST = "SHA256SUMS"
 VERSION_RE = re.compile(r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+READ_ONLY_SOURCES = {
+    pilot.PREVIOUS_VERSION: pilot.PREVIOUS_REVISION,
+    pilot.QUALIFIED_VERSION: pilot.QUALIFIED_REVISION,
+}
 
 
 class BundleError(RuntimeError):
@@ -77,7 +81,6 @@ def validate_inputs(
         raise BundleError("release-version must be an exact vMAJOR.MINOR.PATCH value")
     if re.fullmatch(r"[0-9a-f]{40}", source_revision) is None:
         raise BundleError("source-revision must be a full lowercase Git commit SHA")
-
     manifest = tomllib.loads(
         (repository_root / "Cargo.toml").read_text(encoding="utf-8")
     )
@@ -90,6 +93,14 @@ def validate_inputs(
         )
     if package.get("name") != PACKAGE_NAME:
         raise BundleError(f"Cargo.toml package must be {PACKAGE_NAME}")
+    # The native qualification contract below proves read-only behavior only.
+    # A new v0.1.x binary from mutation-capable main is no safer than v0.2.0.
+    if READ_ONLY_SOURCES.get(release_version) != source_revision:
+        raise BundleError(
+            "read-only release qualification is pinned to published v0.1.0/v0.1.1 "
+            "source revisions; new versions need native mutation and "
+            "removable-volume evidence before signing"
+        )
     return requested_version
 
 

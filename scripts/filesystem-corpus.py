@@ -79,6 +79,20 @@ def resident_bytes(process_group):
                if len(row := line.split()) == 2 and int(row[0]) == process_group)
 
 
+def stop_group(process):
+    # Kill surviving descendants even when the test process has exited.
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except PermissionError:
+        # macOS may report EPERM after the leader is reaped. Only accept that
+        # as a gone group when no processes remain under the recorded PGID.
+        if sys.platform != "darwin" or process.poll() is None or resident_bytes(process.pid):
+            raise
+    process.wait()
+
+
 def run_bounded(argv, workspace, log, budget, deadline, evidence_root, env=None):
     """Hard process limits plus wall/aggregate-disk watchdog; kill the process group."""
     environment = os.environ.copy() if env is None else env.copy()
@@ -113,12 +127,7 @@ def run_bounded(argv, workspace, log, budget, deadline, evidence_root, env=None)
                     break
                 time.sleep(0.02)
         finally:
-            # Also remove descendants left behind by a failed/aborted test.
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait()
+            stop_group(process)
     if failure:
         raise RuntimeError(failure)
     if process.returncode:

@@ -35,6 +35,7 @@ use crate::configuration::EffectivePolicyV1;
 #[cfg(target_os = "linux")]
 use crate::signals::SignalState;
 
+#[cfg(target_os = "linux")]
 pub const EVENT_SCHEMA: &str = "optiflow.execution-recovery-event.v3";
 pub const REPORT_SCHEMA: &str = "optiflow.execution-recovery-report.v3";
 
