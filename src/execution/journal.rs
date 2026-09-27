@@ -264,18 +264,22 @@ impl Journal {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
     pub fn mutation(&self, run_id: &str) -> Result<Option<MutationRun>> {
         read_mutation(&self.store.connection, run_id)
     }
 
+    #[cfg(target_os = "linux")]
     pub fn recovery_events(&self, run_id: &str) -> Result<Vec<RecoveryEvent>> {
         read_recovery_events(&self.store.connection, run_id)
     }
 
+    #[cfg(target_os = "linux")]
     pub fn finalization_events(&self, run_id: &str) -> Result<Vec<FinalizationEvent>> {
         read_finalization_events(&self.store.connection, run_id)
     }
 
+    #[cfg(target_os = "linux")]
     pub fn append_finalization(
         &mut self,
         event: &FinalizationEvent,
@@ -306,6 +310,7 @@ impl Journal {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
     pub fn stored_authority(&self, plan: &ExecutionPlan, approval: &Approval) -> Result<()> {
         for (table, key_name, key, expected) in [
             (
@@ -347,6 +352,7 @@ impl Journal {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
     pub fn append_recovery(
         &mut self,
         event: &RecoveryEvent,

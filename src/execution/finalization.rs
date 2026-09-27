@@ -230,6 +230,7 @@ pub fn authorize(
     Ok(authorization)
 }
 
+#[cfg(target_os = "linux")]
 fn validate_authorization(
     preview: &FinalizationPreview,
     authorization: &FinalizationAuthorization,

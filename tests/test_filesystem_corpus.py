@@ -5,6 +5,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 SPEC = importlib.util.spec_from_file_location("filesystem_corpus", Path(__file__).resolve().parents[1] / "scripts/filesystem-corpus.py")
 CORPUS = importlib.util.module_from_spec(SPEC)
@@ -67,6 +68,32 @@ class CorpusBudgets(unittest.TestCase):
     def test_duplicate_fixture_ids_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicate corpus fixture ID"):
             CORPUS.generated_index({"cases": [{"id": "duplicate"}] * 2})
+
+    def test_exited_group_permission_refusal_does_not_mask_result(self):
+        process = mock.Mock(pid=12345)
+        process.poll.return_value = 0
+        with mock.patch.object(CORPUS.sys, "platform", "darwin"), \
+             mock.patch.object(CORPUS, "resident_bytes", return_value=0), \
+             mock.patch.object(CORPUS.os, "killpg", side_effect=PermissionError):
+            CORPUS.stop_group(process)
+        process.wait.assert_called_once()
+
+    def test_live_group_permission_refusal_fails_closed(self):
+        process = mock.Mock(pid=12345)
+        process.poll.return_value = None
+        with mock.patch.object(CORPUS.sys, "platform", "darwin"), \
+             mock.patch.object(CORPUS.os, "killpg", side_effect=PermissionError):
+            with self.assertRaises(PermissionError):
+                CORPUS.stop_group(process)
+
+    def test_remaining_group_permission_refusal_fails_closed(self):
+        process = mock.Mock(pid=12345)
+        process.poll.return_value = 0
+        with mock.patch.object(CORPUS.sys, "platform", "darwin"), \
+             mock.patch.object(CORPUS, "resident_bytes", return_value=4096), \
+             mock.patch.object(CORPUS.os, "killpg", side_effect=PermissionError):
+            with self.assertRaises(PermissionError):
+                CORPUS.stop_group(process)
 
 
 if __name__ == "__main__":
