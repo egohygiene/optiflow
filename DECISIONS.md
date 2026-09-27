@@ -276,6 +276,27 @@ without changing IDs or history. This document will retain the index.
   same/cross-filesystem plus interruption tests.
 - **Revisit when:** #92 defines idempotent restore and fault-injected recovery.
 
+### OFD-014 — Require pre-mutation authority and append-only recovery evidence
+
+- **Status:** Proposed for #92 review
+- **Context:** v2 mutation records cannot express new operator recovery
+  authority, and a pending filesystem step may have persisted after its last
+  journal update.
+- **Decision:** Bind effective configuration, evidence policy and binary
+  version before new mutations, preserve v1/v2 records, and append v3 events
+  under migration 0008. Record bounded ownership/mode/mtime/xattr fingerprints
+  at commit. Permit only verified untouched actions to resume, committed
+  quarantine actions to restore without replacement, and empty owned
+  namespaces to be removed. A pending transition remains ambiguous.
+- **Consequences:** Historical v2 runs remain inspection-only. Cross-filesystem
+  restore retains the quarantine copy; cleanup refuses it. Read-only status is
+  a journal report, not a current filesystem proof. Physical savings remain
+  unknown and the released v0.1.1 remains read-only.
+- **Evidence:** [Recovery protocol](docs/execution-recovery.md),
+  `schemas/execution-recovery-*-v3.schema.json`, migration 0008 and synthetic
+  interruption/collision/metadata tests.
+- **Revisit when:** #96 defines independently authorized finalization.
+
 ## Deprecated and Superseded Decisions
 
 None.

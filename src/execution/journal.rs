@@ -7,6 +7,7 @@ use rusqlite::{OptionalExtension, params};
 use super::filesystem as fs;
 use super::model::*;
 use super::mutation::{MutationRun, MutationStatus};
+use super::recovery::RecoveryEvent;
 use super::{Result, failure};
 use crate::contracts::{self, Contract};
 use crate::outcome::DiagnosticCode as Code;
@@ -73,7 +74,7 @@ impl Journal {
                     |r| r.get(0),
                 )
                 .map_err(state_error)?;
-            if newest > 7 {
+            if newest > 8 {
                 return Err(failure(
                     Code::StoredStateIncompatible,
                     "state was migrated by a newer execution implementation",
@@ -262,6 +263,84 @@ impl Journal {
         Ok(())
     }
 
+    pub fn mutation(&self, run_id: &str) -> Result<Option<MutationRun>> {
+        read_mutation(&self.store.connection, run_id)
+    }
+
+    pub fn recovery_events(&self, run_id: &str) -> Result<Vec<RecoveryEvent>> {
+        read_recovery_events(&self.store.connection, run_id)
+    }
+
+    pub fn stored_authority(&self, plan: &ExecutionPlan, approval: &Approval) -> Result<()> {
+        for (table, key_name, key, expected) in [
+            (
+                "execution_plans",
+                "fingerprint",
+                &plan.fingerprint,
+                serde_json::to_value(plan).map_err(state_error)?,
+            ),
+            (
+                "execution_approvals",
+                "authorization_id",
+                &approval.authorization_id,
+                serde_json::to_value(approval).map_err(state_error)?,
+            ),
+        ] {
+            let raw: Option<String> = self
+                .store
+                .connection
+                .query_row(
+                    &format!("SELECT document_json FROM {table} WHERE {key_name} = ?1"),
+                    [key],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(state_error)?;
+            let Some(raw) = raw else {
+                return Err(failure(
+                    Code::StoredStateIncompatible,
+                    "execution authority snapshot is missing",
+                ));
+            };
+            if serde_json::from_str::<serde_json::Value>(&raw).map_err(state_error)? != expected {
+                return Err(failure(
+                    Code::StoredStateIncompatible,
+                    "execution authority snapshot differs from supplied documents",
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn append_recovery(
+        &mut self,
+        event: &RecoveryEvent,
+        max_actions: u64,
+        budget: u64,
+    ) -> Result<()> {
+        contracts::validate(Contract::ExecutionRecoveryEvent, event).map_err(state_error)?;
+        let document = serde_json::to_string(event).map_err(state_error)?;
+        let (count, bytes): (i64, i64) = self.store.connection.query_row(
+            "SELECT COUNT(*), COALESCE(SUM(LENGTH(document_json)), 0) FROM execution_recovery_events WHERE run_id = ?1",
+            [&event.run_id], |row| Ok((row.get(0)?, row.get(1)?)),
+        ).map_err(state_error)?;
+        if count < 0
+            || count as u64 >= max_actions.saturating_mul(24).saturating_add(8)
+            || bytes < 0
+            || (bytes as u64).saturating_add(document.len() as u64) > budget
+        {
+            return Err(failure(
+                Code::ExecutionBoundsExceeded,
+                "recovery journal count or byte budget exceeded",
+            ));
+        }
+        self.store.connection.execute(
+            "INSERT INTO execution_recovery_events (event_id, run_id, operation_id, action_id, operation, phase, document_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![event.event_id, event.run_id, event.operation_id, event.action_id, event.operation, event.phase, document],
+        ).map_err(state_error)?;
+        Ok(())
+    }
+
     pub fn begin(
         &mut self,
         plan: &ExecutionPlan,
@@ -355,7 +434,10 @@ pub fn load_mutation(state: &Path, run_id: &str) -> Result<Option<MutationRun>> 
     read_mutation(&connection, run_id)
 }
 
-fn read_mutation(connection: &rusqlite::Connection, run_id: &str) -> Result<Option<MutationRun>> {
+pub(super) fn read_mutation(
+    connection: &rusqlite::Connection,
+    run_id: &str,
+) -> Result<Option<MutationRun>> {
     let record: Option<(String, String, String, String)> = connection.query_row(
         "SELECT plan_fingerprint, authorization_id, status, document_json FROM execution_mutation_runs WHERE run_id = ?1",
         [run_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
@@ -387,6 +469,95 @@ fn read_mutation(connection: &rusqlite::Connection, run_id: &str) -> Result<Opti
             Ok(run)
         })
         .transpose()
+}
+
+pub(super) fn read_recovery_events(
+    connection: &rusqlite::Connection,
+    run_id: &str,
+) -> Result<Vec<RecoveryEvent>> {
+    let version: i64 = connection
+        .query_row(
+            "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(state_error)?;
+    if version < 8 {
+        return Ok(Vec::new());
+    }
+    if version > 8 {
+        return Err(failure(
+            Code::StoredStateIncompatible,
+            "state was migrated by a newer recovery implementation",
+        ));
+    }
+    let mut statement = connection.prepare(
+        "SELECT event_id, operation_id, action_id, operation, phase, document_json FROM execution_recovery_events WHERE run_id = ?1 ORDER BY sequence LIMIT 24009"
+    ).map_err(state_error)?;
+    let rows = statement
+        .query_map([run_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(state_error)?;
+    let mut events = Vec::new();
+    for row in rows {
+        let (event_id, operation_id, action_id, operation, phase, document) =
+            row.map_err(state_error)?;
+        let raw: serde_json::Value = serde_json::from_str(&document).map_err(state_error)?;
+        contracts::validate(Contract::ExecutionRecoveryEvent, &raw).map_err(state_error)?;
+        let event: RecoveryEvent = serde_json::from_str(&document).map_err(state_error)?;
+        if event.event_id != event_id
+            || event.operation_id != operation_id
+            || event.action_id != action_id
+            || event.operation != operation
+            || event.phase != phase
+            || event.run_id != run_id
+        {
+            return Err(failure(
+                Code::StoredStateIncompatible,
+                "recovery row and evidence disagree",
+            ));
+        }
+        events.push(event);
+    }
+    if events.len() > 24008 {
+        return Err(failure(
+            Code::ExecutionBoundsExceeded,
+            "recovery event limit exceeded",
+        ));
+    }
+    Ok(events)
+}
+
+pub(super) fn read_stored_plan(
+    connection: &rusqlite::Connection,
+    fingerprint: &str,
+) -> Result<ExecutionPlan> {
+    let document: String = connection
+        .query_row(
+            "SELECT document_json FROM execution_plans WHERE fingerprint = ?1",
+            [fingerprint],
+            |row| row.get(0),
+        )
+        .map_err(state_error)?;
+    let raw: serde_json::Value = serde_json::from_str(&document).map_err(state_error)?;
+    contracts::validate(Contract::Execution, &raw).map_err(state_error)?;
+    let plan: ExecutionPlan = serde_json::from_str(&document).map_err(state_error)?;
+    super::validation::validate_plan(&plan)?;
+    if plan.fingerprint != fingerprint {
+        return Err(failure(
+            Code::StoredStateIncompatible,
+            "stored plan identity differs",
+        ));
+    }
+    Ok(plan)
 }
 
 pub fn load_execution(state: &Path, run_id: &str) -> Result<Option<ExecutionRun>> {

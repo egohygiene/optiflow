@@ -1,5 +1,7 @@
 use super::Execution;
-use crate::cli::{ApplyArgs, ApproveArgs, ExecutionPlanArgs};
+use crate::cli::{
+    ApplyArgs, ApproveArgs, ExecutionCommand, ExecutionPlanArgs, ExecutionRecoveryArgs,
+};
 use crate::configuration::EffectivePolicyV1;
 use crate::domain::NativePath;
 use crate::execution::{self, model};
@@ -98,6 +100,50 @@ pub(super) fn apply(
             }
             result
         }
+        Err(diagnostic) => Execution::failure(*diagnostic),
+    }
+}
+
+fn recover_documents(
+    args: &ExecutionRecoveryArgs,
+) -> execution::Result<(model::ExecutionPlan, model::Approval)> {
+    Ok((
+        execution::load_plan(&args.plan)?,
+        execution::load_approval(&args.approval)?,
+    ))
+}
+
+pub(super) fn recovery(
+    command: ExecutionCommand,
+    state: &Path,
+    policy: &EffectivePolicyV1,
+    signals: &SignalState,
+) -> Execution {
+    let result = (|| match command {
+        ExecutionCommand::Status(args) => execution::execution_status(state, &args.run),
+        ExecutionCommand::Resume(args) => {
+            let (plan, approval) = recover_documents(&args)?;
+            execution::resume(&plan, &approval, state, policy, &args.run, signals)
+        }
+        ExecutionCommand::Restore(args) => {
+            let (plan, approval) = recover_documents(&args.recovery)?;
+            execution::restore(
+                &plan,
+                &approval,
+                state,
+                policy,
+                &args.recovery.run,
+                &args.action,
+                signals,
+            )
+        }
+        ExecutionCommand::Cleanup(args) => {
+            let (plan, approval) = recover_documents(&args)?;
+            execution::cleanup(&plan, &approval, state, policy, &args.run, signals)
+        }
+    })();
+    match result {
+        Ok(report) => Execution::success(&report),
         Err(diagnostic) => Execution::failure(*diagnostic),
     }
 }

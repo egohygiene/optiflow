@@ -584,7 +584,7 @@ fn newer_state_schema_is_not_modified_or_opened_for_execution() {
     let _store = optiflow::state::StateStore::open(&f.state).unwrap();
     let connection = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
     connection
-        .execute("INSERT INTO schema_migrations VALUES (8,'future')", [])
+        .execute("INSERT INTO schema_migrations VALUES (9,'future')", [])
         .unwrap();
     drop(connection);
     let before = fs::read(f.state.join("state.sqlite3")).unwrap();
@@ -863,4 +863,459 @@ fn cross_filesystem_copy_commits_destination_before_source_removal_when_availabl
     .unwrap();
     assert_eq!(&attribute[..length], b"preserved");
     assert_eq!(run.savings.physical_reclaimed_bytes, None);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn recovery_status_restore_and_empty_cleanup_are_idempotent() {
+    let f = Fixture::new();
+    let p = f.documents();
+    let a = f.approval(&p);
+    let original = source(&f.args.candidate[0]);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let status = execution::execution_status(&f.state, &run.run_id).unwrap();
+    assert_eq!(status.status, "quarantined");
+    assert_eq!(status.recovery_authority, "bound_v3_context");
+    contracts::validate(Contract::ExecutionRecoveryReport, &status).unwrap();
+    for event in &status.events {
+        contracts::validate(Contract::ExecutionRecoveryEvent, event).unwrap();
+    }
+    let status_cli = cli(&f, &["--json", "execution", "status", "--run", &run.run_id]);
+    assert!(status_cli.status.success());
+    let value: Value = serde_json::from_slice(&status_cli.stdout).unwrap();
+    assert_eq!(value["result"]["status"], "quarantined");
+    contracts::validate(Contract::ExecutionRecoveryReport, &value["result"]).unwrap();
+    let db = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
+    assert!(
+        db.execute(
+            "UPDATE execution_recovery_events SET phase = 'cleaned' WHERE run_id = ?1",
+            [&run.run_id]
+        )
+        .is_err()
+    );
+    assert!(
+        db.execute(
+            "DELETE FROM execution_recovery_events WHERE run_id = ?1",
+            [&run.run_id]
+        )
+        .is_err()
+    );
+    let restored = execution::restore(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &p.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.status, "restored");
+    let returned = source(&f.args.candidate[0]);
+    assert_eq!(returned.0, original.0);
+    assert_eq!((returned.1, returned.2), (original.1, original.2));
+    let again = execution::restore(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &p.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.events.len(), again.events.len());
+    let cleaned = execution::cleanup(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(cleaned.status, "cleaned");
+    assert!(!run.namespace.to_path_buf().exists());
+    let repeated = execution::cleanup(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(cleaned.events.len(), repeated.events.len());
+    assert_eq!(
+        execution::load_mutation(&f.state, &run.run_id)
+            .unwrap()
+            .unwrap()
+            .status,
+        execution::MutationStatus::Completed
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn recovery_refuses_collision_and_changed_policy_without_moving_quarantine() {
+    let f = Fixture::new();
+    let p = f.plan();
+    let a = f.approval(&p);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let destination = run.attempts[0].destination.to_path_buf();
+    let saved = fs::read(&destination).unwrap();
+    fs::write(&f.args.candidate[0], b"collision with independent data").unwrap();
+    assert_eq!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .unwrap_err()
+        .code,
+        Code::ExecutionDestinationOccupied
+    );
+    assert_eq!(fs::read(&destination).unwrap(), saved);
+    fs::remove_file(&f.args.candidate[0]).unwrap();
+    let config = f.base.join("alternate-policy.toml");
+    fs::write(
+        &config,
+        "schema = \"optiflow.config.v1\"\n[scan]\ninclude_hidden = true\n",
+    )
+    .unwrap();
+    let cli = Cli::parse_from([
+        "optiflow",
+        "--config",
+        config.to_str().unwrap(),
+        "--state-directory",
+        f.state.to_str().unwrap(),
+        "doctor",
+    ]);
+    let changed = configuration::resolve(&cli).unwrap().policy;
+    assert!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &changed,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert_eq!(fs::read(&destination).unwrap(), saved);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn recovery_refuses_changed_extended_attributes_after_commit() {
+    let f = Fixture::new();
+    rustix::fs::setxattr(
+        &f.args.candidate[0],
+        "user.optiflow_recovery",
+        b"original",
+        rustix::fs::XattrFlags::CREATE,
+    )
+    .unwrap();
+    // Plan after metadata changes so its bound identity remains current.
+    let p = f.plan();
+    let a = f.approval(&p);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let destination = run.attempts[0].destination.to_path_buf();
+    rustix::fs::setxattr(
+        &destination,
+        "user.optiflow_recovery",
+        b"changed",
+        rustix::fs::XattrFlags::empty(),
+    )
+    .unwrap();
+    assert_eq!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .unwrap_err()
+        .code,
+        Code::ExecutionSourceStale
+    );
+    assert!(!f.args.candidate[0].exists());
+    assert!(destination.exists());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn recovery_refuses_contention_permission_change_and_disconnected_quarantine() {
+    use rustix::fs::{FlockOperation, flock};
+    let f = Fixture::new();
+    let p = f.plan();
+    let a = f.approval(&p);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let destination = run.attempts[0].destination.to_path_buf();
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(f.state.join("execution.lock"))
+        .unwrap();
+    flock(&lock, FlockOperation::NonBlockingLockExclusive).unwrap();
+    assert!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    drop(lock);
+    assert!(destination.exists());
+    fs::set_permissions(
+        f.args.candidate[0].parent().unwrap(),
+        fs::Permissions::from_mode(0o555),
+    )
+    .unwrap();
+    assert!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    fs::set_permissions(
+        f.args.candidate[0].parent().unwrap(),
+        fs::Permissions::from_mode(0o755),
+    )
+    .unwrap();
+    let disconnected = f.base.join("disconnected");
+    fs::rename(&f.args.quarantine, &disconnected).unwrap();
+    assert!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    fs::rename(&disconnected, &f.args.quarantine).unwrap();
+    assert!(destination.exists());
+    assert!(!f.args.candidate[0].exists());
+    let restored = execution::restore(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &p.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.status, "restored");
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn pending_reverse_copy_and_unowned_temporary_remain_for_inspection() {
+    let mut f = Fixture::new();
+    let alternate = Path::new("/dev/shm");
+    if !alternate.is_dir()
+        || fs::metadata(alternate).unwrap().dev() == fs::metadata(&f.base).unwrap().dev()
+    {
+        return;
+    }
+    let quarantine = tempfile::tempdir_in(alternate).unwrap();
+    f.args.quarantine = fs::canonicalize(quarantine.path()).unwrap();
+    let p = f.plan();
+    let a = f.approval(&p);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let mut pending = serde_json::to_value(
+        &execution::execution_status(&f.state, &run.run_id)
+            .unwrap()
+            .events[0],
+    )
+    .unwrap();
+    let temporary = f.args.candidate[0].parent().unwrap().join(format!(
+        ".optiflow-{}-{}.restore.part",
+        run.run_id, p.body.actions[0].action_id
+    ));
+    fs::write(&temporary, b"partial reverse copy").unwrap();
+    pending["event_id"] = json!(uuid::Uuid::now_v7().to_string());
+    pending["operation_id"] = json!(uuid::Uuid::now_v7().to_string());
+    pending["operation"] = json!("restore");
+    pending["phase"] = json!("restore_pending");
+    pending["action_id"] = json!(p.body.actions[0].action_id);
+    pending["source"] = serde_json::to_value(&p.body.actions[0].candidate.path).unwrap();
+    pending["destination"] = serde_json::to_value(&run.attempts[0].destination).unwrap();
+    pending["temporary"] =
+        serde_json::to_value(optiflow::domain::NativePath::from_path(&temporary)).unwrap();
+    let db = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
+    db.execute("INSERT INTO execution_recovery_events (event_id,run_id,operation_id,action_id,operation,phase,document_json) VALUES (?1,?2,?3,?4,?5,?6,?7)", rusqlite::params![
+        pending["event_id"].as_str().unwrap(), run.run_id, pending["operation_id"].as_str().unwrap(),
+        p.body.actions[0].action_id, "restore", "restore_pending", pending.to_string()]).unwrap();
+    let status = execution::execution_status(&f.state, &run.run_id).unwrap();
+    assert_eq!(status.status, "attention_required");
+    assert_eq!(status.actions[0].state, "ambiguous");
+    assert!(
+        execution::restore(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert!(
+        execution::cleanup(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert_eq!(fs::read(&temporary).unwrap(), b"partial reverse copy");
+    assert!(run.attempts[0].destination.to_path_buf().exists());
+    assert!(!f.args.candidate[0].exists());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn read_only_status_keeps_a_pending_transition_ambiguous() {
+    let f = Fixture::new();
+    let p = f.plan();
+    let a = f.approval(&p);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let database = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
+    let mut interrupted = serde_json::to_value(&run).unwrap();
+    interrupted["status"] = json!("interrupted");
+    interrupted["attempts"][0]["committed"] = json!(false);
+    interrupted["attempts"][0]["phase"] = json!("rename_pending");
+    interrupted["committed_actions"] = json!(0);
+    database.execute("UPDATE execution_mutation_runs SET status = 'interrupted', document_json = ?2 WHERE run_id = ?1",
+        rusqlite::params![run.run_id, serde_json::to_string(&interrupted).unwrap()]).unwrap();
+    let before = fs::read(run.attempts[0].destination.to_path_buf()).unwrap();
+    let status = execution::execution_status(&f.state, &run.run_id).unwrap();
+    assert_eq!(status.status, "attention_required");
+    assert_eq!(status.actions[0].state, "ambiguous");
+    assert!(
+        execution::resume(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert_eq!(
+        fs::read(run.attempts[0].destination.to_path_buf()).unwrap(),
+        before
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn cross_filesystem_restore_recreates_source_and_retains_verified_quarantine_copy() {
+    let mut f = Fixture::new();
+    let alternate = Path::new("/dev/shm");
+    if !alternate.is_dir()
+        || fs::metadata(alternate).unwrap().dev() == fs::metadata(&f.base).unwrap().dev()
+    {
+        return;
+    }
+    let quarantine = tempfile::tempdir_in(alternate).unwrap();
+    f.args.quarantine = fs::canonicalize(quarantine.path()).unwrap();
+    fs::set_permissions(&f.args.candidate[0], fs::Permissions::from_mode(0o640)).unwrap();
+    rustix::fs::setxattr(
+        &f.args.candidate[0],
+        "user.optiflow_restore_test",
+        b"retained",
+        rustix::fs::XattrFlags::CREATE,
+    )
+    .unwrap();
+    let p = f.plan();
+    let a = f.approval(&p);
+    let original = source(&f.args.candidate[0]);
+    let run =
+        execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    let destination = run.attempts[0].destination.to_path_buf();
+    let restored = execution::restore(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &p.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.actions[0].state, "restored_retained");
+    assert_eq!(source(&f.args.candidate[0]).0, original.0);
+    assert_eq!(fs::read(&destination).unwrap(), original.0);
+    assert_eq!(
+        fs::metadata(&f.args.candidate[0]).unwrap().mode(),
+        original.5
+    );
+    let mut xattr = [0u8; 64];
+    let count = rustix::fs::getxattr(
+        &f.args.candidate[0],
+        "user.optiflow_restore_test",
+        &mut xattr,
+    )
+    .unwrap();
+    assert_eq!(&xattr[..count], b"retained");
+    assert!(
+        execution::cleanup(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    let repeated = execution::restore(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &p.body.actions[0].action_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.events.len(), repeated.events.len());
 }

@@ -33,8 +33,10 @@ the plan allows at most 1,000 actions and exactly one in-flight candidate,
 bounded by the approved `max_in_flight_bytes`. Each approved root and subtree
 is a hard boundary. A plan fingerprint owns one create-only namespace at
 `QUARANTINE/PLAN_FINGERPRINT/`; each destination is named by its action ID.
-An occupied namespace is refused, including after an interrupted run. No
-automatic retry, cleanup, or restore exists in #91.
+An occupied namespace is refused, including after an interrupted run. The
+separately versioned [#92 recovery protocol](execution-recovery.md) supplies
+operator-initiated status, bounded resume, restore and empty-namespace cleanup
+for new runs with a pre-mutation v3 authority binding.
 
 On the same filesystem, a no-replace atomic rename preserves the file object
 and its ownership, permissions, timestamps, extended attributes and other
@@ -77,9 +79,9 @@ neither path, or a replaced object is observed, stop for manual investigation.
 For an unambiguous same-filesystem move, the original file object can be moved
 back with an exclusive no-replace rename to a vacant original path. For a
 cross-filesystem copy, verify the quarantine copy and restore its properties
-before considering a return copy. #92 owns an idempotent status/restore/resume
-command and broader fault-injection proof; #91 never performs automatic
-recovery or silently promotes historical evidence into authority.
+before considering a return copy. The [recovery commands](execution-recovery.md)
+retain ambiguous work for inspection and never promote historical v2 evidence
+into authority.
 
 `selected_logical_bytes` describes approved duplicate content. Immediate
 logical reclaimed bytes remain zero because quarantine retains the data.

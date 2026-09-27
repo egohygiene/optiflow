@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/execution-recovery-event-v3.schema.json",
+  "title": "Optiflow append-only execution recovery transition v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "event_id", "operation_id", "run_id", "action_id", "operation", "phase", "recorded_at", "binary_version", "configuration_fingerprint", "policy_fingerprint", "plan_fingerprint", "authorization_id", "source", "destination", "temporary", "observed_identity", "properties_fingerprint", "capacity", "reason", "recoverability"],
+  "properties": {
+    "schema": {"const": "optiflow.execution-recovery-event.v3"},
+    "event_id": {"type": "string", "format": "uuid"},
+    "operation_id": {"type": "string", "format": "uuid"},
+    "run_id": {"type": "string", "format": "uuid"},
+    "action_id": {"type": ["string", "null"], "pattern": "^action-[0-9]{6}$"},
+    "operation": {"enum": ["apply", "resume", "restore", "cleanup"]},
+    "phase": {"enum": ["authority_bound", "prepared", "preflighted", "rename_pending", "copy_pending", "temp_synced", "destination_pending", "destination_durable", "source_removal_pending", "source_removed", "committed", "restore_pending", "source_pending", "restored", "restored_retained", "cleanup_pending", "cleaned"]},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "binary_version": {"type": "string", "minLength": 1},
+    "configuration_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "plan_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "authorization_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/path"}]},
+    "destination": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/path"}]},
+    "temporary": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/path"}]},
+    "observed_identity": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identity"}]},
+    "properties_fingerprint": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "capacity": {"type": "array", "maxItems": 1000, "items": {"type": "object"}},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "recoverability": {"enum": ["inspect_only", "revalidate_before_retry", "quarantine_retained", "source_restored", "quarantine_copy_retained", "empty_namespace_removed"]}
+  },
+  "$defs": {
+    "path": {"oneOf": [
+      {"type": "object", "required": ["encoding", "value"], "additionalProperties": false, "properties": {"encoding": {"const": "utf8"}, "value": {"type": "string"}}},
+      {"type": "object", "required": ["encoding", "base64"], "additionalProperties": false, "properties": {"encoding": {"const": "unix_bytes"}, "base64": {"type": "string"}}}
+    ]},
+    "identity": {"type": "object", "additionalProperties": false, "required": ["platform", "filesystem_id", "file_id", "link_count"], "properties": {
+      "platform": {"type": "string"}, "filesystem_id": {"type": "string"}, "file_id": {"type": "string"}, "link_count": {"type": ["integer", "null"], "minimum": 0}
+    }}
+  }
+}

@@ -427,6 +427,6 @@ pub fn interrupted(signals: &SignalState) -> Box<crate::outcome::Diagnostic> {
     };
     failure(
         code,
-        "execution validation interrupted; no source mutation occurred",
+        "execution interrupted; inspect durable evidence and filesystem paths before retry",
     )
 }

@@ -1,0 +1,78 @@
+{
+  "schema": "optiflow.execution-local-validation.v1",
+  "issue": "https://github.com/egohygiene/optiflow/issues/92",
+  "validated_at": "2026-09-27T03:32:54.147796+00:00",
+  "base_commit": "85e8208c1105f591166ba7b4c5e40fd9dac09b05",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "rust": "1.85.0",
+  "scope": "Synthetic Linux recovery only: same/cross-filesystem restore, interrupted resume, pending copies, failed sync, capacity consumption, journal contention, permission and disconnect/reconnect refusal; no user media touched.",
+  "checks": [
+    {
+      "command": "cargo +1.85.0 test --locked --offline --all-targets --jobs 1",
+      "status": "passed",
+      "passed": 245,
+      "failed": 0,
+      "ignored": 1,
+      "log_sha256": "4e6d691881dc2d7899f5b920a3f8e7cb0b8a6c081070e3b3460db8775a3bbe31"
+    },
+    {
+      "command": "cargo +1.85.0 clippy --locked --offline --all-targets --jobs 1 -- -D warnings",
+      "status": "passed",
+      "log_sha256": "dbc2759f822f4afd8fa17d4b080983cf3b41dfefc7250b2bbaa8edc1961ed2f5"
+    },
+    {
+      "command": "cargo fmt --all -- --check; git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/filesystem-corpus.py --check --tier pr",
+      "status": "passed",
+      "executions": 32
+    },
+    {
+      "command": "uvx --from uv==0.11.33 uv run --frozen --only-group docs bash scripts/site/build.sh",
+      "status": "passed",
+      "html_documents": 35
+    },
+    {
+      "command": "cargo +1.85.0 package --allow-dirty --locked --offline",
+      "status": "passed",
+      "log_sha256": "e70416a384a7d8956d93b726a146ac1e3865fd158cf593b3b2f2fe8394995c0e"
+    },
+    {
+      "command": "parse execution-recovery-event/report v3 JSON schemas; package file list",
+      "status": "passed"
+    }
+  ],
+  "source_sha256": {
+    "CHANGELOG.md": "668352c0f2e15dba864321b87c6fa1082a80653ac579ab06216f813f79cfe3bb",
+    "DECISIONS.md": "e0e0f8598e9c03fb7af65299bb6a90bc9656ce4a8b4b03f9a8e4b7cb2c32ce48",
+    "README.md": "c7a3a48eeb814464bbc1b2c20bf6e6c2e8533f7d7cf1d6f687cbfeac1f98d055",
+    "ROADMAP.md": "ff25152bf9a5f8564745b563797168ae8ca57b5b215786168b189f8842bde115",
+    "docs/cli-contract.md": "72d7df59b1fdd1007369ef6863cbf5be184d92d699f9117af04b569b8fd5bbf8",
+    "docs/execution-quarantine.md": "8d4e6e2345e7d2e16911ec464950530e7a4ea96a77e474c465f00c9b7a7c704f",
+    "docs/execution-recovery.md": "e3395c0607c1959b19892e4685244386b5ca5c15d62a78c3cb23127d71299ff5",
+    "docs/index.md": "4f13f4141ad814f157b37e34fbb8945e4c5c84a6285e352ee36e0b9b71805522",
+    "docs/state-model.md": "0d754c3e40a54e9bd3a1670f21a4460533f66c7360f087ac59cfa00dc1d1d5b2",
+    "migrations/0008_execution_recovery.sql": "644f73ce17eb282a21039b7ef2603c83062f2e47c0e9e30ebbf594f0bf51ced7",
+    "schemas/execution-recovery-event-v3.schema.json": "e1e1d8e2fd332deb93e037da1e16a37dda0d3c5a4d07c62bd82dee4e807cbc14",
+    "schemas/execution-recovery-report-v3.schema.json": "4968653e13e14f0d1e259f11fc19d5f0e8ea6b402ed7d15c74bc7c47f1f3fc18",
+    "src/app.rs": "1d5296a3a4fbc3aba3cfd414b465909ba6024a8e18e150bf8a822938f98d0167",
+    "src/app/execution_commands.rs": "5182d7609295430fac7b36458a06657c9015019116db1e690dbc0526fd45834b",
+    "src/cli.rs": "033475b9a1e2e0567ebc95d144c5876cb1231a3b38ef351b3719b74318e432cf",
+    "src/contracts.rs": "2107f64c8af11dc87d824353e43ee8fb9c66297b1ebcc0f4bf6d6582d99bcd52",
+    "src/execution/filesystem.rs": "1fea8d11c962f5097d23637e2c42d7eac58cbdcb8119720e83db173b413a75b8",
+    "src/execution/journal.rs": "59c9fc56975e56c443dcce511d1590661a6de82ac39f0d95218092e6d90b661f",
+    "src/execution/mod.rs": "c7fdb73005cb4152edaa365c46e95c09a38529c932da5de3025ca75772359867",
+    "src/execution/mutation.rs": "76739ca82d8e5f4660c11bc2c9958d03666a14c98d4d2cfbbc7274c347610635",
+    "src/execution/recovery.rs": "4f32d95b6491b450df8e6823749c0b977765ad75ecc0586d5330a24139e504d0",
+    "src/state.rs": "aaa7102a4b7b234f481549f007a883762d322b097d0f1041e25ee92fa35e9fd1",
+    "tests/execution.rs": "7da9298ca1cd4afe8d3fc98f22aecb9687d13628bc294934fef20eda4a2f1026",
+    "tests/fixtures/filesystem/index.json": "49f585b5aa3041adb757aa63ba1352898e99d30c39f53b05ac3e52c179eb0ade"
+  },
+  "limitations": [
+    "Native macOS and hosted CI were not run or polled; live recovery refuses non-Linux hosts.",
+    "Faults used disposable synthetic fixtures and an injected synchronization/capacity probe; real disk-full, removable-media power loss, network filesystems and hostile concurrent writers were not qualified.",
+    "Historical #91 v2 mutation rows have no pre-mutation v3 binding and remain inspection-only; no automatic cleanup or physical savings claim."
+  ]
+}

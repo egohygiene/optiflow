@@ -14,6 +14,11 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Linux-only operator recovery commands for new, authority-bound quarantine
+  runs: read-only status, bounded idempotent resume, collision-safe restore and
+  empty owned-namespace cleanup. Migration 0008 appends immutable v3
+  transitions and bound property fingerprints; historical v2 mutation records
+  remain inspection-only. Ambiguous work retains all paths for investigation.
 - Linux-only bounded, sequential exact-duplicate quarantine from explicit
   approved plans, with durable v2 mutation evidence, interruption classification,
   same-filesystem no-replace moves and verified property-preserving cross-filesystem
