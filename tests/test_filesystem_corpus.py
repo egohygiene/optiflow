@@ -38,8 +38,23 @@ class CorpusBudgets(unittest.TestCase):
             self.invoke("import time; data = bytearray(512 * 1024 * 1024); time.sleep(1)")
 
     def test_per_file_limit_is_enforced(self):
-        with self.assertRaisesRegex(RuntimeError, "test_exit_"):
-            self.invoke("import os; open(os.environ['TMPDIR'] + '/large', 'wb').write(b'x' * 8192)", file_bytes=1024)
+        with self.assertRaisesRegex(RuntimeError, "test_exit_42"):
+            # Explicit, unbuffered writes surface RLIMIT_FSIZE in the child.
+            # SIGXFSZ is ignored so the child can identify EFBIG, and a
+            # syntax or unrelated child failure cannot satisfy this proof.
+            self.invoke(
+                "import errno, os, signal, sys\n"
+                "signal.signal(signal.SIGXFSZ, signal.SIG_IGN)\n"
+                "with open(os.path.join(os.environ[\"TMPDIR\"], \"large\"), \"wb\", buffering=0) as output:\n"
+                "    try:\n"
+                "        for _ in range(8):\n"
+                "            output.write(b\"x\" * 1024)\n"
+                "    except OSError as error:\n"
+                "        if error.errno == errno.EFBIG:\n"
+                "            sys.exit(42)\n"
+                "        raise\n",
+                file_bytes=1024,
+            )
 
     def test_aggregate_workspace_limit_is_enforced(self):
         with self.assertRaisesRegex(RuntimeError, "workspace_budget"):

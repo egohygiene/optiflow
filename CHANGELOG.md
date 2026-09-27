@@ -5,6 +5,13 @@ public contracts still receive explicit migration notes.
 
 ## Unreleased
 
+### Fixed
+
+- Restored CI coverage for the in-development execution work: macOS lint keeps
+  Linux-only mutation journal paths gated, fuzz targets resolve against the
+  current crate version, and the filesystem file-size refusal proof uses
+  explicit unbuffered writes.
+
 ### Added
 
 - Linux-only bounded, sequential exact-duplicate quarantine from explicit

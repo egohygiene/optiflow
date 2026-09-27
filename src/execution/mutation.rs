@@ -30,7 +30,9 @@ use crate::domain::NativePath;
 use crate::outcome::{Diagnostic, DiagnosticCode as Code};
 use crate::signals::SignalState;
 
+#[cfg(target_os = "linux")]
 pub const MUTATION_SCHEMA: &str = "optiflow.execution-mutation.v2";
+#[cfg(target_os = "linux")]
 const ATTEMPT_SCHEMA: &str = "optiflow.execution-mutation-attempt.v2";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -130,6 +132,7 @@ fn check_authority(
     Ok(())
 }
 
+#[cfg(not(target_os = "linux"))]
 pub fn apply_quarantine(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -137,15 +140,21 @@ pub fn apply_quarantine(
     policy: &EffectivePolicyV1,
     signals: &SignalState,
 ) -> Result<MutationRun> {
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = (plan, approval, state, policy, signals);
-        return Err(failure(
-            Code::ExecutionUnsupported,
-            "live quarantine requires the verified Linux filesystem implementation",
-        ));
-    }
-    #[cfg(target_os = "linux")]
+    let _ = (plan, approval, state, policy, signals);
+    Err(failure(
+        Code::ExecutionUnsupported,
+        "live quarantine requires the verified Linux filesystem implementation",
+    ))
+}
+
+#[cfg(target_os = "linux")]
+pub fn apply_quarantine(
+    plan: &ExecutionPlan,
+    approval: &Approval,
+    state: &Path,
+    policy: &EffectivePolicyV1,
+    signals: &SignalState,
+) -> Result<MutationRun> {
     apply_linux(plan, approval, state, policy, signals)
 }
 
