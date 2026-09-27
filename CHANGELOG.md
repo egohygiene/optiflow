@@ -14,6 +14,11 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Linux-only, explicit irreversible finalization of selected retained
+  cross-filesystem quarantine copies after a proven restore, with read-only
+  preview, separate manifest-bound authorization, append-only v4 pending and
+  removed transitions, inspect-only interruption, and no physical-savings
+  claim. Migration 0009 leaves prior execution records intact.
 - Linux-only operator recovery commands for new, authority-bound quarantine
   runs: read-only status, bounded idempotent resume, collision-safe restore and
   empty owned-namespace cleanup. Migration 0008 appends immutable v3

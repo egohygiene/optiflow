@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/execution-finalization-event-v4.schema.json",
+  "title": "Optiflow append-only irreversible transition v4",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "event_id", "run_id", "action_id", "phase", "preview_fingerprint", "authorization_id", "manifest_digest", "recorded_at", "binary_version", "configuration_fingerprint", "policy_fingerprint", "quarantine_identity", "survivor_identity", "logical_bytes", "observed_allocated_bytes_before", "target_available_before", "target_available_after", "target_free_space_change_bytes", "shared_extent_bytes", "physical_reclaimed_bytes", "recoverability", "reason"],
+  "properties": {
+    "schema": {"const": "optiflow.execution-finalization-event.v4"},
+    "event_id": {"type": "string", "format": "uuid"},
+    "run_id": {"type": "string", "format": "uuid"},
+    "action_id": {"type": "string", "pattern": "^action-[0-9]{6}$"},
+    "phase": {"enum": ["removal_pending", "removed"]},
+    "preview_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "authorization_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "manifest_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "binary_version": {"type": "string", "minLength": 1},
+    "configuration_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "quarantine_identity": {"type": "object"},
+    "survivor_identity": {"type": "object"},
+    "logical_bytes": {"type": "integer", "minimum": 0},
+    "observed_allocated_bytes_before": {"type": "integer", "minimum": 0},
+    "target_available_before": {"type": "integer", "minimum": 0},
+    "target_available_after": {"type": ["integer", "null"], "minimum": 0},
+    "target_free_space_change_bytes": {"type": ["integer", "null"]},
+    "shared_extent_bytes": {"const": null},
+    "physical_reclaimed_bytes": {"const": null},
+    "recoverability": {"enum": ["irreversible_pending_inspection", "irreversible_removed"]},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 4096}
+  }
+}

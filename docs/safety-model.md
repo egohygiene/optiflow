@@ -94,3 +94,7 @@ separate v2 mutation journal. Approval binds every
 selection, root/subtree, policy, location and bound; a review suggestion is never
 authorization. State/evidence must stay outside protected roots and quarantine.
 Physical savings stay unknown, and v1 commit evidence cannot claim mutation.
+After a proven cross-filesystem restore, [v4 finalization](execution-finalization.md)
+may permanently remove only explicitly selected retained quarantine copies
+with a separately reviewed manifest-bound authorization. It never targets the
+original source and treats a pending removal as irreversible ambiguity.

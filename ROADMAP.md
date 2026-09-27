@@ -24,6 +24,17 @@ supersedes: []
 
 # OptiFlow Roadmap
 
+## 2026-09-27 finalization review handoff
+
+PR review for #96 follows the merged #92 recovery work at
+`e50c3b206a243ce607d6863cca8b2423711cde2a`. This branch adds only
+explicit retained-copy finalization under a separate v4 authorization and
+append-only journal. The immutable v0.1.1 release remains read-only. Review
+the [protocol](docs/execution-finalization.md),
+[synthetic validation receipt](docs/validation/optiflow-96-local.json),
+and PR before merging; the next dependency is #93. #94 still depends on the
+relevant #65 fixture work. The earlier #92 handoff below is historical.
+
 ## 2026-09-27 recovery review handoff
 
 The immutable, independently verified `v0.1.1` remains read-only. #90 and
@@ -342,7 +353,7 @@ This produces four ordered product milestones:
 | Released | `v0.1.1` source `b82599a2231e997d42fd9f26f4b59587f4ae14cf`, annotated tag object `e14acbcdf14a92e28f4efed7ebaf2a3f3d905cf0`, and verified signed release-bundle evidence. The Git tag itself is not claimed to be signed. |
 | Included since `v0.1.0` | #75, #78, #80, #83, #85, #88, and #89 preparation are included in the immutable `v0.1.1` source. Later `main` changes require their own release evidence. |
 | Development source | #90 adds [execution previews](docs/execution-dry-run.md); #91 adds [Linux-only bounded quarantine](docs/execution-quarantine.md) with separate v2 journal evidence. Neither is in the published v0.1.1 bundle. |
-| Next / planned | #92 → #96 → #93, then #94 → #95 under the documented gates. |
+| Next / planned | #96 review → #93, then #94 → #95 under the documented gates. |
 | Unsupported today | Candidate production, optimization execution, replacement, automatic resume/restore, irreversible finalization, and measured physical-space reclamation. |
 
 [Issue #60](https://github.com/egohygiene/optiflow/issues/60) remains gated on

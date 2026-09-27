@@ -15,7 +15,8 @@ produces immutable plans for human review.
 
     The published v0.1.1 bundle is read-only. Development source adds
     [approved execution](execution-dry-run.md), [Linux quarantine](execution-quarantine.md)
-    and [operator recovery](execution-recovery.md). A finding never becomes
+    [operator recovery](execution-recovery.md), and separately authorized
+    [irreversible finalization](execution-finalization.md). A finding never becomes
     mutation authority.
 
 ## Choose a path

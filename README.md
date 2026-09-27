@@ -55,6 +55,10 @@ adds a separate v2 journal and Linux-only approved mutation path. These
 features are not in the published v0.1.1 bundle. New development runs have
 [operator-initiated status, resume, restore and owned cleanup](docs/execution-recovery.md)
 with append-only v3 recovery evidence; older v2 runs remain inspection-only.
+Explicitly selected, restored cross-filesystem quarantine copies may be
+[previewed and separately authorized for irreversible finalization](docs/execution-finalization.md)
+under additive v4 evidence. This is absent from v0.1.1 and never applies to
+the restored original source.
 
 ### Media capability matrix
 

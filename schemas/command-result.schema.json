@@ -235,7 +235,7 @@
       "type": "object",
       "required": ["kind", "schema", "path"],
       "properties": {
-        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set", "execution_plan", "execution_approval"] },
+        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set", "execution_plan", "execution_approval", "execution_finalization_preview", "execution_finalization_authorization"] },
         "schema": { "type": "string", "minLength": 1 },
         "run_id": { "type": "string", "minLength": 1 },
         "path": { "$ref": "#/$defs/serialized_path" }

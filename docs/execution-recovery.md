@@ -3,7 +3,8 @@
 This #92 implementation adds operator-initiated recovery for the Linux-only
 quarantine transaction. It is absent from the immutable read-only `v0.1.1`
 release. Use disposable files when evaluating it. Recovery never permanently
-deletes a file or claims measured physical savings.
+deletes a file or claims measured physical savings. Explicit [v4 finalization](execution-finalization.md)
+has a separate irreversible authority and report.
 
 ## Inspect before an operation
 
@@ -12,7 +13,8 @@ without taking a write lock, migrating state, classifying an abandoned run, or
 touching the filesystem. It describes **recorded** evidence, not a fresh
 proof that the paths still match. JSON output contains a strict
 `optiflow.execution-recovery-report.v3` result and its append-only transition
-events.
+events. A run with finalization events instead returns a v4 status wrapper;
+its v3 `recovery_history` is historical, not authority to restore a removed copy.
 
 ```bash
 optiflow --no-config --state-directory /local/optiflow-state --json \

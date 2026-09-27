@@ -219,6 +219,16 @@ revalidate the bound run under an exclusive lock. These Linux-only commands
 return a `optiflow.execution-recovery-report.v3` result; see the [recovery
 protocol](execution-recovery.md). Ambiguous work requires inspection.
 
+`execution finalize` defaults to a read-only, explicit-action preview. Its
+`--commit` mode requires both a matching preview and separately recorded
+`execution authorize-finalization` document; see the
+[irreversible v4 protocol](execution-finalization.md). After any finalization
+event, `execution status` returns `optiflow.execution-finalization-status.v4`
+with the old v3 recovery report under `recovery_history`. Pending removal
+remains `attention_required`; logical, observed allocation, unknown shared
+extents and target free-space change are reported separately. Physical
+reclaimed bytes remain `null`.
+
 Execution artifact kinds `execution_plan` and `execution_approval`, plus stable
 `execution_*` diagnostic codes, are additive command-result v1 values. Scan
 run/report/review-plan versions and existing outcome/exit-code meanings remain

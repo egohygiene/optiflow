@@ -297,6 +297,26 @@ without changing IDs or history. This document will retain the index.
   interruption/collision/metadata tests.
 - **Revisit when:** #96 defines independently authorized finalization.
 
+### OFD-015 — Independently authorize irreversible retained-copy finalization
+
+- **Status:** Proposed for #96 review
+- **Context:** A cross-filesystem restore retains a verified quarantine copy;
+  v3 recovery authority cannot express permanent removal or its interruption.
+- **Decision:** Restrict v4 finalization to explicitly selected, completed,
+  v3-bound `restored_retained` actions. Require a read-only fingerprinted
+  preview, manifest-bound separate local authorization, revalidation of the
+  restored source, keeper and quarantine file, and durable pending/removed
+  events around unlink and directory sync. A pending event stays inspect-only.
+- **Consequences:** v1-v3 records remain historical and no original source is
+  removed. Observed allocation and available-space samples are separate from
+  logical bytes; physical reclaimed bytes remain unknown. The filesystem and
+  SQLite journal cannot atomically commit together, so interrupted removal
+  needs operator investigation.
+- **Evidence:** [Finalization protocol](docs/execution-finalization.md),
+  `schemas/execution-finalization-*-v4.schema.json`, migration 0009 and
+  synthetic cross-filesystem refusal/interruption tests.
+- **Revisit when:** #93 qualifies the release and reviews native target evidence.
+
 ## Deprecated and Superseded Decisions
 
 None.

@@ -1,0 +1,95 @@
+{
+  "schema": "optiflow.execution-local-validation.v1",
+  "issue": "https://github.com/egohygiene/optiflow/issues/96",
+  "validated_at": "2026-09-27T09:04:24.583602+00:00",
+  "base_commit": "e50c3b206a243ce607d6863cca8b2423711cde2a",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "rust": "1.85.1 (Ubuntu versioned package)",
+  "scope": "Synthetic Linux exact-duplicate cross-filesystem retained-copy finalization only; no user media touched.",
+  "checks": [
+    {
+      "command": "cargo check --locked --all-targets --all-features",
+      "status": "passed"
+    },
+    {
+      "command": "cargo test --locked --all-targets",
+      "status": "passed",
+      "passed": 251,
+      "failed": 0,
+      "ignored": 1,
+      "finalization_tests": 6
+    },
+    {
+      "command": "cargo clippy --locked --all-targets --all-features -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo fmt --all -- --check; git diff --check",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/filesystem-corpus.py --check --tier pr",
+      "status": "passed",
+      "executions": 32
+    },
+    {
+      "command": "python3 scripts/filesystem-corpus.py --check --tier scheduled",
+      "status": "passed",
+      "executions": 170
+    },
+    {
+      "command": "python3 -m unittest tests/test_filesystem_corpus.py",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "command": "UV_NO_CONFIG=1 uvx --from uv==0.11.33 uv run --group docs zensical build --clean",
+      "status": "passed",
+      "html_documents": 34
+    },
+    {
+      "command": "parse four v4 JSON schemas and apply migration 0009 to in-memory SQLite",
+      "status": "passed"
+    },
+    {
+      "command": "cargo package --allow-dirty --locked --offline",
+      "status": "verification_blocked",
+      "detail": "Tarball assembled with v4 schemas, migration and source; local package verification could not execute a libsqlite3-sys build script copied without executable permission under target/package."
+    }
+  ],
+  "source_sha256": {
+    "CHANGELOG.md": "6e07c242a6efa374b20ea58bc810b0e5c6258c1f52dfeaea7f126f815bc5f533",
+    "DECISIONS.md": "1b32297320322bb5f70ac224f16587a303767cb9d9e08fb6aa2226451ca485c5",
+    "README.md": "c380a44059da37e36d23ea150ff353259a59409a0d9327123ade129e31e34aaa",
+    "ROADMAP.md": "9866dda6a99740163edfa7351822be953f1a75a962df9776033f7c02bb62b2db",
+    "docs/cli-contract.md": "5f79a4147dd0a57640601e0615c7e72123fd6614ad309fc4887f5f67825402bb",
+    "docs/execution-finalization.md": "58932d11bfa87c88939c9bc5adbb8879c392ad2155e2f7cb2b067e4b2aee25a9",
+    "docs/execution-recovery.md": "88df5729404fc3c22a55ef03b70bea7df4cec5a3ac88a6778debc0b9358dd1aa",
+    "docs/index.md": "aa2d005bc169c27d7c6999dd52e1f834078eea8933902e616e497d62b614f258",
+    "docs/safety-model.md": "f8ee47e96827736b699096061e1d44e9a32400bd8a8a3392f532f2d4506a2016",
+    "docs/state-model.md": "7d06c7ea08563ab204dd1a18277a3b7671b702491d378a853dac31a618c02c36",
+    "migrations/0009_execution_finalization.sql": "a611cc9415c190df0d91a3449da8fc5c0eeff0d2290d7d64df9112198d9cdd66",
+    "schemas/command-result.schema.json": "f8895785b2076e7b2e80638d5af48c2de1bc4d4418b70b75dac8f27351eb6b90",
+    "schemas/execution-finalization-authorization-v4.schema.json": "bf5c34c1db9e48509ce2ee68592b34c4f3022ab695b322d55f989ceba0cd430a",
+    "schemas/execution-finalization-event-v4.schema.json": "e993a2419f7dd7b143d2c49cc2e776af45680087dd832c1250f6cd00a70a3d2d",
+    "schemas/execution-finalization-preview-v4.schema.json": "0376ace943a8121ab22dcc847c57a30a32a6cf10382d0a10645651fdd8fa4878",
+    "schemas/execution-finalization-status-v4.schema.json": "aa0bed2c7d4d30052ae69cd9b3ec38a5f050fa85f553d637036acbf38abb4fe8",
+    "src/app/execution_commands.rs": "e5de85c7a59e30940a7464339551a79e59639a265cb2a1f787258c4445332e45",
+    "src/cli.rs": "342ed5a054465eb749cb52f516e05417191e7ff91900e8c01d2250119e83e458",
+    "src/contracts.rs": "dd97c345cf07a8506b05ab9d794f94b97dbef06a6618ad2314b14f06afcb4654",
+    "src/execution/finalization.rs": "b9e54ba33c56063ad135cd81f59dafb376a6b08cbcaad4d79e657f3c7d790106",
+    "src/execution/journal.rs": "2cb3e5a296e0b43a967bdcea1713e861cf2ed055cc563e7097a99e1c603aeaca",
+    "src/execution/mod.rs": "f33eac197adb0dc6cd19d44489ae797c78265251cb824e9006aa633a14fb50db",
+    "src/execution/recovery.rs": "b79eb335916b6db07ef121220807f0720c6c98dbf1ce756bd3b93bffe8717117",
+    "src/execution/validation.rs": "69d3ed5a6bce7b3690d91ab5df5552181113e4db3aa708e9381f775eda1f4ca9",
+    "src/state.rs": "db04104f3293b8dcafbd64fb1814e57aa5949af425f7896f5254543898902cc3",
+    "tests/execution.rs": "e73e617e689827016d0cb0342ace850687bd03a7fb2fab422751392a7e48f9df",
+    "tests/fixtures/filesystem/index.json": "313e3cfd8f6ec1fe923bddfb522a54eda43a979321c2b9e3b6748a556ad1fcde"
+  },
+  "limitations": [
+    "Native macOS and hosted CI were not run or polled; finalization is Linux-only.",
+    "Tests use disposable synthetic files and /dev/shm for a distinct filesystem; power loss, network filesystems and hostile concurrent writers were not qualified.",
+    "A crash after unlink and before the SQLite removed event leaves durable removal_pending evidence and requires manual inspection; it never reports success automatically.",
+    "Observed allocated bytes and free-space change do not establish physical reclaimed bytes; shared extents remain unknown."
+  ]
+}

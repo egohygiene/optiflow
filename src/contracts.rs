@@ -9,6 +9,10 @@ pub enum Contract {
     ExecutionMutation,
     ExecutionRecoveryEvent,
     ExecutionRecoveryReport,
+    ExecutionFinalizationPreview,
+    ExecutionFinalizationAuthorization,
+    ExecutionFinalizationEvent,
+    ExecutionFinalizationStatus,
     ArtifactSet,
     Run,
     Report,
@@ -31,7 +35,11 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
         Contract::Execution
         | Contract::ExecutionMutation
         | Contract::ExecutionRecoveryEvent
-        | Contract::ExecutionRecoveryReport => jsonschema::options()
+        | Contract::ExecutionRecoveryReport
+        | Contract::ExecutionFinalizationPreview
+        | Contract::ExecutionFinalizationAuthorization
+        | Contract::ExecutionFinalizationEvent
+        | Contract::ExecutionFinalizationStatus => jsonschema::options()
             .should_validate_formats(true)
             .build(&schema_document)
             .context("failed to compile execution schema")?,
@@ -75,6 +83,18 @@ pub fn schema(contract: Contract) -> Result<Value> {
         }
         Contract::ExecutionRecoveryReport => {
             include_str!("../schemas/execution-recovery-report-v3.schema.json")
+        }
+        Contract::ExecutionFinalizationPreview => {
+            include_str!("../schemas/execution-finalization-preview-v4.schema.json")
+        }
+        Contract::ExecutionFinalizationAuthorization => {
+            include_str!("../schemas/execution-finalization-authorization-v4.schema.json")
+        }
+        Contract::ExecutionFinalizationEvent => {
+            include_str!("../schemas/execution-finalization-event-v4.schema.json")
+        }
+        Contract::ExecutionFinalizationStatus => {
+            include_str!("../schemas/execution-finalization-status-v4.schema.json")
         }
         Contract::ArtifactSet => include_str!("../schemas/artifact-set-v1.schema.json"),
         Contract::Run => include_str!("../schemas/run.schema.json"),
