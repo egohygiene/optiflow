@@ -18,7 +18,7 @@ import pilot_contract as pilot
 import release_bundle as release
 SCRIPT = REPOSITORY_ROOT / "scripts" / "release_bundle.py"
 RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
-SOURCE_REVISION = "a" * 40
+SOURCE_REVISION = release.READ_ONLY_SOURCES["v0.1.1"]
 CREATED_AT = "2026-09-12T00:00:00Z"
 MINIMUM_SUPPORTED_RUST = "1.85.0"
 RELAY_RELEASE_REVISION = "1eada5142f7fc7da7862f335589e3b8f5884ffaf"
@@ -120,6 +120,23 @@ def workflow_step_script(workflow: str, step_name: str) -> str:
 
 
 class ReleaseBundleTests(unittest.TestCase):
+    def test_read_only_receipts_cannot_qualify_mutation_release(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "Cargo.toml").write_text('[package]\nname = "optiflow"\nversion = "0.2.0"\n')
+            with self.assertRaisesRegex(release.BundleError, "pinned to published"):
+                release.validate_inputs(root, "v0.2.0", SOURCE_REVISION)
+            (root / "Cargo.toml").write_text('[package]\nname = "optiflow"\nversion = "0.1.2"\n')
+            with self.assertRaisesRegex(release.BundleError, "pinned to published"):
+                release.validate_inputs(root, "v0.1.2", SOURCE_REVISION)
+            (root / "Cargo.toml").write_text('[package]\nname = "optiflow"\nversion = "0.1.1"\n')
+            with self.assertRaisesRegex(release.BundleError, "pinned to published"):
+                release.validate_inputs(root, "v0.1.1", "a" * 40)
+        workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        for version, revision in release.READ_ONLY_SOURCES.items():
+            self.assertIn(f'"${{RELEASE_VERSION}}" == "{version}"', workflow)
+            self.assertIn(f'"${{GITHUB_SHA}}" == "{revision}"', workflow)
+
     def test_failed_or_unbound_native_qualification_cannot_be_signed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             inputs = fixture_binaries(Path(temporary))

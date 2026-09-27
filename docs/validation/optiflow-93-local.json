@@ -1,0 +1,40 @@
+{
+  "schema": "optiflow.release-preparation-local.v1",
+  "issue": "https://github.com/egohygiene/optiflow/issues/93",
+  "validated_at": "2026-09-27T09:58:23Z",
+  "base_commit": "8f1f96044ac24efbc230eee0dd6dde03fa5eab2b",
+  "platform": "Linux 6.18.44 x86_64; overlay source workspace and separate tmpfs quarantine",
+  "rust": "1.85.1 (Ubuntu versioned package)",
+  "local_cargo_environment": "CARGO_PROFILE_TEST_DEBUG=0, CARGO_INCREMENTAL=0, CARGO_PROFILE_TEST_CODEGEN_UNITS=1; one generated build script and one generated test executable required restoring execute permission in this scratch filesystem. Repository profiles were unchanged.",
+  "scope": "Newly generated 64 KiB synthetic exact duplicates only; no private media, mounted removable volume, APFS or native macOS mutation was exercised.",
+  "checks": [
+    {"command": "cargo test --locked --all-targets", "status": "passed", "passed": 251, "ignored": 1},
+    {"command": "cargo clippy --locked --all-targets --all-features -- -D warnings", "status": "passed"},
+    {"command": "cargo fmt --all -- --check; git diff --check", "status": "passed"},
+    {"command": "PATH=/usr/lib/rust-1.85/bin:$PATH python3 -m unittest tests/test_release_bundle.py tests/test_read_only_pilot.py tests/test_synthetic_transaction_smoke.py", "status": "passed", "tests": 16},
+    {"command": "python3 scripts/filesystem-corpus.py --check --tier pr", "status": "passed", "executions": 32},
+    {"command": "UV_NO_CONFIG=1 uvx --from uv==0.11.33 uv run --group docs zensical build --clean", "status": "passed", "html_documents": 36},
+    {"command": "python3 scripts/smoke-exact-transaction.py --binary target/debug/optiflow --work-root . --cross-quarantine-root /dev/shm --output /tmp/optiflow-93-smoke-v3.json", "status": "passed", "receipt_copy": "docs/validation/optiflow-93-synthetic-smoke.json", "receipt_sha256": "ffe7500edf9989608eb77f57492e306dc1e86a5403be53a8c516af442e1d8355"}
+  ],
+  "synthetic_smoke": {
+    "qualified_for_release": false,
+    "topologies": ["same_filesystem", "cross_filesystem"],
+    "flow": ["scan", "review", "explicit_plan", "approval", "dry_run", "quarantine", "status", "restore", "finalization_preview", "separate_authorization", "finalization_commit", "cleanup"],
+    "refusals": ["missing_execution_approval", "missing_finalization_authorization", "renamed_source_before_action"],
+    "journal_phases": ["removal_pending", "removed"],
+    "logical_bytes_removed": 65536,
+    "observed_allocated_bytes_removed": 65536,
+    "target_free_space_change_bytes": 0,
+    "shared_extent_bytes": null,
+    "physical_reclaimed_bytes": null,
+    "synthetic_fixtures_cleaned": true
+  },
+  "publication_gates_open": [
+    "Linux-only mutation currently refuses on both supported macOS targets; native APFS proof is unavailable.",
+    "No disposable mounted removable-volume pilot, portability-relevant external-format run, or physical disconnect and interruption trial was performed.",
+    "No native three-target clean-install and v0.1.x upgrade/rollback qualification or mutation-specific signed receipts exist.",
+    "No positive, independently attributable physical-space reclamation was observed; the local free-space delta was zero.",
+    "No v0.2.0 tag, signed bundle, publication, or independent download verification exists."
+  ],
+  "release_status": "blocked; v0.1.1 remains the latest immutable public release"
+}

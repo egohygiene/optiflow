@@ -156,6 +156,19 @@ it never repackages a different archive after qualification.
 The release workflow does not publish crates.io packages, Homebrew formulas,
 installers, or mutable “latest” aliases.
 
+The current qualification contract is **read-only** and accepts only the
+already published `v0.1.0` and `v0.1.1` source/version pairs. The
+authorization job and bundle builder reject any new source or version,
+including `v0.1.2` and `v0.2.0`; a version bump or a valid historical receipt
+cannot bypass that gate.
+Before enabling a mutation release, qualify the exact archives on native
+targets and disposable real volumes using the
+[mutation pilot](external-drive-mutation-pilot.md), and introduce distinct,
+versioned release receipts with fail-closed bundle verification. Linux-only
+synthetic transaction smoke is useful development evidence but does not meet
+APFS, removable-media or three-target release criteria. Do not dispatch a
+`v0.2.0` release while those gates remain open.
+
 Preparing a pull request does not require an agent to poll hosted CI. Release
 publication is a separate maintainer checkpoint on merged `main`. The #89
 native qualification, signed publication, and independent download checks

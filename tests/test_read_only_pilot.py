@@ -14,6 +14,16 @@ from tests.test_release_bundle import fixture_binaries, SOURCE_REVISION, TARGETS
 
 
 class PilotAdmission(unittest.TestCase):
+    def test_read_only_receipt_cannot_be_relabelled_as_mutation_qualification(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = fixture_binaries(Path(temporary)) / f"optiflow-{TARGETS[0]}"
+            archive = directory / f"optiflow-v0.1.1-{TARGETS[0]}.tar.gz"
+            receipt = json.loads((directory / "qualification.json").read_text())
+            with self.assertRaisesRegex(ValueError, "pinned to published"):
+                pilot.validate_receipt(receipt, TARGETS[0], "v0.2.0", SOURCE_REVISION, archive)
+            with self.assertRaisesRegex(ValueError, "pinned to published"):
+                pilot.validate_receipt(receipt, TARGETS[0], "v0.1.2", SOURCE_REVISION, archive)
+
     def test_incomplete_or_mutating_trials_cannot_qualify(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = fixture_binaries(Path(temporary)) / f"optiflow-{TARGETS[0]}"

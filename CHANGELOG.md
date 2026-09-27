@@ -14,6 +14,10 @@ public contracts still receive explicit migration notes.
 
 ### Added
 
+- Added a synthetic two-filesystem transaction smoke and a disposable-volume
+  operator runbook. The receipt explicitly cannot qualify a release. The
+  signed bundle and dispatch now refuse new source/version pairs until distinct
+  native mutation/APFS/removable-volume evidence is reviewed; `v0.1.1` is unchanged.
 - Linux-only, explicit irreversible finalization of selected retained
   cross-filesystem quarantine copies after a proven restore, with read-only
   preview, separate manifest-bound authorization, append-only v4 pending and

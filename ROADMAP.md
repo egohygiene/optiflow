@@ -24,6 +24,17 @@ supersedes: []
 
 # OptiFlow Roadmap
 
+## 2026-09-27 mutation release qualification handoff
+
+#96 merged through PR #109 at `8f1f96044ac24efbc230eee0dd6dde03fa5eab2b`.
+#93 is the next release gate. Current development mutation and recovery are
+Linux-only; no APFS/removable-volume or native macOS mutation proof exists.
+The read-only `v0.1.1` remains the latest public release. The signed release
+path rejects all new source/version pairs until distinct native mutation pilot
+receipts, target install/upgrade evidence and release review exist. The
+[disposable-volume procedure](docs/external-drive-mutation-pilot.md) records
+the needed proof and its limits; #94 stays separate after relevant #65 fixtures.
+
 ## 2026-09-27 finalization review handoff
 
 PR review for #96 follows the merged #92 recovery work at

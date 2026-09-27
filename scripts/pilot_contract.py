@@ -10,6 +10,8 @@ from pathlib import Path
 SCHEMA = "optiflow.read-only-pilot.v1"
 PREVIOUS_VERSION = "v0.1.0"
 PREVIOUS_REVISION = "f04c82a0b0c677a2939ea351c4219602cd7181af"
+QUALIFIED_VERSION = "v0.1.1"
+QUALIFIED_REVISION = "b82599a2231e997d42fd9f26f4b59587f4ae14cf"
 PROFILE = {"seed": 89, "tree_files": 4096, "large_file_bytes": 268435456, "large_members": 2}
 OUTCOMES = {
     "tree_cold": (0, "success"), "tree_warm": (0, "success"),
@@ -59,6 +61,8 @@ def archive_binary(archive, destination=None):
 
 def validate_receipt(receipt, target, version, revision, archive):
     """A signed release must bind complete native trials to its actual archive."""
+    if version != QUALIFIED_VERSION or revision != QUALIFIED_REVISION:
+        raise ValueError("read-only pilot receipt is pinned to published v0.1.1 source")
     if not isinstance(receipt, dict):
         raise ValueError("pilot receipt must be an object")
     expected = {"schema": SCHEMA, "target": target, "native_target": target,
