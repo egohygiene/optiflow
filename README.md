@@ -6,8 +6,9 @@
 proving byte-identical duplicate groups, calculating reclaimable storage, and
 producing immutable review plans.
 
-The product is deliberately read-only with respect to source media. It cannot
-delete, replace, move, quarantine, or optimize source files.
+The published v0.1.1 product is read-only with respect to source media. Current
+development source adds Linux-only approved exact-duplicate quarantine; it
+cannot permanently delete, replace, or optimize source files.
 
 ## Current capabilities
 
@@ -44,13 +45,14 @@ this immutable release; `v0.1.0` predates the later read-only additions.
   inspectors, analyzers, policy contributors, planners, validators,
   report/export providers, and read-only lifecycle observers.
 
-### Development addition: approved execution previews
+### Development addition: approved execution and bounded quarantine
 
 Current source adds [explicit execution plans, approval records and
 `apply --dry-run`](docs/execution-dry-run.md) for selected exact duplicates.
 It rechecks file identity, metadata, full hashes, direct byte equality and
-capacity, and saves versioned validation/recovery evidence. **Source mutation
-remains disabled.** This feature is not in the published v0.1.1 bundle.
+capacity, and saves versioned validation/recovery evidence. [Bounded quarantine](docs/execution-quarantine.md)
+adds a separate v2 journal and Linux-only approved mutation path. These
+features are not in the published v0.1.1 bundle.
 
 ### Media capability matrix
 

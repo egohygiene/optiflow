@@ -194,7 +194,7 @@ fn paths(bindings: &[DirectoryBinding]) -> Result<Vec<PathBuf>> {
     bindings.iter().map(|b| fs::native_path(&b.path)).collect()
 }
 
-fn validate_plan(plan: &ExecutionPlan) -> Result<()> {
+pub(super) fn validate_plan(plan: &ExecutionPlan) -> Result<()> {
     contract(plan)?;
     let body = &plan.body;
     if digest(body)? != plan.fingerprint {
@@ -408,7 +408,7 @@ pub fn write_document<T: Serialize>(
     ))
 }
 
-fn validate_pair(action: &ExactAction, signals: &SignalState) -> Result<()> {
+pub(super) fn validate_pair(action: &ExactAction, signals: &SignalState) -> Result<()> {
     validate_pair_with_hook(action, signals, &mut || Ok(()))
 }
 
@@ -482,6 +482,20 @@ fn validate_environment<F>(plan: &ExecutionPlan, probe: &mut F) -> Result<Vec<Ca
 where
     F: FnMut(&File) -> Result<fs::Capacity>,
 {
+    validate_environment_remaining(plan, probe, false, 0)
+}
+
+/// Recheck all bindings, but charge only copies that have not yet been moved.
+/// A live run owns the pre-created namespace under its exclusive journal lock.
+pub(super) fn validate_environment_remaining<F>(
+    plan: &ExecutionPlan,
+    probe: &mut F,
+    namespace_exists: bool,
+    first_action: usize,
+) -> Result<Vec<CapacityEvidence>>
+where
+    F: FnMut(&File) -> Result<fs::Capacity>,
+{
     let b = &plan.body;
     let protected_state: Vec<_> = b.roots.iter().chain([&b.quarantine]).collect();
     fs::outside_directories(&fs::native_path(&b.state.path)?, &protected_state)?;
@@ -525,6 +539,9 @@ where
     let destination = fs::native_path(&b.quarantine.path)?.join(&plan.fingerprint);
     match std::fs::symlink_metadata(&destination) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+        Ok(m) if namespace_exists && m.is_dir() && !m.file_type().is_symlink() => {
+            let _handle = fs::open(&destination, true)?;
+        }
         Ok(_) => {
             return Err(failure(
                 Code::ExecutionDestinationOccupied,
@@ -533,12 +550,13 @@ where
         }
         Err(e) => return Err(failure(Code::ExecutionSourceUnavailable, e.to_string())),
     }
-    account_capacity(plan, &measurements)
+    account_capacity_remaining(plan, &measurements, first_action)
 }
 
-fn account_capacity(
+fn account_capacity_remaining(
     plan: &ExecutionPlan,
     measurements: &BTreeMap<String, fs::Capacity>,
+    first_action: usize,
 ) -> Result<Vec<CapacityEvidence>> {
     let b = &plan.body;
     let mut evidence: BTreeMap<_, _> = measurements
@@ -563,7 +581,7 @@ fn account_capacity(
         .expect("measured state");
     state.journal_and_metadata_budget_bytes = b.bounds.journal_budget_bytes;
     let mut seen = BTreeSet::new();
-    for action in &b.actions {
+    for action in &b.actions[first_action..] {
         for source in [&action.keeper, &action.candidate] {
             if seen.insert(source.identity.identity_key()) {
                 let volume = evidence
@@ -961,7 +979,7 @@ mod tests {
         let mut second = first.clone();
         second.candidate.identity.file_id = "second".to_owned();
         plan.body.actions.push(second);
-        let capacity = account_capacity(&plan, &measurements).unwrap();
+        let capacity = account_capacity_remaining(&plan, &measurements, 0).unwrap();
         let destination = capacity
             .iter()
             .find(|c| c.filesystem_id == "destination")

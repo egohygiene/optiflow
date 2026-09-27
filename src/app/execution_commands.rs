@@ -64,15 +64,6 @@ pub(super) fn apply(
     policy: &EffectivePolicyV1,
     signals: &SignalState,
 ) -> Execution {
-    if !args.dry_run {
-        return Execution::failure(Diagnostic::new(
-            DiagnosticCode::ExecutionUnsupported,
-            DiagnosticSeverity::Error,
-            DiagnosticClassification::Capability,
-            DiagnosticImpact::BlocksCommand,
-            "only apply --dry-run is supported; source mutation is disabled",
-        ));
-    }
     let Some(approval_path) = &args.approval else {
         return Execution::failure(Diagnostic::new(
             DiagnosticCode::ExecutionApprovalRequired,
@@ -85,12 +76,26 @@ pub(super) fn apply(
     let result = (|| {
         let plan = execution::load_plan(&args.plan)?;
         let approval = execution::load_approval(approval_path)?;
-        execution::dry_run(&plan, &approval, state, policy, signals)
+        if args.dry_run {
+            execution::dry_run(&plan, &approval, state, policy, signals)
+                .map(|run| serde_json::to_value(run).expect("serializable dry-run evidence"))
+        } else {
+            execution::apply_quarantine(&plan, &approval, state, policy, signals)
+                .map(|run| serde_json::to_value(run).expect("serializable mutation evidence"))
+        }
     })();
     match result {
         Ok(run) => {
             let mut result = Execution::success(&run);
-            result.diagnostics = run.validation.diagnostics;
+            if let Some(diagnostics) = run.get("diagnostics") {
+                result.diagnostics =
+                    serde_json::from_value(diagnostics.clone()).unwrap_or_default();
+            } else if let Some(diagnostics) =
+                run.get("validation").and_then(|v| v.get("diagnostics"))
+            {
+                result.diagnostics =
+                    serde_json::from_value(diagnostics.clone()).unwrap_or_default();
+            }
             result
         }
         Err(diagnostic) => Execution::failure(*diagnostic),

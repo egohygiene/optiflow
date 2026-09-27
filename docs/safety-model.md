@@ -88,7 +88,9 @@ claim boundary and required future-output validations.
 
 Current development source can validate explicitly selected and separately
 approved execution plans through [a non-mutating dry run](execution-dry-run.md).
-This changes no source authority: live apply is disabled. Approval binds every
+The preview changes no source authority. [Linux-only bounded
+quarantine](execution-quarantine.md) requires an explicit live invocation and a
+separate v2 mutation journal. Approval binds every
 selection, root/subtree, policy, location and bound; a review suggestion is never
 authorization. State/evidence must stay outside protected roots and quarantine.
 Physical savings stay unknown, and v1 commit evidence cannot claim mutation.

@@ -253,6 +253,29 @@ without changing IDs or history. This document will retain the index.
   `schemas/execution-v1.schema.json`, migration 0006 and synthetic execution tests.
 - **Revisit when:** #91 earns bounded mutation and property-preserving recovery.
 
+### OFD-013 — Separate quarantine mutation evidence from dry-run v1
+
+- **Status:** Proposed for #91 review
+- **Context:** v1 commit/recovery records explicitly forbid source mutation.
+  Cross-filesystem copy and same-filesystem rename require different recovery
+  evidence and can stop between filesystem and journal steps.
+- **Decision:** Keep v1 immutable. Add migration 0007 and a strict v2 mutation
+  record under the existing exclusive, fully synchronized journal. Persist
+  phases before and after every consequential step, use no-replace Linux
+  renames, and verify content and required properties before cross-filesystem
+  source removal. Refuse hosts or properties whose guarantees are unavailable.
+  Never automatically retry an occupied namespace or represent an ambiguous
+  interruption as committed.
+- **Consequences:** #91 supplies a manual inspection/recovery path; #92 owns
+  idempotent resume, status and restore. A crash may leave a durable copy,
+  original or both. The last durable phase is evidence, not an atomic
+  compare-and-mutate against hostile concurrent writers. Physical savings
+  remain unknown and the v0.1.1 release remains read-only.
+- **Evidence:** [Quarantine protocol](docs/execution-quarantine.md),
+  `schemas/execution-mutation-v2.schema.json`, migration 0007 and synthetic
+  same/cross-filesystem plus interruption tests.
+- **Revisit when:** #92 defines idempotent restore and fault-injected recovery.
+
 ## Deprecated and Superseded Decisions
 
 None.

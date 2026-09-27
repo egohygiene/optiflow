@@ -61,6 +61,7 @@ impl StateStore {
         // Apply migration 0005 exactly once.
         apply_migration_0005(&mut connection).context("failed to apply migration 0005")?;
         apply_migration_0006(&mut connection).context("failed to apply migration 0006")?;
+        apply_migration_0007(&mut connection).context("failed to apply migration 0007")?;
 
         let mut store = Self {
             connection,
@@ -591,6 +592,22 @@ fn apply_migration_0006(connection: &mut Connection) -> Result<()> {
     Ok(())
 }
 
+/// Mutation evidence is separate from the immutable v1 dry-run rows.
+fn apply_migration_0007(connection: &mut Connection) -> Result<()> {
+    if connection.query_row(
+        "SELECT COUNT(*) FROM schema_migrations WHERE version = 7",
+        [],
+        |row| row.get::<_, i64>(0),
+    )? > 0
+    {
+        return Ok(());
+    }
+    let transaction = connection.transaction()?;
+    transaction.execute_batch(include_str!("../migrations/0007_quarantine.sql"))?;
+    transaction.commit()?;
+    Ok(())
+}
+
 /// Apply migration 0005 exactly once (handle-bound cache signatures).
 fn apply_migration_0005(connection: &mut Connection) -> Result<()> {
     let already_applied: bool = connection
@@ -843,7 +860,10 @@ mod tests {
         connection.execute("INSERT INTO scan_runs (run_id, created_at, status) VALUES ('historical', 'then', 'interrupted')", []).unwrap();
         apply_migration_0006(&mut connection).unwrap();
         apply_migration_0006(&mut connection).unwrap();
+        apply_migration_0007(&mut connection).unwrap();
+        apply_migration_0007(&mut connection).unwrap();
         assert_eq!(migration_count(&connection, 6), 1);
+        assert_eq!(migration_count(&connection, 7), 1);
         assert_eq!(
             connection
                 .query_row(

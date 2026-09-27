@@ -2,9 +2,11 @@
 mod filesystem;
 mod journal;
 pub mod model;
+mod mutation;
 mod validation;
 
 pub use journal::load_execution;
+pub use mutation::{MutationRun, MutationStatus, apply_quarantine, load_mutation};
 pub use validation::{approve, create_plan, dry_run, load_approval, load_plan, write_document};
 
 use crate::outcome::{

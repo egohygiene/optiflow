@@ -1,0 +1,71 @@
+{
+  "schema": "optiflow.execution-local-validation.v1",
+  "issue": "https://github.com/egohygiene/optiflow/issues/91",
+  "validated_at": "2026-09-26T23:52:48.921185+00:00",
+  "base_commit": "437fc326c37fd91b4c9f84a67efd097a17c6f0c6",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "rust": "1.85.0",
+  "scope": "Synthetic Linux same/cross-filesystem quarantine and interruption evidence; no user media was touched.",
+  "checks": [
+    {
+      "command": "cargo +1.85.0 test --locked --offline --all-targets --jobs 1",
+      "status": "passed",
+      "passed": 234,
+      "failed": 0,
+      "ignored": 1,
+      "log_sha256": "a7ea81ecdda58c68f01986f7ccc7a3b193e78b15fb2e6efa23bccf2811a9aca4"
+    },
+    {
+      "command": "cargo +1.85.0 clippy --locked --offline --all-targets --jobs 1 -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo +1.85.0 fmt --all -- --check",
+      "status": "passed"
+    },
+    {
+      "command": "python scripts/filesystem-corpus.py --check --tier pr",
+      "status": "passed",
+      "executions": 32,
+      "evidence": "/tmp/optiflow-91-corpus/pr-x415yrn6"
+    },
+    {
+      "command": "uvx --from uv==0.11.33 uv run --frozen --only-group docs bash scripts/site/build.sh",
+      "status": "passed",
+      "html_documents": 34,
+      "log_sha256": "79b6c1ec03250dbcf6fb36780bf80dc13525e5ccf8694b8e56484d0a076f35c6"
+    },
+    {
+      "command": "git diff --check; parse execution-mutation-v2.schema.json",
+      "status": "passed"
+    }
+  ],
+  "source_sha256": {
+    "CHANGELOG.md": "e1833a403096f04c9a427a21e613bbf417a1b9dc0626f231415c788f7f69ee38",
+    "DECISIONS.md": "7488098885d5c752154592e92deeefa359343f780696320bdee543d067c263ad",
+    "README.md": "8853bf5494f939b0a4f375c64b413b77c1418ba6aec2fa3ddfdc9ea62523e979",
+    "ROADMAP.md": "cadbf6e09638c252f361c3a36478d035b5ddd20ea62664ce5bc2efdb8f26639a",
+    "docs/cli-contract.md": "c1e750ab7cc61adf550c8dec03e2a193751decb107a6058f03e10d4545d06917",
+    "docs/execution-dry-run.md": "9ee6517dbbaca723d06f42619cbb45a4275ab51e2b598937ac2d4dfa245a1815",
+    "docs/execution-quarantine.md": "8309ca0bcc4ead851ddcfc48d59a724f1dd8f73bbb601b8624c95415ab3160ee",
+    "docs/safety-model.md": "8330eb9b123ae97ab91ff4426104c46570ff640bcf8650dbac3bc346a53bffc1",
+    "migrations/0007_quarantine.sql": "92dd48f82de51c5f8a4d09455077aaf0192ff3fb5f9b18daa0f1ef403d16825d",
+    "schemas/execution-mutation-v2.schema.json": "e5f19c2b3e20b22e2bbb9d6f45c5a706964c9b153f7245b5cdf306ad571853d6",
+    "src/app/execution_commands.rs": "b2b5906f17f52bfdf1439ccdb0e457740df914e7c65f5f963434f1c3cf2bf4e4",
+    "src/cli.rs": "b91455ef068801ed69878bc6d0e01788609d8e09d085989561e5d703aa4aef70",
+    "src/contracts.rs": "afe9351321f9197df468b9fe31976ddfa74428cafd263e545690e6a0051feb38",
+    "src/execution/journal.rs": "18dc1ffa6de606c2471394ccbbe17d31586a1bd651810ea25d836675d0d503cd",
+    "src/execution/mod.rs": "704055285502a1be728d8219b7ee29e87b9d0ad4c3d5664d7464eb7350a6eec2",
+    "src/execution/mutation.rs": "6b51643c514651bf3b3f50b8c6790645e8acd3f0b241ee72812c2647856e2670",
+    "src/execution/validation.rs": "f316ae380ef03bd6b62a8c9eac1b34b15092e81a83053aa72d6e0dbf13fd00f2",
+    "src/state.rs": "159f328eb01f16d4aedbf778db6feea817848ada48e02e67b2cde29e322631b5",
+    "tests/execution.rs": "ace8af3edbaa11ed3f3cf6af09c8039e0090e568becf74f91687e7a2e57ed0cb",
+    "tests/fixtures/filesystem/index.json": "609a3ff1dd7a2a07f52f3bdb64c582f5f802e5e1382e8d7a26e6389883347386"
+  },
+  "limitations": [
+    "Native macOS and hosted CI were not run or polled. Live mutation refuses non-Linux hosts.",
+    "The cross-filesystem success fixture used disposable /dev/shm space; no real removable media or user plans were applied.",
+    "The initial broad test run encountered a local compiled test/example binary without execute permission. Rebuilding with debug disabled, incremental disabled, one codegen unit and correcting the generated artifact permission yielded the recorded full pass; repository build profiles were unchanged.",
+    "No atomic compare-and-unlink guarantee against hostile concurrent writers, automatic restore, remote power-loss durability, quota enforcement or physical savings claim."
+  ]
+}

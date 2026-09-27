@@ -206,8 +206,9 @@ hash, and byte-for-byte confirmation.
 
 `plan execution` captures explicitly selected keeper/candidate paths into a new
 execution contract. `plan approve` records explicit fingerprint-bound approval.
-`apply --plan FILE --approval FILE --dry-run` validates it and saves evidence;
-live apply is refused. See the [complete dry-run contract](execution-dry-run.md)
+`apply --plan FILE --approval FILE --dry-run` validates it and saves v1 evidence;
+omitting `--dry-run` selects the separate, Linux-only [bounded quarantine
+transaction](execution-quarantine.md) with v2 mutation evidence. See the [complete dry-run contract](execution-dry-run.md)
 for flags, bounds, diagnostic classes and unsupported guarantees. Human output
 prints the same execution result object that JSON includes under `result`.
 
