@@ -95,3 +95,10 @@ validating/validated/rejected/interrupted lifecycle, terminal immutability and
 abandoned-attempt recovery. Source commit is impossible in these v1 records.
 Execution opens do not perform scan artifact cleanup. Unknown future execution
 state versions are refused before writable initialization.
+
+Migration 0007 keeps Linux quarantine `execution_mutation_runs` in separate
+v2 evidence. Migration 0008 appends immutable v3 recovery transitions under
+`execution_recovery_events`, with an authority binding before new mutation.
+Historical v2 rows without that binding remain inspection-only. The
+[recovery protocol](execution-recovery.md) defines status, restore, resume,
+empty namespace cleanup and ambiguous interruption handling.

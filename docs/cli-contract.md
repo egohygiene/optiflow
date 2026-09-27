@@ -212,6 +212,13 @@ transaction](execution-quarantine.md) with v2 mutation evidence. See the [comple
 for flags, bounds, diagnostic classes and unsupported guarantees. Human output
 prints the same execution result object that JSON includes under `result`.
 
+`execution status --run UUID` reads a stored mutation and v3 recovery events.
+`execution resume`, `execution restore --action ACTION-ID`, and `execution
+cleanup` additionally require `--plan FILE --approval FILE --run UUID` and
+revalidate the bound run under an exclusive lock. These Linux-only commands
+return a `optiflow.execution-recovery-report.v3` result; see the [recovery
+protocol](execution-recovery.md). Ambiguous work requires inspection.
+
 Execution artifact kinds `execution_plan` and `execution_approval`, plus stable
 `execution_*` diagnostic codes, are additive command-result v1 values. Scan
 run/report/review-plan versions and existing outcome/exit-code meanings remain

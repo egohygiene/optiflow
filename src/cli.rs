@@ -61,6 +61,12 @@ impl Cli {
             Command::Report(_) => "report",
             Command::Plan(_) => "plan",
             Command::Apply(_) => "apply",
+            Command::Execution(arguments) => match &arguments.command {
+                ExecutionCommand::Status(_) => "execution status",
+                ExecutionCommand::Resume(_) => "execution resume",
+                ExecutionCommand::Restore(_) => "execution restore",
+                ExecutionCommand::Cleanup(_) => "execution cleanup",
+            },
             Command::Cache(_) => "cache",
             Command::Config(arguments) => match &arguments.command {
                 ConfigCommand::Validate => "config validate",
@@ -90,8 +96,11 @@ pub enum Command {
     /// Generate an immutable, review-only action plan.
     Plan(PlanArgs),
 
-    /// Validate an explicitly approved execution plan; only --dry-run is supported.
+    /// Preview or execute explicitly approved exact-duplicate quarantine.
     Apply(ApplyArgs),
+
+    /// Inspect and recover a bounded quarantine run.
+    Execution(ExecutionArgs),
 
     /// Inspect the persistent analysis cache.
     Cache(CacheArgs),
@@ -238,6 +247,48 @@ pub struct ApplyArgs {
     /// Preview only. Omit to execute the approved bounded quarantine transaction.
     #[arg(long)]
     pub dry_run: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionArgs {
+    #[command(subcommand)]
+    pub command: ExecutionCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ExecutionCommand {
+    /// Read-only journal report; never classifies or cleans ambiguous work.
+    Status(ExecutionStatusArgs),
+    /// Continue only verified, untouched actions from an interrupted run.
+    Resume(ExecutionRecoveryArgs),
+    /// Return one committed action to its original path without overwriting.
+    Restore(ExecutionRestoreArgs),
+    /// Remove an empty owned namespace after every action is restored.
+    Cleanup(ExecutionRecoveryArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionStatusArgs {
+    #[arg(long, value_name = "UUID")]
+    pub run: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionRecoveryArgs {
+    #[arg(long, value_name = "FILE")]
+    pub plan: PathBuf,
+    #[arg(long, value_name = "FILE")]
+    pub approval: PathBuf,
+    #[arg(long, value_name = "UUID")]
+    pub run: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ExecutionRestoreArgs {
+    #[command(flatten)]
+    pub recovery: ExecutionRecoveryArgs,
+    #[arg(long, value_name = "ACTION-ID")]
+    pub action: String,
 }
 
 #[derive(Debug, Args)]

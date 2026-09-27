@@ -62,6 +62,7 @@ impl StateStore {
         apply_migration_0005(&mut connection).context("failed to apply migration 0005")?;
         apply_migration_0006(&mut connection).context("failed to apply migration 0006")?;
         apply_migration_0007(&mut connection).context("failed to apply migration 0007")?;
+        apply_migration_0008(&mut connection).context("failed to apply migration 0008")?;
 
         let mut store = Self {
             connection,
@@ -604,6 +605,21 @@ fn apply_migration_0007(connection: &mut Connection) -> Result<()> {
     }
     let transaction = connection.transaction()?;
     transaction.execute_batch(include_str!("../migrations/0007_quarantine.sql"))?;
+    transaction.commit()?;
+    Ok(())
+}
+
+fn apply_migration_0008(connection: &mut Connection) -> Result<()> {
+    if connection.query_row(
+        "SELECT COUNT(*) FROM schema_migrations WHERE version = 8",
+        [],
+        |row| row.get::<_, i64>(0),
+    )? > 0
+    {
+        return Ok(());
+    }
+    let transaction = connection.transaction()?;
+    transaction.execute_batch(include_str!("../migrations/0008_execution_recovery.sql"))?;
     transaction.commit()?;
     Ok(())
 }

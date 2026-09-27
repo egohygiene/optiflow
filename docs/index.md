@@ -11,11 +11,12 @@ produces immutable plans for human review.
 
 **Observe first. Prove relationships. Plan safely.**
 
-!!! note "Read-only by design"
+!!! note "Release and development source"
 
-    Source mutation is disabled. Development source adds an
-    [approved execution dry run](execution-dry-run.md); the published v0.1.1
-    bundle predates it. A finding never becomes mutation authority.
+    The published v0.1.1 bundle is read-only. Development source adds
+    [approved execution](execution-dry-run.md), [Linux quarantine](execution-quarantine.md)
+    and [operator recovery](execution-recovery.md). A finding never becomes
+    mutation authority.
 
 ## Choose a path
 

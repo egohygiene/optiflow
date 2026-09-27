@@ -101,6 +101,12 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
         Command::Apply(arguments) => {
             execution_commands::apply(&arguments, &state_directory, &effective_policy, signals)
         }
+        Command::Execution(arguments) => execution_commands::recovery(
+            arguments.command,
+            &state_directory,
+            &effective_policy,
+            signals,
+        ),
         Command::Cache(arguments) => match arguments.command {
             CacheCommand::Status => run_cache_status(&state_directory),
         },

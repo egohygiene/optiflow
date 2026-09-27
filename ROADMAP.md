@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.9
+version: 0.1.10
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-26
+updated: 2026-09-27
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,17 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-09-27 recovery review handoff
+
+The immutable, independently verified `v0.1.1` remains read-only. #90 and
+#91 are complete on `main`; the #106 CI maintenance work also merged through
+PR #107 at `85e8208c1105f591166ba7b4c5e40fd9dac09b05`. This branch
+implements #92's Linux-only operator recovery over new v3-bound mutation
+runs; review its synthetic local validation and PR before merging. Historical
+v2 mutation rows stay inspection-only. After #92 review and merge, re-query
+live dependencies and take #96, then #93. #94 additionally needs relevant
+#65 fixture work before #95. The 2026-09-26 snapshot below is historical.
 
 ## 2026-09-26 live suite handoff
 

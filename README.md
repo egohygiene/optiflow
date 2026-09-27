@@ -52,7 +52,9 @@ Current source adds [explicit execution plans, approval records and
 It rechecks file identity, metadata, full hashes, direct byte equality and
 capacity, and saves versioned validation/recovery evidence. [Bounded quarantine](docs/execution-quarantine.md)
 adds a separate v2 journal and Linux-only approved mutation path. These
-features are not in the published v0.1.1 bundle.
+features are not in the published v0.1.1 bundle. New development runs have
+[operator-initiated status, resume, restore and owned cleanup](docs/execution-recovery.md)
+with append-only v3 recovery evidence; older v2 runs remain inspection-only.
 
 ### Media capability matrix
 

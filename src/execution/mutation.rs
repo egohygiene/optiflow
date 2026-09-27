@@ -97,7 +97,7 @@ pub struct MutationRun {
 pub use super::journal::load_mutation;
 
 #[cfg(target_os = "linux")]
-fn check_authority(
+pub(super) fn check_authority(
     plan: &ExecutionPlan,
     approval: &Approval,
     state: &Path,
@@ -195,7 +195,8 @@ fn apply_linux(
         recovery_guarantee: "inspect_journal_and_paths_before_manual_restore; no_automatic_resume".to_owned(),
     };
     journal.begin_mutation(plan, approval, &run)?;
-    let result = execute(plan, signals, &mut journal, &mut run);
+    super::recovery::bind_apply(&mut journal, &run, plan, approval, policy)?;
+    let result = execute(plan, approval, policy, signals, &mut journal, &mut run);
     match result {
         Ok(()) => run.status = MutationStatus::Completed,
         Err(error) => {
@@ -217,6 +218,8 @@ fn apply_linux(
 #[cfg(target_os = "linux")]
 fn execute(
     plan: &ExecutionPlan,
+    approval: &Approval,
+    policy: &EffectivePolicyV1,
     signals: &SignalState,
     journal: &mut Journal,
     run: &mut MutationRun,
@@ -259,55 +262,74 @@ fn execute(
                 "quarantine namespace changed",
             ));
         }
-        // Revalidate immediately before each action, regardless of previous
-        // dry-run or previous actions in this batch.
-        run.capacity = validate_environment_remaining(plan, &mut fs::capacity, true, index)?;
-        validate_pair(action, signals)?;
-        let candidate = fs::open_bound(&action.candidate)?;
-        let parent = fs::check_directory(&action.candidate.directory)?;
-        let name = fs::native_path(&action.candidate.path)?
-            .file_name()
-            .ok_or_else(|| failure(Code::ExecutionScopeInvalid, "candidate has no filename"))?
-            .to_owned();
-        let destination_name = action.action_id.as_str();
-        phase(journal, run, Phase::Preflighted)?;
-        if action.topology == Topology::SameFilesystem {
-            phase(journal, run, Phase::RenamePending)?;
-            fs::check_file(&candidate, &action.candidate)?;
-            rustix::fs::renameat_with(
-                &parent,
-                &name,
-                &directory,
-                destination_name,
-                rustix::fs::RenameFlags::NOREPLACE,
-            )
-            .map_err(|e| {
-                failure(
-                    Code::ExecutionSourceStale,
-                    format!("atomic no-replace quarantine move refused: {e}"),
-                )
-            })?;
-            parent
-                .sync_all()
-                .and_then(|_| directory.sync_all())
-                .map_err(journal_error)?;
-            verify_moved(
-                action,
-                &candidate,
-                &run.attempts[index].destination.to_path_buf(),
-                signals,
-            )?;
-            phase(journal, run, Phase::DestinationDurable)?;
-        } else {
-            copy_cross_filesystem(plan, action, &candidate, index, signals, journal, run)?;
-        }
+        let namespace = run.namespace.to_path_buf();
+        run.capacity = perform_one(plan, action, index, &namespace, signals, &mut |next| {
+            phase(journal, run, next)
+        })?;
         // Only a verified durable destination and absent source become committed.
         run.attempts[index].committed = true;
         run.attempts[index].phase = Phase::Committed;
         run.committed_actions += 1;
         journal.save_mutation(run)?;
+        super::recovery::bind_committed(journal, run, plan, approval, policy, action)?;
     }
     Ok(())
+}
+
+/// Shared v2/v3 action engine. The caller must durably record each checkpoint;
+/// a failed checkpoint leaves its last pending phase ambiguous, never committed.
+#[cfg(target_os = "linux")]
+pub(super) fn perform_one(
+    plan: &ExecutionPlan,
+    action: &ExactAction,
+    index: usize,
+    namespace: &Path,
+    signals: &SignalState,
+    checkpoint: &mut impl FnMut(Phase) -> Result<()>,
+) -> Result<Vec<CapacityEvidence>> {
+    let mut capacity = validate_environment_remaining(plan, &mut fs::capacity, true, index)?;
+    validate_pair(action, signals)?;
+    let candidate = fs::open_bound(&action.candidate)?;
+    let parent = fs::check_directory(&action.candidate.directory)?;
+    let directory = fs::open(namespace, true)?;
+    let name = fs::native_path(&action.candidate.path)?
+        .file_name()
+        .ok_or_else(|| failure(Code::ExecutionScopeInvalid, "candidate has no filename"))?
+        .to_owned();
+    checkpoint(Phase::Preflighted)?;
+    if action.topology == Topology::SameFilesystem {
+        checkpoint(Phase::RenamePending)?;
+        fs::check_file(&candidate, &action.candidate)?;
+        rustix::fs::renameat_with(
+            &parent,
+            &name,
+            &directory,
+            action.action_id.as_str(),
+            rustix::fs::RenameFlags::NOREPLACE,
+        )
+        .map_err(|e| {
+            failure(
+                Code::ExecutionSourceStale,
+                format!("atomic no-replace quarantine move refused: {e}"),
+            )
+        })?;
+        parent
+            .sync_all()
+            .and_then(|_| directory.sync_all())
+            .map_err(journal_error)?;
+        verify_moved(
+            action,
+            &candidate,
+            &namespace.join(&action.action_id),
+            signals,
+        )?;
+        checkpoint(Phase::DestinationDurable)?;
+    } else {
+        capacity = copy_cross_filesystem(
+            plan, action, &candidate, index, namespace, signals, checkpoint,
+        )?;
+    }
+    Ok(capacity)
 }
 
 #[cfg(target_os = "linux")]
@@ -392,13 +414,13 @@ fn copy_cross_filesystem(
     action: &ExactAction,
     source: &File,
     index: usize,
+    namespace: &Path,
     signals: &SignalState,
-    journal: &mut Journal,
-    run: &mut MutationRun,
-) -> Result<()> {
+    checkpoint: &mut impl FnMut(Phase) -> Result<()>,
+) -> Result<Vec<CapacityEvidence>> {
     use rustix::fs::{AtFlags, Mode, OFlags, openat, renameat_with, unlinkat};
     let parent = fs::check_directory(&action.candidate.directory)?;
-    let directory = fs::open(&run.namespace.to_path_buf(), true)?;
+    let directory = fs::open(namespace, true)?;
     let source_path = fs::native_path(&action.candidate.path)?;
     let source_name = source_path
         .file_name()
@@ -406,7 +428,7 @@ fn copy_cross_filesystem(
     let destination_name = action.action_id.as_str();
     let original_properties = properties(source)?;
     let temp_name = format!(".{destination_name}.part");
-    phase(journal, run, Phase::CopyPending)?;
+    checkpoint(Phase::CopyPending)?;
     let temporary = openat(
         &directory,
         temp_name.as_str(),
@@ -454,10 +476,10 @@ fn copy_cross_filesystem(
     )?;
     temporary.sync_all().map_err(journal_error)?;
     directory.sync_all().map_err(journal_error)?;
-    phase(journal, run, Phase::TempSynced)?;
+    checkpoint(Phase::TempSynced)?;
     // The destination is durable before source removal. A crash at any later
     // checkpoint retains at least the original or a verified quarantine copy.
-    phase(journal, run, Phase::DestinationPending)?;
+    checkpoint(Phase::DestinationPending)?;
     renameat_with(
         &directory,
         temp_name.as_str(),
@@ -472,7 +494,7 @@ fn copy_cross_filesystem(
         )
     })?;
     directory.sync_all().map_err(journal_error)?;
-    let destination = run.attempts[index].destination.to_path_buf();
+    let destination = namespace.join(&action.action_id);
     let mut committed = fs::open(&destination, false)?;
     same_object(&temporary, &committed)?;
     check_copy(
@@ -483,15 +505,13 @@ fn copy_cross_filesystem(
         signals,
     )?;
     committed.sync_all().map_err(journal_error)?;
-    phase(journal, run, Phase::DestinationDurable)?;
+    checkpoint(Phase::DestinationDurable)?;
 
     // Recheck content, current identities, namespace and remaining capacity
     // immediately before the consequential source removal.
     validate_pair(action, signals)?;
-    run.capacity = validate_environment_remaining(plan, &mut fs::capacity, true, index + 1)?;
-    if fs::directory(&run.namespace.to_path_buf())?
-        .identity
-        .identity_key()
+    let capacity = validate_environment_remaining(plan, &mut fs::capacity, true, index + 1)?;
+    if fs::directory(namespace)?.identity.identity_key()
         != crate::filesystem::identity::FileStateSignature::from_file_metadata(&fs::metadata(
             &directory,
         )?)
@@ -519,7 +539,7 @@ fn copy_cross_filesystem(
         signals,
     )?;
     committed.sync_all().map_err(journal_error)?;
-    phase(journal, run, Phase::SourceRemovalPending)?;
+    checkpoint(Phase::SourceRemovalPending)?;
     unlinkat(&parent, source_name, AtFlags::empty()).map_err(|e| {
         failure(
             Code::ExecutionSourceStale,
@@ -536,7 +556,8 @@ fn copy_cross_filesystem(
             ));
         }
     }
-    phase(journal, run, Phase::SourceRemoved)
+    checkpoint(Phase::SourceRemoved)?;
+    Ok(capacity)
 }
 
 #[cfg(target_os = "linux")]
@@ -565,17 +586,17 @@ fn same_object(left: &File, right: &File) -> Result<()> {
 
 #[cfg(target_os = "linux")]
 #[derive(PartialEq, Eq)]
-struct Properties {
-    uid: u32,
-    gid: u32,
-    mode: u32,
-    atime: (i64, i64),
-    mtime: (i64, i64),
-    xattrs: Vec<(Vec<u8>, Vec<u8>)>,
+pub(super) struct Properties {
+    pub(super) uid: u32,
+    pub(super) gid: u32,
+    pub(super) mode: u32,
+    pub(super) atime: (i64, i64),
+    pub(super) mtime: (i64, i64),
+    pub(super) xattrs: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
 #[cfg(target_os = "linux")]
-fn properties(file: &File) -> Result<Properties> {
+pub(super) fn properties(file: &File) -> Result<Properties> {
     use rustix::fs::{fgetxattr, flistxattr, ioctl_getflags};
     use std::os::unix::ffi::OsStrExt;
     use std::os::unix::fs::MetadataExt;
@@ -644,7 +665,7 @@ fn properties(file: &File) -> Result<Properties> {
 }
 
 #[cfg(target_os = "linux")]
-fn set_properties(file: &File, p: &Properties) -> Result<()> {
+pub(super) fn set_properties(file: &File, p: &Properties) -> Result<()> {
     use rustix::fs::{Mode, Timespec, Timestamps, XattrFlags, fchmod, fchown, fsetxattr, futimens};
     use std::os::unix::ffi::OsStrExt;
     let current = fs::metadata(file)?;

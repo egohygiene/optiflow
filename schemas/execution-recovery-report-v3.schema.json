@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/execution-recovery-report-v3.schema.json",
+  "title": "Optiflow execution recovery report v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "run_id", "mutation", "events", "actions", "status", "recovery_authority", "physical_reclaimed_bytes"],
+  "properties": {
+    "schema": {"const": "optiflow.execution-recovery-report.v3"},
+    "run_id": {"type": "string", "format": "uuid"},
+    "mutation": {"type": "object", "required": ["schema", "run_id"], "properties": {"schema": {"const": "optiflow.execution-mutation.v2"}}},
+    "events": {"type": "array", "maxItems": 24008, "items": {"type": "object", "required": ["schema", "event_id", "phase"]}},
+    "actions": {"type": "array", "maxItems": 1000, "items": {"type": "object", "additionalProperties": false, "required": ["action_id", "state"], "properties": {
+      "action_id": {"type": "string", "pattern": "^action-[0-9]{6}$"},
+      "state": {"enum": ["not_started", "ready_to_resume", "quarantined", "restored", "restored_retained", "ambiguous"]}
+    }}},
+    "status": {"enum": ["resumable", "quarantined", "restored", "attention_required", "cleaned"]},
+    "recovery_authority": {"enum": ["bound_v3_context", "manual_inspection_only"]},
+    "physical_reclaimed_bytes": {"const": null}
+  }
+}

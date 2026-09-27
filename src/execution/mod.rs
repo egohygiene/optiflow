@@ -3,10 +3,12 @@ mod filesystem;
 mod journal;
 pub mod model;
 mod mutation;
+mod recovery;
 mod validation;
 
 pub use journal::load_execution;
 pub use mutation::{MutationRun, MutationStatus, apply_quarantine, load_mutation};
+pub use recovery::{RecoveryReport, cleanup, restore, resume, status as execution_status};
 pub use validation::{approve, create_plan, dry_run, load_approval, load_plan, write_document};
 
 use crate::outcome::{
