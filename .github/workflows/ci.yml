@@ -76,6 +76,9 @@ jobs:
             jq empty "$schema"
           done
 
+      - name: Verify deterministic PNG corpus
+        run: python3 scripts/png-corpus.py --check
+
       - name: Verify formatting
         run: cargo fmt --all -- --check
 

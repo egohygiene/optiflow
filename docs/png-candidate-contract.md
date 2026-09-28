@@ -212,8 +212,11 @@ cargo test --locked --test png_byte_validation
 These tests include different compression/filter/IDAT layouts, transparency,
 metadata placement, changed samples, corrupt chunk CRCs and zlib checksums,
 truncation, extra compressed/decompressed bytes, unsupported input, and exact
-budget boundaries. They are functional fixtures, not the broader redistribution
-corpus tracked by [#65](https://github.com/egohygiene/optiflow/issues/65).
+budget boundaries. The separate [versioned PNG corpus](png-corpus.md) under
+[#112](https://github.com/egohygiene/optiflow/issues/112) adds reviewed
+synthetic byte recipes, reproducible digests, and contract refusal scenarios.
+The wider [#65](https://github.com/egohygiene/optiflow/issues/65) corpus
+remains open.
 
 ## Next execution checkpoint
 

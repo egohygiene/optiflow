@@ -8,7 +8,7 @@ status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-27
+updated: 2026-09-28
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,26 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-09-28 PNG corpus review handoff
+
+The #93 release qualification remains open after PR #110 merged at
+`67439404c5b98da72d48d50c08c826dc99d0678c`; #111 owns the native
+macOS/APFS mutation port needed before that release. The signed, read-only
+`v0.1.1` is still the latest public OptiFlow release.
+
+[#112](https://github.com/egohygiene/optiflow/issues/112) is the bounded
+PNG/provider/candidate fixture tranche of the open
+[#65](https://github.com/egohygiene/optiflow/issues/65) corpus umbrella. This
+branch adds synthetic, deterministic, drift-checked evidence for the
+read-only PNG byte validator and candidate-contract checker. It does not
+execute OxiPNG, publish a candidate artifact, or authorize source mutation.
+Review its [local validation](docs/validation/optiflow-112-local.json) and PR
+before using these fixtures as the starting point for
+[#94](https://github.com/egohygiene/optiflow/issues/94). #94 must
+still prove the real bounded provider and candidate publication paths.
+The broader #65 media, perceptual, compatibility, and stress families remain
+open; #95 still joins #93 and #94.
 
 ## 2026-09-27 mutation release qualification handoff
 
