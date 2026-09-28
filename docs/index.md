@@ -35,6 +35,9 @@ produces immutable plans for human review.
 - **[Check media capabilities and optimizer strategy](optimizer-strategy.md)**
   to distinguish current inspection/validation from planned production and
   replacement, and see the OxiPNG and `image_optim` direction.
+- **[Review bounded PNG candidate production](png-candidate-production.md)**
+  to see the #94 development-source OxiPNG invocation, independent validation,
+  publication evidence and interruption path.
 - **[See the operator-ready milestone](current-release-milestone.md)** for the
   exact release/source pins and the dependency-ordered external-drive path.
 - **[Consume the CLI contract](cli-contract.md)** from `flow`, a shell script,

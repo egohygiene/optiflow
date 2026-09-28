@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::contracts::{self, Contract};
+
 pub const SCHEMA: &str = "optiflow.png-candidate-artifact-set.v1";
 pub const EVIDENCE_SCHEMA: &str = "optiflow.png-candidate-evidence.v1";
 pub const MARKER_NAME: &str = "candidate-artifact-set.json";
@@ -239,6 +241,9 @@ pub fn inspect(directory: &Path) -> Inspection {
     if let Err(error) = require_private_root(&root_file) {
         return Inspection::incompatible(format!("unsafe candidate root: {error}"));
     }
+    if let Err(error) = require_absent_provider_work(root, set_id) {
+        return Inspection::incompatible(error.to_string());
+    }
     let directory_file = match open_directory(directory) {
         Ok(file) => file,
         Err(error) => {
@@ -366,6 +371,9 @@ pub fn recover(root: &Path, set_id: Uuid) -> Inspection {
     if let Err(error) = require_private_root(&root_file) {
         return Inspection::incompatible(format!("unsafe candidate root: {error}"));
     }
+    if let Err(error) = require_absent_provider_work(root, set_id) {
+        return Inspection::incompatible(error.to_string());
+    }
     let final_path = root.join(set_id.to_string());
     let staging_name = staging_name(set_id);
     let staging = root.join(&staging_name);
@@ -404,7 +412,21 @@ fn digest(bytes: &[u8]) -> String {
     blake3::hash(bytes).to_hex().to_string()
 }
 
+// A killed provider may leave this namespace behind. It is outside the
+// three-member set and must never be inferred committed or deleted by set
+// recovery, even if a seemingly valid final marker also exists.
+fn require_absent_provider_work(root: &Path, set_id: Uuid) -> Result<()> {
+    let provider_work = root.join(format!(".provider-work-{set_id}"));
+    match fs::symlink_metadata(provider_work) {
+        Ok(_) => bail!("provider work directory remains; inspect it separately before recovery"),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => bail!("provider work directory state is unknown: {error}"),
+    }
+}
+
 fn validate_evidence(evidence: &Value, set_id: Uuid, candidate: &Member) -> Result<()> {
+    contracts::validate(Contract::PngCandidateEvidence, evidence)
+        .context("candidate production evidence does not satisfy its v1 contract")?;
     ensure!(
         evidence.get("schema").and_then(Value::as_str) == Some(EVIDENCE_SCHEMA),
         "candidate evidence schema is unsupported"
@@ -423,6 +445,111 @@ fn validate_evidence(evidence: &Value, set_id: Uuid, candidate: &Member) -> Resu
             && content.pointer("/digest/value").and_then(Value::as_str)
                 == Some(candidate.digest.value.as_str()),
         "candidate evidence content identity disagrees with committed media bytes"
+    );
+    let source = evidence
+        .pointer("/source/content/logical_bytes")
+        .and_then(Value::as_u64)
+        .context("candidate evidence omits source logical size")?;
+    let reduction = source
+        .checked_sub(candidate.size_bytes)
+        .context("candidate is not strictly smaller than the source")?;
+    ensure!(
+        reduction > 0
+            && evidence
+                .get("encoded_logical_reduction_bytes")
+                .and_then(Value::as_u64)
+                == Some(reduction),
+        "claimed logical reduction disagrees with source and candidate bytes"
+    );
+    ensure!(
+        evidence.pointer("/source/before") == evidence.pointer("/source/after")
+            && evidence
+                .pointer("/source/before/size_bytes")
+                .and_then(Value::as_u64)
+                == Some(source),
+        "source metadata or size changed across candidate production"
+    );
+    ensure!(
+        evidence
+            .pointer("/measurements/captured_stdout_bytes")
+            .and_then(Value::as_u64)
+            == Some(candidate.size_bytes)
+            && evidence.pointer("/measurements/decoded_source_bytes")
+                == evidence.pointer("/validation/source_png/decoded_bytes")
+            && evidence.pointer("/measurements/decoded_candidate_bytes")
+                == evidence.pointer("/validation/candidate_png/decoded_bytes"),
+        "measured output or decoded size contradicts the independent validation"
+    );
+    for field in [
+        "width",
+        "height",
+        "bit_depth",
+        "color_type",
+        "frames",
+        "ihdr_digest",
+        "decoded_samples_digest",
+        "non_idat_chunks_digest",
+    ] {
+        ensure!(
+            evidence.pointer(&format!("/validation/source_png/{field}"))
+                == evidence.pointer(&format!("/validation/candidate_png/{field}")),
+            "source and candidate validation facts differ for {field}"
+        );
+    }
+    let limits = evidence
+        .pointer("/limits")
+        .context("candidate evidence omits limits")?;
+    for (measure, limit) in [
+        ("/measurements/captured_stdout_bytes", "candidate_bytes"),
+        ("/measurements/captured_stderr_bytes", "stderr_bytes"),
+        (
+            "/measurements/decoded_source_bytes",
+            "decoded_bytes_per_image",
+        ),
+        (
+            "/measurements/decoded_candidate_bytes",
+            "decoded_bytes_per_image",
+        ),
+    ] {
+        ensure!(
+            evidence.pointer(measure).and_then(Value::as_u64)
+                <= limits.get(limit).and_then(Value::as_u64),
+            "measured value exceeds the declared {limit} bound"
+        );
+    }
+    ensure!(
+        source
+            <= limits
+                .get("source_bytes")
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+            && candidate.size_bytes
+                <= limits
+                    .get("candidate_bytes")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
+        "source or candidate exceeds its declared byte bound"
+    );
+    let raw_cap = evidence
+        .pointer("/argv/8")
+        .and_then(Value::as_str)
+        .and_then(|value| value.parse::<u64>().ok())
+        .context("provider raw-byte argument is not a bounded integer")?;
+    let decoded = evidence
+        .pointer("/validation/source_png/decoded_bytes")
+        .and_then(Value::as_u64)
+        .context("candidate evidence omits decoded source size")?;
+    let height = evidence
+        .pointer("/validation/source_png/height")
+        .and_then(Value::as_u64)
+        .context("candidate evidence omits source height")?;
+    let expected_cap = decoded
+        .checked_add(height)
+        .context("decoded raw-byte cap overflows")?
+        .max(source);
+    ensure!(
+        raw_cap == expected_cap,
+        "provider raw-byte argument disagrees with bounded source bytes"
     );
     Ok(())
 }
@@ -637,23 +764,77 @@ mod tests {
     use super::*;
 
     fn evidence(id: Uuid, candidate: &[u8]) -> Value {
+        let digest_value =
+            |byte: char| json!({ "algorithm": "blake3-256", "value": byte.to_string().repeat(64) });
+        let snapshot = json!({
+            "device_id": 1, "inode": 2, "mode": 33152, "owner_uid": 1000,
+            "group_gid": 1000, "link_count": 1, "size_bytes": candidate.len() + 1,
+            "modified_unix_ns": 1, "changed_unix_ns": 1
+        });
+        let png = json!({
+            "width": 1, "height": 1, "bit_depth": 8, "color_type": 2,
+            "frames": 1, "complete_decode": true, "animation_chunks": false,
+            "unknown_unsafe_to_copy_chunks": false, "decoded_bytes": 3,
+            "ihdr_digest": digest_value('a'),
+            "decoded_samples_digest": digest_value('b'),
+            "non_idat_chunks_digest": digest_value('c')
+        });
         json!({
             "schema": EVIDENCE_SCHEMA,
             "artifact_set_id": id.to_string(),
+            "profile": "optiflow.png-idat-preserve.v1",
+            "source_observation_id": Uuid::now_v7().to_string(),
+            "source": {
+                "path": { "encoding": "utf8", "value": "/synthetic/source.png" },
+                "before": snapshot, "after": snapshot,
+                "content": { "digest": digest_value('d'), "logical_bytes": candidate.len() + 1 }
+            },
+            "effective_policy_fingerprint": digest_value('e'),
+            "producer": {
+                "name": "oxipng", "version": "10.2.1",
+                "executable": { "encoding": "utf8", "value": "/synthetic/oxipng" },
+                "binary_digest": digest_value('f'),
+                "invocation_fingerprint": digest_value('a')
+            },
+            "argv": ["--opt", "2", "--nx", "--interlace", "keep", "--threads", "1", "--max-raw-size", (candidate.len() + 1).max(4).to_string(), "--quiet", "--stdout", "-"],
+            "input_binding": "complete_bounded_source_bytes_on_stdin",
+            "output_binding": "bounded_stdout_then_independent_validation",
+            "provider_configuration": "oxipng_v10.2.1_opt2_nx_keep_interlace_one_thread_no_strip",
             "candidate": {
+                "file_name": CANDIDATE_NAME,
                 "content": {
                     "digest": { "algorithm": "blake3-256", "value": digest(candidate) },
                     "logical_bytes": candidate.len()
                 }
             },
-            "test_provenance": "original synthetic candidate bytes"
+            "limits": {
+                "source_bytes": 1024, "candidate_bytes": 1024,
+                "decoded_bytes_per_image": 1024, "decoder_allocation_bytes": 1024,
+                "chunks_per_image": 2, "provider_binary_bytes": 1024,
+                "stderr_bytes": 1024, "evidence_bytes": 8192, "elapsed_ms": 1000
+            },
+            "measurements": {
+                "elapsed_ms": 1, "captured_stdout_bytes": candidate.len(),
+                "captured_stderr_bytes": 0, "decoded_source_bytes": 3,
+                "decoded_candidate_bytes": 3, "peak_provider_memory_bytes": null,
+                "peak_provider_temporary_bytes": null,
+                "provider_resource_enforcement": "host_bounds_stdin_stdout_stderr_elapsed_and_validator_buffers;provider_rss_and_private_workdir_usage_unmeasured"
+            },
+            "validation": {
+                "source_png": png, "candidate_png": png,
+                "independent_byte_validation": true, "exact_decoded_samples": true,
+                "ordered_non_idat_chunks_preserved": true, "strict_encoded_reduction": true
+            },
+            "encoded_logical_reduction_bytes": 1,
+            "physical_savings_bytes": null,
+            "cleanup": { "provider_work_directory_removed": true, "source_mutation": false }
         })
     }
 
     fn limits() -> PublishLimits {
         PublishLimits {
             candidate_bytes: 1024,
-            evidence_bytes: 1024,
+            evidence_bytes: 8192,
         }
     }
 
@@ -769,6 +950,53 @@ mod tests {
     }
 
     #[test]
+    fn malformed_or_contradictory_evidence_never_creates_staging() {
+        let root = private_root();
+        let id = Uuid::now_v7();
+        let candidate = b"synthetic candidate";
+        let baseline = evidence(id, candidate);
+        validate_evidence(
+            &baseline,
+            id,
+            &member("candidate_png", CANDIDATE_NAME, candidate),
+        )
+        .expect("closed test evidence satisfies the production contract");
+        let mut invalid = Vec::new();
+        let mut missing = baseline.clone();
+        missing.as_object_mut().unwrap().remove("source");
+        invalid.push(missing);
+        let mut extra = baseline.clone();
+        extra["provider_untrusted_claim"] = json!(true);
+        invalid.push(extra);
+        let mut false_validation = baseline.clone();
+        false_validation["validation"]["exact_decoded_samples"] = json!(false);
+        invalid.push(false_validation);
+        let mut fabricated_savings = baseline.clone();
+        fabricated_savings["physical_savings_bytes"] = json!(1);
+        invalid.push(fabricated_savings);
+        let mut fabricated_peak = baseline.clone();
+        fabricated_peak["measurements"]["peak_provider_memory_bytes"] = json!(1);
+        invalid.push(fabricated_peak);
+        let mut wrong_reduction = baseline.clone();
+        wrong_reduction["encoded_logical_reduction_bytes"] = json!(2);
+        invalid.push(wrong_reduction);
+        let mut changed_source = baseline.clone();
+        changed_source["source"]["after"]["inode"] = json!(3);
+        invalid.push(changed_source);
+        let mut spoofed_argv = baseline.clone();
+        spoofed_argv["argv"][2] = json!("--strip");
+        invalid.push(spoofed_argv);
+
+        for document in invalid {
+            assert!(
+                publish(root.path(), id, candidate, &document, limits(), || Ok(())).is_err(),
+                "invalid evidence must be rejected"
+            );
+            assert!(!root.path().join(staging_name(id)).exists());
+        }
+    }
+
+    #[test]
     fn symlinked_root_and_member_are_never_read_as_committed() {
         use std::os::unix::fs::symlink;
 
@@ -839,5 +1067,43 @@ mod tests {
         .unwrap();
         fs::remove_file(directory.join(EVIDENCE_NAME)).unwrap();
         assert_eq!(inspect(&directory).status, Status::Incomplete);
+    }
+
+    #[test]
+    fn recovery_preserves_abandoned_provider_work_for_manual_inspection() {
+        let root = private_root();
+        let id = Uuid::now_v7();
+        let work = root.path().join(format!(".provider-work-{id}"));
+        fs::create_dir(&work).unwrap();
+        fs::write(work.join("unknown"), b"opaque provider bytes").unwrap();
+        let inspection = recover(root.path(), id);
+        assert_eq!(inspection.status, Status::Incompatible);
+        assert!(inspection.detail.contains("provider work directory"));
+        assert_eq!(
+            fs::read(work.join("unknown")).unwrap(),
+            b"opaque provider bytes"
+        );
+    }
+
+    #[test]
+    fn provider_work_conflicting_with_final_marker_never_appears_committed() {
+        let root = private_root();
+        let id = Uuid::now_v7();
+        let candidate = b"synthetic candidate";
+        let directory = publish(
+            root.path(),
+            id,
+            candidate,
+            &evidence(id, candidate),
+            limits(),
+            || Ok(()),
+        )
+        .unwrap();
+        let work = root.path().join(format!(".provider-work-{id}"));
+        fs::create_dir(&work).unwrap();
+        assert_eq!(inspect(&directory).status, Status::Incompatible);
+        assert_eq!(recover(root.path(), id).status, Status::Incompatible);
+        assert!(work.exists());
+        assert!(directory.exists());
     }
 }

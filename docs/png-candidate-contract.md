@@ -5,12 +5,13 @@ description: PNG candidate declarations, actual byte validation, and remaining e
 
 # PNG candidate contract
 
-Issue [#78](https://github.com/egohygiene/optiflow/issues/78) defines
-`optiflow.png-candidate-contract.v1`, a **contract-only** review packet for a
-future lossless PNG provider. Issue
-[#80](https://github.com/egohygiene/optiflow/issues/80) adds a separate read-only
-byte validator described below. No encoder is selected or invoked; the
-existing CLI and read-only v0.1 authority are unchanged.
+Issue [#78](https://github.com/egohygiene/optiflow/issues/78) defined
+`optiflow.png-candidate-contract.v1`, a **contract-only** review packet. Issue
+[#80](https://github.com/egohygiene/optiflow/issues/80) added a separate
+read-only byte validator described below. The packet and pure checker still
+invoke no encoder; [#94's bounded candidate producer](png-candidate-production.md)
+is a distinct development-source operation. The published read-only v0.1.1
+authority is unchanged.
 
 The [schema](../schemas/png-candidate-contract-v1.schema.json), Rust
 `png_candidate` module, and [synthetic example](https://github.com/egohygiene/optiflow/blob/main/examples/png-candidate-contract-v1.json)
@@ -218,16 +219,17 @@ synthetic byte recipes, reproducible digests, and contract refusal scenarios.
 The wider [#65](https://github.com/egohygiene/optiflow/issues/65) corpus
 remains open.
 
-## Next execution checkpoint
+## Production checkpoint
 
-After this validator is reviewed, scope one real source-preserving provider
-using independently produced byte-validation evidence, a complete source-handle
-window, bounded workspace/process behavior, and candidate-media publication.
-That checkpoint must explicitly resolve the architecture and release boundary
-before adding runtime execution. Existing Scan/Plan JSON artifact publication
-does not already provide a media-output commit protocol.
+[#94](https://github.com/egohygiene/optiflow/issues/94) adds a bounded,
+source-preserving OxiPNG v10.2.1 path and a separate binary candidate-artifact
+set. Its host validates actual bytes and publishes independent production
+evidence; it does **not** reinterpret this declaration-only packet or its
+synthetic example as a trusted runtime observation. [Read its provider,
+resource and interruption boundaries](png-candidate-production.md).
 
-Keep provider absence/failure, source changes, output corruption, no reduction,
-budget exhaustion, cancellation, and cleanup as tested refusals. Provider exit
-zero never substitutes for host validation. Transactional replacement, batch
-execution, metadata stripping, and lossy/perceptual policies remain separate.
+Provider absence/failure, source changes, output corruption, no reduction,
+budget exhaustion, cancellation, and cleanup remain tested refusals. Provider
+exit zero never substitutes for host validation. Transactional replacement,
+batch execution, metadata stripping, and lossy/perceptual policies remain
+separate.

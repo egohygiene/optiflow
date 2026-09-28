@@ -3,7 +3,8 @@
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
-use std::time::Duration;
+use std::sync::{Mutex, TryLockError};
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,7 @@ use uuid::Uuid;
 
 use crate::adapters::oxipng::OxipngAdapter;
 use crate::candidate_artifact::{self, PublishLimits};
+use crate::contracts::{self, Contract};
 use crate::domain::{EvidenceDigest, MediaProviderEvidence, NativePath};
 use crate::png_candidate::{ContentIdentity, PROFILE, PngFacts};
 use crate::png_validation::{
@@ -22,6 +24,9 @@ const SOURCE_MAX: usize = 16 * 1024 * 1024;
 const OUTPUT_MAX: usize = 16 * 1024 * 1024;
 const DECODED_MAX: usize = 64 * 1024 * 1024;
 const BINARY_MAX: u64 = 64 * 1024 * 1024;
+// One producer at a time in this process, including its version query and
+// publication. Separate OptiFlow processes are independent.
+static PRODUCTION_GATE: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -246,9 +251,39 @@ pub fn produce_png(
     limits
         .check()
         .map_err(|e| fail(ProductionRefusal::InvalidInput, e))?;
+    let gate_started = Instant::now();
+    let _permit = loop {
+        if is_cancelled() {
+            return Err(fail(
+                ProductionRefusal::Cancelled,
+                "cancelled while waiting for producer",
+            ));
+        }
+        match PRODUCTION_GATE.try_lock() {
+            Ok(permit) => break permit,
+            Err(TryLockError::Poisoned(_)) => {
+                return Err(fail(
+                    ProductionRefusal::ArtifactUncommitted,
+                    "producer gate is poisoned",
+                ));
+            }
+            Err(TryLockError::WouldBlock)
+                if gate_started.elapsed() >= Duration::from_millis(limits.elapsed_ms) =>
+            {
+                return Err(fail(
+                    ProductionRefusal::ProviderTimedOut,
+                    "producer gate wait exceeded time ceiling",
+                ));
+            }
+            Err(TryLockError::WouldBlock) => std::thread::sleep(Duration::from_millis(10)),
+        }
+    };
     if policy_digest.algorithm != "blake3-256"
         || policy_digest.value.len() != 64
-        || !policy_digest.value.bytes().all(|c| c.is_ascii_hexdigit())
+        || !policy_digest
+            .value
+            .bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
     {
         return Err(fail(
             ProductionRefusal::InvalidInput,
@@ -282,13 +317,24 @@ pub fn produce_png(
     let set_id = Uuid::now_v7();
     let work = ProviderWork::create(root, set_id)
         .map_err(|e| fail(ProductionRefusal::ArtifactUncommitted, e))?;
-    let output = adapter
-        .optimize(&source_bytes, &work.path, &is_cancelled)
-        .map_err(|e| provider_failure(e, ProductionRefusal::ProviderFailed))?;
+    let attempt = adapter.optimize(&source_bytes, &work.path, &is_cancelled);
+    // Every provider outcome takes the explicit cleanup path. A failed
+    // cleanup retains the set ID so recovery can flag the private namespace.
+    let cleanup = work.cleanup();
+    if let Err(error) = cleanup {
+        return Err(ProductionFailure {
+            reason: ProductionRefusal::ArtifactUncommitted,
+            detail: format!("provider workdir cleanup failed: {error}"),
+            set_id: Some(set_id),
+        });
+    }
+    let output = attempt.map_err(|error| {
+        let mut refusal = provider_failure(error, ProductionRefusal::ProviderFailed);
+        refusal.set_id = Some(set_id);
+        refusal
+    })?;
     let candidate_bytes = output.stdout;
     let stderr_len = output.stderr.len() as u64;
-    work.cleanup()
-        .map_err(|e| fail(ProductionRefusal::ArtifactUncommitted, e))?;
     if is_cancelled() {
         return Err(fail(ProductionRefusal::Cancelled, "cancelled"));
     }
@@ -332,7 +378,8 @@ pub fn produce_png(
         encoded_logical_reduction_bytes: validated.encoded_byte_reduction(), physical_savings_bytes: None,
         cleanup: CleanupEvidence { provider_work_directory_removed: true, source_mutation: false },
     };
-    // WIP #94: the full evidence schema and contract registration are still pending.
+    contracts::validate(Contract::PngCandidateEvidence, &evidence)
+        .map_err(|e| fail(ProductionRefusal::ArtifactUncommitted, e))?;
     let value = serde_json::to_value(&evidence)
         .map_err(|e| fail(ProductionRefusal::ArtifactUncommitted, e))?;
     let directory = candidate_artifact::publish(
@@ -400,7 +447,7 @@ fn provider_failure(error: anyhow::Error, fallback: ProductionRefusal) -> Produc
             SubprocessError::Truncated { .. } => ProductionRefusal::OutputBoundExceeded,
             _ => fallback,
         });
-    fail(reason, error)
+    fail(reason, format!("{error:#}"))
 }
 
 struct ProviderWork {
