@@ -60,12 +60,22 @@ Explicitly selected, restored cross-filesystem quarantine copies may be
 under additive v4 evidence. This is absent from v0.1.1 and never applies to
 the restored original source.
 
+### Development addition: source-preserving PNG candidates
+
+The [#94 development branch](docs/png-candidate-production.md) adds a
+separately installed, exact-version **OxiPNG v10.2.1** adapter for bounded,
+static noninterlaced 8-bit RGB/RGBA PNG candidates. It validates source and
+candidate bytes independently, publishes a private candidate/evidence set,
+and inspects or discards incomplete staging after an interruption. It neither
+replaces nor deletes the source. Peak provider memory and provider workdir
+usage are unmeasured; the signed v0.1.1 release contains none of this path.
+
 ### Media capability matrix
 
-**OptiFlow does not yet produce optimized media or apply replacements.**
-Inventory, optional probing, review evidence, and candidate validation are
-separate capabilities. Exact deduplication here means evidence and review
-planning, not deletion.
+**The published v0.1.1 release does not produce optimized media or apply
+replacements.** The #94 development branch produces source-preserving PNG
+candidates only. Inventory, optional probing, review evidence, candidate
+validation, production and replacement are separate capabilities.
 
 Legend: **✓** merged implementation; **~** conditional or limited subset;
 **P** planned only; **—** no implementation or selected format-specific profile.
@@ -74,7 +84,7 @@ Each status links to its evidence or precise roadmap boundary.
 | Files | Inventory / exact dedup | Optional probe | Review evidence | Candidate validation | Candidate production | Apply / replace | Maturity / evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Any regular file (baseline) | [✓][inventory] | [—][probe] | [—][absent] | [—][absent] | [—][absent] | [P][transactions] | [Format-independent inventory][inventory] |
-| PNG | [✓][inventory] | [~][probe] | [~][png-review] | [~][png-bytes] | [P][png-plan] | [P][transactions] | [Review + library validator][png-bytes] |
+| PNG | [✓][inventory] | [~][probe] | [~][png-review] | [~][png-bytes] | [P][png-plan] | [P][transactions] | [Released review/validator; #94 production in development][png-production] |
 | JPEG | [✓][inventory] | [~][probe] | [—][absent] | [P][quality-plan] | [P][image-plan] | [P][transactions] | [Probe eligible; encoding planned][image-plan] |
 | GIF | [✓][inventory] | [~][probe] | [—][absent] | [—][absent] | [—][format-plans] | [P][transactions] | [No GIF producer selected][format-plans] |
 | SVG | [✓][inventory] | [—][probe] | [—][absent] | [—][absent] | [—][format-plans] | [P][transactions] | [Inventory only][probe] |
@@ -95,17 +105,19 @@ evaluation candidates, and planned apply refers to the shared transaction
 engine, not a promise of optimization for every row.
 
 PNG review opportunities do not prove that a candidate can be made smaller.
-The separate byte validator is library-only: static noninterlaced 8-bit
-RGB/RGBA with a documented metadata subset, exact sample/chunk preservation,
-and a strictly smaller encoded candidate. It does not run during scans or
-create files. See the [capability evidence and optimizer strategy](docs/optimizer-strategy.md)
-for source ownership, limits, OxiPNG sequencing, and the `image_optim` comparison.
+The separate byte validator covers static noninterlaced 8-bit RGB/RGBA with a
+documented metadata subset, exact sample/chunk preservation and strictly
+smaller encoded output. It does not run during scans. The development #94
+producer invokes this validator before publishing a candidate and never
+claims physical savings. See the [capability evidence and optimizer
+strategy](docs/optimizer-strategy.md) and [candidate protocol](docs/png-candidate-production.md).
 
 [inventory]: docs/optimizer-strategy.md#inventory-and-exact-duplicates
 [probe]: docs/optimizer-strategy.md#classification-and-optional-probing
 [absent]: docs/optimizer-strategy.md#current-boundaries
 [png-review]: docs/media-profiles.md#selection-and-evidence
 [png-bytes]: docs/png-candidate-contract.md#actual-byte-validation
+[png-production]: docs/png-candidate-production.md
 [transactions]: ROADMAP.md#v020--transactional-exact-duplicate-resolution
 [png-plan]: ROADMAP.md#adapter-framework
 [image-plan]: ROADMAP.md#encoders-and-formats
@@ -174,6 +186,15 @@ optiflow extensions inspect <EXTENSION_ID> --manifest <FILE> --lock <FILE>
 optiflow extensions doctor --manifest <FILE> --lock <FILE>
 ```
 
+The #94 development branch additionally exposes the source-preserving
+candidate commands (absent from the v0.1.1 release):
+
+```text
+optiflow candidate png --source <FILE> --oxipng <FILE>
+optiflow candidate status --id <UUID>
+optiflow candidate recover --id <UUID>
+```
+
 Global options:
 
 ```text
@@ -229,6 +250,8 @@ Machine results and committed domain artifacts have independent identifiers:
 | Extension lock | `optiflow.extension-lock.v1` | `schemas/extension-lock-v1.schema.json` |
 | Extension invocation | `optiflow.extension-invocation.v1` | `schemas/extension-invocation-v1.schema.json` |
 | Extension result | `optiflow.extension-result.v1` | `schemas/extension-result-v1.schema.json` |
+| PNG candidate evidence (development #94) | `optiflow.png-candidate-evidence.v1` | `schemas/png-candidate-evidence-v1.schema.json` |
+| PNG candidate artifact set (development #94) | `optiflow.png-candidate-artifact-set.v1` | `schemas/png-candidate-artifact-set-v1.schema.json` |
 
 Use `--output-format json` (or `--json`) for subprocess integration. JSON owns
 stdout; human primary output uses stdout and human diagnostics use stderr.

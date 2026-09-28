@@ -1,0 +1,201 @@
+{
+  "schema": "optiflow.png-provider-corpus.v1",
+  "license": "MIT",
+  "seed": 0,
+  "generator": "tests/png_provider_corpus.rs",
+  "baseline": "examples/png-candidate-contract-v1.json",
+  "scope": "Synthetic contract declarations only; no provider is launched and no host observation is attested.",
+  "cases": [
+    {
+      "id": "policy-request-replay",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic policy edit with intentionally stale provider and host request bindings.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/request/effective_policy_fingerprint/value",
+            "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        ]
+      },
+      "expected": { "refusal": "RequestMismatch" }
+    },
+    {
+      "id": "provider-reports-failure",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic provider status claim, not an observed subprocess exit.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          { "operation": "replace", "path": "/provider_result/status", "value": "failed" }
+        ]
+      },
+      "expected": { "refusal": "ProviderUnsuccessful" }
+    },
+    {
+      "id": "success-without-host-evidence",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic successful provider claim without independent host declarations.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          { "operation": "replace", "path": "/host_evidence", "value": null }
+        ]
+      },
+      "expected": { "refusal": "MissingHostEvidence" }
+    },
+    {
+      "id": "producer-binary-changed-after",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic host declaration that the producer executable bytes changed.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/host_evidence/producer_after/binary_digest/value",
+            "value": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ]
+      },
+      "expected": { "refusal": "ProviderIdentityMismatch" }
+    },
+    {
+      "id": "source-changed-after",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic host declaration that source content changed across evaluation.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/host_evidence/source_after/content/digest/value",
+            "value": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        ]
+      },
+      "expected": { "refusal": "SourceChanged" }
+    },
+    {
+      "id": "provider-candidate-claim-mismatch",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic provider claim disagrees with the separately supplied candidate declaration.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/provider_result/candidate/digest/value",
+            "value": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        ]
+      },
+      "expected": { "refusal": "CandidateMismatch" }
+    },
+    {
+      "id": "candidate-aliases-source-object",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic host declaration reuses the source filesystem identity at a separate path.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "copy",
+            "from": "/request/source/filesystem_identity",
+            "path": "/host_evidence/candidate/filesystem_identity"
+          }
+        ]
+      },
+      "expected": { "refusal": "SourceAlias" }
+    },
+    {
+      "id": "metadata-check-failed",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic declared host check does not pass; its truth is not established by this file.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/host_evidence/checks/7/status",
+            "value": "failed"
+          }
+        ]
+      },
+      "expected": { "refusal": "ValidationIncomplete" }
+    },
+    {
+      "id": "animated-candidate-declared",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic candidate PNG facts report animation outside the initial static profile.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/host_evidence/candidate_png/animation_chunks",
+            "value": true
+          }
+        ]
+      },
+      "expected": { "refusal": "UnsupportedPng" }
+    },
+    {
+      "id": "decoded-samples-mismatch",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic candidate PNG fact digest disagrees despite all declared checks passing.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/host_evidence/candidate_png/decoded_samples_digest/value",
+            "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          }
+        ]
+      },
+      "expected": { "refusal": "PreservationMismatch" }
+    },
+    {
+      "id": "candidate-exceeds-bound-limit",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic tighter candidate limit with both request fingerprints recomputed.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          { "operation": "replace", "path": "/request/limits/candidate_bytes", "value": 799 }
+        ],
+        "rebind_request": true
+      },
+      "expected": { "refusal": "LimitExceeded" }
+    },
+    {
+      "id": "candidate-not-smaller",
+      "validity_class": "contract_refusal",
+      "provenance": "Synthetic equal-length candidate and provider claim; no physical savings inference.",
+      "contract": "optiflow.png-candidate-contract.v1",
+      "recipe": {
+        "mutations": [
+          {
+            "operation": "replace",
+            "path": "/provider_result/candidate/logical_bytes",
+            "value": 1024
+          },
+          {
+            "operation": "replace",
+            "path": "/host_evidence/candidate/content/logical_bytes",
+            "value": 1024
+          },
+          {
+            "operation": "replace",
+            "path": "/host_evidence/resource_usage/peak_temporary_bytes",
+            "value": 1024
+          }
+        ]
+      },
+      "expected": { "refusal": "NotSmaller" }
+    }
+  ]
+}

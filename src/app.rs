@@ -13,6 +13,7 @@ use crate::outcome::{
 use crate::signals::{Interruption, SignalState};
 use crate::state::StateStore;
 
+mod candidate_commands;
 mod execution_commands;
 mod extension_commands;
 mod reporting;
@@ -101,6 +102,12 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
         Command::Apply(arguments) => {
             execution_commands::apply(&arguments, &state_directory, &effective_policy, signals)
         }
+        Command::Candidate(arguments) => candidate_commands::run(
+            arguments.command,
+            &state_directory,
+            &effective_policy,
+            signals,
+        ),
         Command::Execution(arguments) => execution_commands::recovery(
             arguments.command,
             &state_directory,

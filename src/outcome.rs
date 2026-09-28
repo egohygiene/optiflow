@@ -123,6 +123,18 @@ pub enum DiagnosticImpact {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DiagnosticCode {
+    CandidateInputInvalid,
+    CandidateUnsupportedPng,
+    CandidateInvalidPng,
+    CandidateSourceChanged,
+    CandidateProviderUnavailable,
+    CandidateProviderChanged,
+    CandidateProviderFailed,
+    CandidateProviderTimedOut,
+    CandidateOutputBoundExceeded,
+    CandidateValidationFailed,
+    CandidateNotSmaller,
+    CandidateUncommitted,
     ExecutionPlanInvalid,
     ExecutionApprovalRequired,
     ExecutionApprovalMismatch,

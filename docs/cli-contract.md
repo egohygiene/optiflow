@@ -233,3 +233,28 @@ Execution artifact kinds `execution_plan` and `execution_approval`, plus stable
 `execution_*` diagnostic codes, are additive command-result v1 values. Scan
 run/report/review-plan versions and existing outcome/exit-code meanings remain
 unchanged.
+
+## PNG candidate commands (development source)
+
+`candidate png --source FILE --oxipng FILE` selects one absolute normalized
+source path and one explicitly installed OxiPNG v10.2.1 executable; it produces
+one bounded, independently validated, **source-preserving** candidate set in
+private state. `candidate status --id UUID` inspects a set read-only;
+`candidate recover --id UUID` may discard the exact abandoned staging
+namespace but never promotes it, overwrites a final set, or changes the
+source. A remaining provider work directory blocks recovery for manual
+inspection. All three use the global `--state-directory` when provided. See the
+[production protocol](png-candidate-production.md) for fixed limits and
+interruption rules.
+
+Successful production lists the distinct candidate/evidence marker artifacts
+and returns the candidate UUID. Status reports `committed`, `incomplete`, or
+`incompatible`; a staged marker alone never constitutes a committed result.
+Changed inputs, unsupported PNGs, provider failure, absence, timeout,
+cancellation, changed binary, exceeded bounds, non-smaller output, and unsafe
+publication return typed refusals. An interrupted or ambiguous publication is
+never represented as a successful candidate command. The new
+`optiflow.png-candidate-evidence.v1` and
+`optiflow.png-candidate-artifact-set.v1` schemas are independent of scan/plan
+artifact-set v1. No exit status, candidate ID, or command-result artifact is
+approval to replace a source file.

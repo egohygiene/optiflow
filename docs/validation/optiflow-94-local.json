@@ -1,0 +1,64 @@
+{
+  "schema": "optiflow.png-candidate-local-validation.v1",
+  "date": "2026-09-28",
+  "issue": "https://github.com/egohygiene/optiflow/issues/94",
+  "fixture_dependency": "https://github.com/egohygiene/optiflow/pull/113",
+  "review_pr": "https://github.com/egohygiene/optiflow/pull/114",
+  "base_commit": "f5bd77e65ce566a952817f7b6b9c3b08672ad970",
+  "authority": "original synthetic PNG fixtures and controlled fake provider executables only; no user media or source replacement",
+  "platform": "Linux x86_64",
+  "toolchain": {
+    "rustc": "1.94.0",
+    "python": "3.12.14",
+    "zensical": "0.0.51"
+  },
+  "checks": [
+    {
+      "command": "cargo test --locked --offline --all-targets --jobs 2",
+      "status": "passed",
+      "evidence": "All targets passed, including 8 synthetic candidate-production integration tests and 10 candidate artifact unit tests; one preexisting scheduled filesystem stress test ignored."
+    },
+    {
+      "command": "cargo clippy --locked --offline --all-targets -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "status": "passed"
+    },
+    {
+      "command": "./scripts/run-adversarial-tests.sh corpus",
+      "status": "passed",
+      "filesystem_executions": 32,
+      "png_case_assertions": 17,
+      "provider_contract_case_assertions": 12
+    },
+    {
+      "command": "python3 scripts/png-corpus.py --check",
+      "status": "passed",
+      "evidence": "16 generated synthetic PNG files and the versioned index match."
+    },
+    {
+      "command": "uv tool run --offline --from 'zensical==0.0.51' zensical build --clean --strict",
+      "status": "passed",
+      "html_documents": 38,
+      "evidence": "Offline exact-version Zensical build found no issues."
+    },
+    {
+      "command": "synthetic CLI production/status/recover smoke",
+      "status": "passed",
+      "evidence": "Fake OxiPNG v10.2.1 consumed stdin and returned an original corpus PNG; CLI committed a 3-byte encoded reduction, inspected and recovered the artifact, and left source bytes unchanged."
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed"
+    }
+  ],
+  "limitations": [
+    "The controlled fake executables test the OptiFlow process boundary, not OxiPNG's own optimization algorithm. No OxiPNG executable was installed locally; its source build was unavailable offline because the image dependency was absent from the cache.",
+    "Provider RSS and private workdir disk usage are unmeasured; the runner kills the direct child rather than a complete process tree.",
+    "Complete binary hashes before and after invocation do not eliminate a concurrent executable path-swap race or authenticate the binary's publisher.",
+    "Rust 1.85 MSRV, native macOS, disposable external volumes, and hosted CI were not checked for this candidate change.",
+    "The existing scheduled filesystem stress test remained ignored; encoded logical reduction does not prove reclaimed physical space."
+  ]
+}

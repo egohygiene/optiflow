@@ -7,12 +7,25 @@ description: Evidence behind the format matrix, planned provider ownership, and 
 
 The [README capability matrix](https://github.com/egohygiene/optiflow#media-capability-matrix)
 separates inventory, probing, review evidence, byte validation, production,
-and apply. This page records the evidence behind those cells and the existing
-optimizer direction; it adds no runtime capability or execution authority.
+and apply. This page preserves a dated source snapshot and documents the
+development-source #94 provider boundary separately.
+
+## 2026-09-28 development addition
+
+[#94](https://github.com/egohygiene/optiflow/issues/94) adds a direct,
+separately installed **OxiPNG v10.2.1** adapter for one bounded static
+noninterlaced 8-bit RGB/RGBA PNG candidate. The host independently validates
+the candidate against the source, records typed production evidence and
+publishes a private candidate artifact set. It does not edit the source or
+grant replacement authority. [Production and recovery details](png-candidate-production.md)
+describe the exact argv, limits and unavailable RSS/temp measurements. The
+synthetic [#112 corpus](png-corpus.md) covers the relevant fixture tranche;
+the signed v0.1.1 binary remains read-only and has no producer. #95 owns
+separately approved replacement after the #93 mutation release gate.
 
 ## Evidence snapshot
 
-Reviewed on **2026-09-17** against OptiFlow
+This historical snapshot was reviewed on **2026-09-17** against OptiFlow
 [`5be461c413fc34515cd70f41d4178eb8243525d9`](https://github.com/egohygiene/optiflow/tree/5be461c413fc34515cd70f41d4178eb8243525d9),
 after [PR #82](https://github.com/egohygiene/optiflow/pull/82) merged. The matrix
 describes merged source, not the installed-release surface. The
@@ -75,7 +88,7 @@ The recognizer evidence is the
 and [image matchers](https://docs.rs/crate/infer/0.22.0/source/src/matchers/image.rs).
 Do not turn that dependency's extension list into an OptiFlow support promise.
 
-## Current boundaries
+## Boundaries at the 2026-09-17 source pin
 
 Only PNG has a built-in versioned optimization-review profile. Its
 [selection rules](media-profiles.md#selection-and-evidence) require current,
@@ -95,14 +108,14 @@ and strictly smaller encoded length. [Real synthetic fixtures][png-tests]
 exercise success and refusal. Its byte limits and best-effort decoder
 allocation accounting are not process-memory or wall-clock enforcement.
 
-This is a **library-only** validator. The [CLI command definitions][cli] and
+At this pinned source, this is a **library-only** validator. The [CLI command definitions][cli] and
 [application dispatch][app] do not invoke it, generate candidates, optimize,
 apply, replace, delete or quarantine source media. No format currently has a
 candidate producer or transaction engine. Other formats have no built-in
 optimization-review profile or candidate byte validator; ordinary inventory,
 probe metadata and extension roles are not substitutes for these capabilities.
 
-## Format plans
+## Format plans at the source pin
 
 The existing [image roadmap][image-roadmap] begins with conservative lossless
 PNG and OxiPNG capability discovery. OxiPNG remains the **first planned

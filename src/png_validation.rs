@@ -100,6 +100,22 @@ pub fn validate_png_pair(
     })
 }
 
+/// Validate the supported source profile before any provider is started.
+/// This does not establish filesystem stability or approve an output.
+pub fn validate_png_source(
+    source: &[u8],
+    limits: ByteValidationLimits,
+) -> Result<PngFacts, ByteRefusal> {
+    if source.len() > limits.source_bytes
+        || limits.decoded_bytes_per_image == 0
+        || limits.chunks_per_image == 0
+        || limits.decoder_allocation_bytes == 0
+    {
+        return Err(ByteRefusal::LimitExceeded);
+    }
+    Ok(observe(source, limits)?.facts)
+}
+
 struct Observed<'a> {
     // None is the one IDAT-run marker, binding all metadata placement.
     preserved: Vec<Option<&'a [u8]>>,

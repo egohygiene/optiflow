@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/png-candidate-artifact-set-v1.schema.json",
+  "title": "OptiFlow PNG candidate artifact set v1",
+  "type": "object",
+  "required": ["schema", "set_id", "created_at", "state", "members"],
+  "properties": {
+    "schema": { "const": "optiflow.png-candidate-artifact-set.v1" },
+    "set_id": { "type": "string", "format": "uuid" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "state": { "const": "committed" },
+    "members": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/candidate" },
+        { "$ref": "#/$defs/evidence" }
+      ],
+      "items": false,
+      "minItems": 2
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "digest": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "blake3-256" },
+        "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "candidate": {
+      "type": "object",
+      "required": ["kind", "file_name", "size_bytes", "digest"],
+      "properties": {
+        "kind": { "const": "candidate_png" },
+        "file_name": { "const": "candidate.png" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+        "digest": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["kind", "file_name", "size_bytes", "digest"],
+      "properties": {
+        "kind": { "const": "evidence" },
+        "file_name": { "const": "evidence.json" },
+        "size_bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+        "digest": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

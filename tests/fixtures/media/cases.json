@@ -1,0 +1,438 @@
+{
+  "schema": "optiflow.png-corpus.v1",
+  "generator": "scripts/png-corpus.py",
+  "generator_version": "1",
+  "description": "Original, bounded PNG source/candidate byte pairs for the #94 validation gate; provider execution is separate.",
+  "license": "MIT",
+  "width": 16,
+  "height": 8,
+  "cases": [
+    {
+      "id": "png65-rgb-smaller",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-fixed.png",
+      "expected": {
+        "outcome": "valid",
+        "logical_reduction_bytes": 3
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "valid",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-rgba-metadata-smaller",
+      "source": "tests/fixtures/media/generated/rgba-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgba-fixed.png",
+      "expected": {
+        "outcome": "valid",
+        "logical_reduction_bytes": 3
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgba",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgba",
+          "encoding": "fixed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "valid",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-hidden-rgb-change",
+      "source": "tests/fixtures/media/generated/rgba-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgba-hidden-rgb-change-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "PreservationMismatch"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgba",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgba",
+          "encoding": "fixed",
+          "transform": "hidden_rgb_change"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "boundary",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-metadata-moved",
+      "source": "tests/fixtures/media/generated/rgba-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgba-metadata-moved-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "PreservationMismatch"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgba",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgba",
+          "encoding": "fixed",
+          "transform": "metadata_moved"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "boundary",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-equal",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-stored.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "NotSmaller"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "stored"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "boundary",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-larger",
+      "source": "tests/fixtures/media/generated/rgb-fixed.png",
+      "candidate": "tests/fixtures/media/generated/rgb-stored.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "NotSmaller"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "fixed"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "stored"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "boundary",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-bad-crc",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-bad-crc-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "InvalidChecksum"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "bad_crc"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "malformed",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-extra-zlib",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-extra-zlib-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "IncompleteImageStream"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "extra_zlib_byte"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "malformed",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-indexed",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-indexed-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "UnsupportedPng"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "indexed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "unsupported",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media.",
+      "validity_detail": "Early unsupported-profile sentinel; this recipe is not a full conformance fixture for the named PNG feature."
+    },
+    {
+      "id": "png65-apng",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-apng-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "UnsupportedPng"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "apng"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "unsupported",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media.",
+      "validity_detail": "Early unsupported-profile sentinel; this recipe is not a full conformance fixture for the named PNG feature."
+    },
+    {
+      "id": "png65-trailing-byte",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-trailing-byte-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "InvalidStructure"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "trailing_byte"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "malformed",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-source-bad-crc",
+      "source": "tests/fixtures/media/generated/rgb-source-bad-crc-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "InvalidChecksum"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored",
+          "transform": "bad_crc"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "malformed",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-source-iccp",
+      "source": "tests/fixtures/media/generated/rgb-source-iccp-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "UnsupportedPng"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored",
+          "transform": "iccp"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "unsupported",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media.",
+      "validity_detail": "Early unsupported-profile sentinel; this recipe is not a full conformance fixture for the named PNG feature."
+    },
+    {
+      "id": "png65-interlaced",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-interlaced-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "UnsupportedPng"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "interlaced"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "unsupported",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media.",
+      "validity_detail": "Early unsupported-profile sentinel; this recipe is not a full conformance fixture for the named PNG feature."
+    },
+    {
+      "id": "png65-truncated",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgb-truncated-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "InvalidStructure"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgb",
+          "encoding": "fixed",
+          "transform": "truncated"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "malformed",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-decoded-limit",
+      "source": "tests/fixtures/media/generated/rgba-stored.png",
+      "candidate": "tests/fixtures/media/generated/rgba-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "LimitExceeded"
+      },
+      "limits": {
+        "decoded_bytes_per_image": 511
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgba",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "rgba",
+          "encoding": "fixed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "boundary",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    },
+    {
+      "id": "png65-gray-complete",
+      "source": "tests/fixtures/media/generated/rgb-stored.png",
+      "candidate": "tests/fixtures/media/generated/gray-fixed.png",
+      "expected": {
+        "outcome": "refused",
+        "reason": "UnsupportedPng"
+      },
+      "recipe": {
+        "seed": 0,
+        "source": {
+          "color": "rgb",
+          "encoding": "stored"
+        },
+        "candidate": {
+          "color": "gray",
+          "encoding": "fixed"
+        }
+      },
+      "media_type": "image/png",
+      "validity_class": "unsupported",
+      "validity_detail": "Complete static 8-bit grayscale PNG with matching dimensions, valid chunks, CRCs, and zlib stream; outside the RGB/RGBA profile.",
+      "license": "MIT",
+      "provenance": "Original synthetic pixels and metadata generated locally by scripts/png-corpus.py; no external media."
+    }
+  ]
+}
