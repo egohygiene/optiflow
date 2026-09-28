@@ -3,6 +3,7 @@
 pub mod adapters;
 pub mod app;
 pub mod artifact_set;
+pub mod candidate_artifact;
 pub mod cli;
 pub mod configuration;
 pub mod contracts;
@@ -19,6 +20,7 @@ pub mod observation;
 pub mod outcome;
 pub mod planning;
 pub mod png_candidate;
+pub mod png_production;
 pub mod png_validation;
 pub mod render;
 pub mod reports;

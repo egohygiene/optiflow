@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-decisions
 title: OptiFlow Decisions
 kind: architecture-document
-version: 0.1.0
+version: 0.1.1
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-13
+updated: 2026-09-28
 governed_by:
   - architecture-decisions
 depends_on:
@@ -74,6 +74,11 @@ without changing IDs or history. This document will retain the index.
 | OFD-009 | Accepted | Treat cloud-native systems as replaceable platform capabilities |
 | OFD-010 | Accepted | Adopt the Aether architecture-document metadata contract manually |
 | OFD-011 | Accepted | Separate extension declaration, operator trust, and core acceptance |
+| OFD-012 | Proposed | Bind explicit selections and approval to a dry-run-only execution contract |
+| OFD-013 | Proposed | Separate quarantine mutation evidence from dry-run v1 |
+| OFD-014 | Proposed | Require pre-mutation authority and append-only recovery evidence |
+| OFD-015 | Proposed | Independently authorize irreversible retained-copy finalization |
+| OFD-016 | Proposed | Publish source-preserving PNG candidates under an independent artifact protocol |
 
 ## Active Decisions
 
@@ -316,6 +321,34 @@ without changing IDs or history. This document will retain the index.
   `schemas/execution-finalization-*-v4.schema.json`, migration 0009 and
   synthetic cross-filesystem refusal/interruption tests.
 - **Revisit when:** #93 qualifies the release and reviews native target evidence.
+
+### OFD-016 — Publish source-preserving PNG candidates under an independent artifact protocol
+
+- **Status:** Proposed for #94 review
+- **Context:** The #78 declaration packet and #80 library byte validator do
+  not execute an optimizer. Scan/plan artifact-set v1 cannot represent binary
+  candidate media, and a provider result cannot establish profile preservation
+  or mutation authority. The relevant #65 fixtures enter through #112.
+- **Decision:** Require an explicitly selected, separately installed OxiPNG
+  v10.2.1 executable, observe its complete binary and fixed direct invocation,
+  supply bounded source bytes by standard input and accept its standard output
+  only after independent source stability and PNG byte validation. Publish
+  source-preserving `candidate.png` plus strict v1 evidence under a separate
+  marker-sealed candidate set with private staging, no-replace publication and
+  inspection/recovery. A candidate never authorizes source replacement.
+- **Consequences:** Published v0.1.1 remains read-only and immutable. A #94
+  result records encoded logical reduction while physical savings remain
+  unknown; full provider RSS and private workdir usage are unmeasured. The
+  provider is not bundled or OS-sandboxed, and binary hashing cannot eliminate
+  the final path-swap/exec race. No old contract or artifact is promoted into
+  runtime authority. #95 must separately bind approved replacement to the #93
+  release-qualified transaction engine.
+- **Evidence:** [PNG production protocol](docs/png-candidate-production.md),
+  `schemas/png-candidate-evidence-v1.schema.json`,
+  `schemas/png-candidate-artifact-set-v1.schema.json`, and #94 synthetic
+  provider/CLI interruption tests.
+- **Revisit when:** A second provider, full process containment, or approved
+  PNG replacement requires a new protocol version or stronger isolation.
 
 ## Deprecated and Superseded Decisions
 

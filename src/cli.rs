@@ -61,6 +61,11 @@ impl Cli {
             Command::Report(_) => "report",
             Command::Plan(_) => "plan",
             Command::Apply(_) => "apply",
+            Command::Candidate(arguments) => match &arguments.command {
+                CandidateCommand::Png(_) => "candidate png",
+                CandidateCommand::Status(_) => "candidate status",
+                CandidateCommand::Recover(_) => "candidate recover",
+            },
             Command::Execution(arguments) => match &arguments.command {
                 ExecutionCommand::Status(_) => "execution status",
                 ExecutionCommand::Resume(_) => "execution resume",
@@ -100,6 +105,9 @@ pub enum Command {
 
     /// Preview or execute explicitly approved exact-duplicate quarantine.
     Apply(ApplyArgs),
+
+    /// Produce, inspect, or recover source-preserving PNG candidates.
+    Candidate(CandidateArgs),
 
     /// Inspect and recover a bounded quarantine run.
     Execution(ExecutionArgs),
@@ -249,6 +257,39 @@ pub struct ApplyArgs {
     /// Preview only. Omit to execute the approved bounded quarantine transaction.
     #[arg(long)]
     pub dry_run: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct CandidateArgs {
+    #[command(subcommand)]
+    pub command: CandidateCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CandidateCommand {
+    /// Produce an independently validated PNG candidate from an explicit source.
+    Png(CandidatePngArgs),
+    /// Inspect a candidate set without changing it.
+    Status(CandidateSetArgs),
+    /// Discard only an owned abandoned staging set, or inspect a committed set.
+    Recover(CandidateSetArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct CandidatePngArgs {
+    /// Exact source PNG to read without following symlinks.
+    #[arg(long, value_name = "FILE")]
+    pub source: PathBuf,
+    /// Exact OxiPNG v10.2.1 executable; PATH discovery is disabled.
+    #[arg(long, value_name = "FILE")]
+    pub oxipng: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct CandidateSetArgs {
+    /// Canonical UUID of the candidate set.
+    #[arg(long, value_name = "UUID")]
+    pub id: String,
 }
 
 #[derive(Debug, Args)]
