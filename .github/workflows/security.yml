@@ -70,7 +70,7 @@ jobs:
 
       - name: Scan changed history for secrets
         # trufflesecurity/trufflehog v3.97.4
-        uses: trufflesecurity/trufflehog@f714bf454f350590f4a24c3ddb1aef02c35bf5b6
+        uses: trufflesecurity/trufflehog@4dd8831c5f12599465d4d45c3c447b4018a34c85
         with:
           version: "3.97.4"
           extra_args: "--results=verified,unknown"
