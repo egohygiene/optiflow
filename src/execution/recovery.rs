@@ -1,4 +1,5 @@
 //! Operator-initiated v3 recovery evidence over immutable v2 mutation history.
+//! macOS recovery is limited to same-volume APFS moves and empty-namespace cleanup.
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -11,31 +12,33 @@ use crate::domain::NativePath;
 use crate::filesystem::identity::FilesystemIdentity;
 use crate::outcome::DiagnosticCode as Code;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use chrono::Utc;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::fs::File;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::io::Read;
 #[cfg(target_os = "linux")]
-use std::io::{Read, Write};
-#[cfg(target_os = "linux")]
+use std::io::Write;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use uuid::Uuid;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::filesystem as fs;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::journal::Journal;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::model::{Approval, ExactAction, Topology};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::mutation::{self, MutationStatus};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::validation::validate_environment_remaining;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use crate::configuration::EffectivePolicyV1;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use crate::signals::SignalState;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub const EVENT_SCHEMA: &str = "optiflow.execution-recovery-event.v3";
 pub const REPORT_SCHEMA: &str = "optiflow.execution-recovery-report.v3";
 
@@ -233,7 +236,7 @@ pub(super) fn report(
     Ok(report)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[expect(
     clippy::too_many_arguments,
     reason = "transition evidence binds every authority, path and capacity field explicitly"
@@ -279,7 +282,7 @@ fn event(
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[expect(
     clippy::too_many_arguments,
     reason = "durable event emission keeps the full transition context explicit"
@@ -341,7 +344,22 @@ fn properties_fingerprint(file: &File) -> Result<String> {
     Ok(blake3::hash(&bytes).to_hex().to_string())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(target_os = "macos")]
+fn properties_fingerprint(file: &File) -> Result<String> {
+    let p = mutation::properties(file)?;
+    // Keep Linux v3 evidence byte-for-byte unchanged. This platform domain also
+    // binds APFS object flags and birth time; verification reads may alter atime.
+    let bytes = serde_json::to_vec(&serde_json::json!({
+        "platform": "macos-apfs/v1",
+        "uid": p.uid, "gid": p.gid, "mode": p.mode,
+        "mtime": p.mtime, "xattrs": p.xattrs,
+        "flags": p.flags, "birthtime": p.birthtime,
+    }))
+    .map_err(|e| failure(Code::StateTransactionFailed, e.to_string()))?;
+    Ok(blake3::hash(&bytes).to_hex().to_string())
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn bind_committed(
     journal: &mut Journal,
     run: &MutationRun,
@@ -370,7 +388,7 @@ pub(super) fn bind_committed(
 
 /// New applies bind the full effective configuration before the first source
 /// mutation. Historical v2 rows without this event remain inspection-only.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn bind_apply(
     journal: &mut Journal,
     run: &MutationRun,
@@ -396,7 +414,7 @@ pub(super) fn bind_apply(
     )
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn locked(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -404,8 +422,9 @@ pub(super) fn locked(
     policy: &EffectivePolicyV1,
     run_id: &str,
 ) -> Result<(Journal, MutationRun, Vec<RecoveryEvent>)> {
+    // Authority includes platform and volume refusals before writable journal access.
     mutation::check_authority(plan, approval, state, policy)?;
-    let journal = Journal::open(plan)?;
+    let journal = Journal::open_mutation(plan)?;
     journal.stored_authority(plan, approval)?;
     let run = journal
         .mutation(run_id)?
@@ -445,7 +464,7 @@ pub(super) fn locked(
     Ok((journal, run, events))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn identity(file: &File) -> Result<FilesystemIdentity> {
     crate::filesystem::identity::FileStateSignature::from_file_metadata(&fs::metadata(file)?)
         .identity
@@ -457,7 +476,7 @@ pub(super) fn identity(file: &File) -> Result<FilesystemIdentity> {
         })
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn absent(path: &Path) -> Result<()> {
     match std::fs::symlink_metadata(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -469,7 +488,7 @@ fn absent(path: &Path) -> Result<()> {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn journal_error(error: std::io::Error) -> Box<crate::outcome::Diagnostic> {
     failure(
         Code::StateTransactionFailed,
@@ -477,7 +496,7 @@ fn journal_error(error: std::io::Error) -> Box<crate::outcome::Diagnostic> {
     )
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn compare(left: &File, right: &File, size: u64, signals: &SignalState) -> Result<()> {
     use std::io::Seek;
     let mut left = left.try_clone().map_err(journal_error)?;
@@ -505,7 +524,7 @@ pub(super) fn compare(left: &File, right: &File, size: u64, signals: &SignalStat
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn verify_content(
     action: &ExactAction,
     file: &mut File,
@@ -551,7 +570,7 @@ pub(super) fn verify_content(
     Ok(before)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn verify_quarantined(
     plan: &ExecutionPlan,
     run: &MutationRun,
@@ -583,7 +602,7 @@ fn verify_quarantined(
     Ok(identity)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn check_properties(
     action: &ExactAction,
     file: &File,
@@ -608,13 +627,17 @@ pub(super) fn check_properties(
     if properties_fingerprint(file)? != expected {
         return Err(failure(
             Code::ExecutionSourceStale,
-            "ownership, mode, mtime or extended attributes differ from committed evidence",
+            if cfg!(target_os = "macos") {
+                "ownership, mode, mtime, extended attributes, flags or birth time differ from committed evidence"
+            } else {
+                "ownership, mode, mtime or extended attributes differ from committed evidence"
+            },
         ));
     }
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn expected_namespace(
     plan: &ExecutionPlan,
     run: &MutationRun,
@@ -646,7 +669,7 @@ fn expected_namespace(
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn resume(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -782,7 +805,7 @@ pub fn resume(
     report(plan, run, events)
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn resume(
     _plan: &super::model::ExecutionPlan,
     _approval: &super::model::Approval,
@@ -793,11 +816,11 @@ pub fn resume(
 ) -> Result<RecoveryReport> {
     Err(failure(
         Code::ExecutionUnsupported,
-        "quarantine recovery requires Linux",
+        "quarantine recovery requires Linux or the supported macOS APFS same-volume profile",
     ))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn restored_source(
     action: &ExactAction,
     run: &MutationRun,
@@ -828,7 +851,7 @@ fn restored_source(
     Ok(observed)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn restore_capacity(
     plan: &ExecutionPlan,
     action: &ExactAction,
@@ -837,7 +860,7 @@ fn restore_capacity(
     restore_capacity_with(plan, action, copy_bytes, &mut fs::capacity)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn restore_capacity_with<F>(
     plan: &ExecutionPlan,
     action: &ExactAction,
@@ -1051,7 +1074,7 @@ fn restore_cross(
     )
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn restore(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -1131,6 +1154,11 @@ pub fn restore(
     }
     let operation_id = Uuid::now_v7().to_string();
     if action.topology == Topology::SameFilesystem {
+        // Refuse unsupported durability before recording or changing the namespace.
+        fs::check_rename_platform(&destination, &namespace, &parent)?;
+        fs::sync_file(&destination)?;
+        fs::sync_directory(&parent)?;
+        fs::sync_directory(&namespace)?;
         let source_name = source
             .file_name()
             .ok_or_else(|| failure(Code::ExecutionScopeInvalid, "source has no filename"))?;
@@ -1163,10 +1191,8 @@ pub fn restore(
                 format!("restore no-replace refused: {e}"),
             )
         })?;
-        parent
-            .sync_all()
-            .and_then(|_| namespace.sync_all())
-            .map_err(journal_error)?;
+        fs::sync_directory(&parent)?;
+        fs::sync_directory(&namespace)?;
         let restored = restored_source(action, &run, &current, signals)?;
         if restored.identity_key() != observed.identity_key() {
             return Err(failure(
@@ -1191,6 +1217,7 @@ pub fn restore(
             "source_restored",
         )?;
     } else {
+        #[cfg(target_os = "linux")]
         restore_cross(
             plan,
             &run,
@@ -1205,11 +1232,16 @@ pub fn restore(
             capacity,
             &mut |file| file.sync_all().map_err(journal_error),
         )?;
+        #[cfg(target_os = "macos")]
+        return Err(failure(
+            Code::ExecutionUnsupported,
+            "macOS APFS recovery refuses cross-volume restore",
+        ));
     }
     report(plan, run, journal.recovery_events(run_id)?)
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn restore(
     _plan: &super::model::ExecutionPlan,
     _approval: &super::model::Approval,
@@ -1221,11 +1253,11 @@ pub fn restore(
 ) -> Result<RecoveryReport> {
     Err(failure(
         Code::ExecutionUnsupported,
-        "quarantine recovery requires Linux",
+        "quarantine recovery requires Linux or the supported macOS APFS same-volume profile",
     ))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -1267,6 +1299,8 @@ pub fn cleanup(
     fs::writable_directory(&parent)?;
     let namespace = fs::open(&run.namespace.to_path_buf(), true)?;
     let original = identity(&namespace)?;
+    fs::sync_directory(&parent)?;
+    fs::sync_directory(&namespace)?;
     let operation_id = Uuid::now_v7().to_string();
     record(
         &mut journal,
@@ -1298,7 +1332,7 @@ pub fn cleanup(
             format!("empty namespace removal refused: {e}"),
         )
     })?;
-    parent.sync_all().map_err(journal_error)?;
+    fs::sync_directory(&parent)?;
     absent(&run.namespace.to_path_buf())?;
     record(
         &mut journal,
@@ -1319,7 +1353,7 @@ pub fn cleanup(
     report(plan, run, journal.recovery_events(run_id)?)
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn cleanup(
     _plan: &super::model::ExecutionPlan,
     _approval: &super::model::Approval,
@@ -1330,11 +1364,11 @@ pub fn cleanup(
 ) -> Result<RecoveryReport> {
     Err(failure(
         Code::ExecutionUnsupported,
-        "quarantine recovery requires Linux",
+        "quarantine recovery requires Linux or the supported macOS APFS same-volume profile",
     ))
 }
 
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
 mod tests {
     use super::*;
     use crate::cli::{Cli, ExecutionPlanArgs};
@@ -1425,14 +1459,13 @@ mod tests {
             recovery_guarantee:
                 "inspect_journal_and_paths_before_manual_restore; no_automatic_resume".to_owned(),
         };
-        let mut journal = Journal::open(&plan).unwrap();
+        mutation::check_authority(&plan, &approval, &state, &policy).unwrap();
+        let mut journal = Journal::open_mutation(&plan).unwrap();
         journal.begin_mutation(&plan, &approval, &run).unwrap();
         bind_apply(&mut journal, &run, &plan, &approval, &policy).unwrap();
         std::fs::create_dir(&namespace).unwrap();
-        std::fs::File::open(&args.quarantine)
-            .unwrap()
-            .sync_all()
-            .unwrap();
+        fs::sync_directory(&std::fs::File::open(&args.quarantine).unwrap()).unwrap();
+        fs::sync_directory(&std::fs::File::open(&namespace).unwrap()).unwrap();
         run.attempts[0].phase = Phase::NamespaceDurable;
         journal.save_mutation(&run).unwrap();
         run.capacity = mutation::perform_one(
@@ -1572,6 +1605,7 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn failed_reverse_copy_sync_cannot_create_a_restore_commit() {
         use std::os::unix::fs::MetadataExt;

@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.11
+version: 0.1.12
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-28
+updated: 2026-10-05
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,25 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-05 macOS/APFS first checkpoint
+
+The current candidate starts from `c5dbcd1761e810aea228389b8ba017acc97a411e`.
+PR #113, including the stacked #114 implementation, and Dependabot PRs
+#116–#120 are merged. #112 and #94 are closed; PNG candidate production is
+development source, with real OxiPNG and native qualification still outstanding.
+
+[#111](https://github.com/egohygiene/optiflow/issues/111) now has a bounded
+same-volume macOS/APFS implementation checkpoint: quarantine, operator resume,
+collision-safe restore, and verified empty-namespace cleanup. It is **unvalidated
+draft work**, not a release or completed macOS port. Cross-volume plans and
+finalization remain refused on macOS. No checks or CI were run for this candidate.
+
+The [durable handoff](docs/work/111/HANDOFF.md) owns the remaining finite sequence:
+validate this boundary, implement cross-volume/property preservation and
+finalization parity, then complete native disposable-volume qualification before
+#93's release work. #95 remains gated on #93. The signed v0.1.1 is unchanged and
+read-only. Earlier dated handoffs below are historical snapshots.
 
 ## 2026-09-28 source-preserving PNG candidate review handoff
 

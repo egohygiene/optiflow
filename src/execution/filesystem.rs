@@ -7,7 +7,7 @@ use crate::filesystem::identity::FileStateSignature;
 use crate::outcome::DiagnosticCode as Code;
 use crate::signals::SignalState;
 
-use super::model::{DirectoryBinding, FileBinding};
+use super::model::{DirectoryBinding, ExecutionPlan, FileBinding};
 use super::{Result, failure};
 
 pub fn native_path(path: &NativePath) -> Result<PathBuf> {
@@ -93,6 +93,125 @@ pub fn canonical_input(path: &Path) -> Result<PathBuf> {
 pub fn metadata(file: &File) -> Result<Metadata> {
     file.metadata()
         .map_err(|e| failure(Code::ExecutionSourceUnavailable, e.to_string()))
+}
+
+/// The mutation platform gate is deliberately separate from read-only preview.
+/// Linux keeps its existing contract. macOS v1 supports only same-volume APFS
+/// renames and requires the filesystem's durable synchronization operation.
+#[cfg(target_os = "linux")]
+pub fn check_mutation_platform(_plan: &ExecutionPlan) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+pub fn check_mutation_platform(plan: &ExecutionPlan) -> Result<()> {
+    use std::os::unix::fs::MetadataExt;
+    use super::model::Topology;
+    // Reject unsupported intent before journal creation or any source change.
+    if plan.body.actions.iter().any(|action| action.topology != Topology::SameFilesystem) {
+        return Err(failure(
+            Code::ExecutionUnsupported,
+            "macOS quarantine, resume and restore support same-volume APFS renames only",
+        ));
+    }
+    let quarantine = check_directory(&plan.body.quarantine)?;
+    require_apfs(&quarantine)?;
+    sync_directory(&quarantine)?;
+    let quarantine_device = metadata(&quarantine)?.dev();
+    let state = check_directory(&plan.body.state)?;
+    require_apfs(&state)?;
+    sync_directory(&state)?;
+    // Do not require the candidate pathname to exist here: recovery operates
+    // after that object has moved. The retained directory binding stays exact.
+    for action in &plan.body.actions {
+        let parent = check_directory(&action.candidate.directory)?;
+        require_apfs(&parent)?;
+        if metadata(&parent)?.dev() != quarantine_device {
+            return Err(failure(
+                Code::ExecutionUnsupported,
+                "macOS source and quarantine must be on the same actual APFS volume",
+            ));
+        }
+        sync_directory(&parent)?;
+        let keeper_parent = check_directory(&action.keeper.directory)?;
+        require_apfs(&keeper_parent)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub fn check_mutation_platform(_plan: &ExecutionPlan) -> Result<()> {
+    Err(failure(Code::ExecutionUnsupported, "mutation filesystem evidence requires Linux or macOS APFS"))
+}
+
+#[cfg(target_os = "macos")]
+fn require_apfs(file: &File) -> Result<()> {
+    let filesystem = rustix::fs::fstatfs(file).map_err(|error| failure(
+        Code::ExecutionUnsupported, format!("cannot identify mutation filesystem: {error}"),
+    ))?;
+    let name: Vec<u8> = filesystem.f_fstypename.iter()
+        .take_while(|byte| **byte != 0).map(|byte| *byte as u8).collect();
+    if name != b"apfs" {
+        return Err(failure(Code::ExecutionUnsupported, "macOS mutation requires an observed APFS filesystem"));
+    }
+    Ok(())
+}
+
+/// Recheck the actual opened objects, not merely their declared parent paths,
+/// immediately before a same-volume move or restore.
+#[cfg(target_os = "macos")]
+pub fn check_rename_platform(source: &File, source_parent: &File, destination_parent: &File) -> Result<()> {
+    use std::os::unix::fs::MetadataExt;
+    require_apfs(source)?;
+    require_apfs(source_parent)?;
+    require_apfs(destination_parent)?;
+    let device = metadata(source)?.dev();
+    if metadata(source_parent)?.dev() != device || metadata(destination_parent)?.dev() != device {
+        return Err(failure(Code::ExecutionUnsupported, "opened macOS rename objects are not on the same APFS volume"));
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub fn check_rename_platform(_source: &File, _source_parent: &File, _destination_parent: &File) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub fn check_rename_platform(_source: &File, _source_parent: &File, _destination_parent: &File) -> Result<()> {
+    Err(failure(Code::ExecutionUnsupported, "mutation rename platform is unsupported"))
+}
+
+/// Synchronize without silently falling back from Darwin F_FULLFSYNC. A
+/// filesystem that cannot provide this operation is unsupported for mutation.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub fn sync_file(file: &File) -> Result<()> {
+    #[cfg(target_os = "linux")]
+    file.sync_all().map_err(|error| failure(
+        Code::StateTransactionFailed, format!("filesystem synchronization failed: {error}"),
+    ))?;
+    #[cfg(target_os = "macos")]
+    {
+        rustix::fs::fsync(file).map_err(|error| failure(
+            Code::StateTransactionFailed, format!("macOS filesystem synchronization failed: {error}"),
+        ))?;
+        rustix::fs::fcntl_fullfsync(file).map_err(|error| failure(
+            Code::ExecutionUnsupported, format!("macOS durable F_FULLFSYNC is unavailable: {error}"),
+        ))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub fn sync_file(_file: &File) -> Result<()> {
+    Err(failure(Code::ExecutionUnsupported, "durable mutation synchronization is unsupported"))
+}
+
+pub fn sync_directory(file: &File) -> Result<()> {
+    if !metadata(file)?.is_dir() {
+        return Err(failure(Code::ExecutionScopeInvalid, "directory synchronization requires a directory handle"));
+    }
+    sync_file(file)
 }
 
 #[cfg(unix)]
