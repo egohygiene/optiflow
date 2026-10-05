@@ -1,0 +1,67 @@
+{
+  "schema": "optiflow.png-corpus-local-validation.v1",
+  "date": "2026-09-28",
+  "base_commit": "67439404c5b98da72d48d50c08c826dc99d0678c",
+  "issue": "https://github.com/egohygiene/optiflow/issues/112",
+  "authority": "original synthetic PNG bytes and declaration-only provider contract recipes; no OxiPNG process or source-media mutation",
+  "platform": "Linux x86_64",
+  "toolchain": {
+    "rustc": "1.94.0",
+    "cargo": "1.94.0",
+    "python": "3.12.14",
+    "zensical": "0.0.51"
+  },
+  "corpus": {
+    "png_cases": 17,
+    "generated_png_files": 16,
+    "provider_contract_refusal_cases": 12,
+    "index_sha256": "95db515b590aec9c81970d15a110d039019e9b9d60a05cc269fee36bba35eb21"
+  },
+  "checks": [
+    {
+      "command": "python3 scripts/png-corpus.py --check",
+      "status": "passed",
+      "evidence": "Regenerated PNG bytes and SHA-256 index match committed files."
+    },
+    {
+      "command": "cargo test --locked --offline --all-targets --jobs 2",
+      "status": "passed",
+      "passed": 253,
+      "ignored": 1,
+      "evidence": "Includes both corpus tests, existing PNG validator/contract tests, and all other Rust targets."
+    },
+    {
+      "command": "./scripts/run-adversarial-tests.sh corpus",
+      "status": "passed",
+      "filesystem_executions": 32,
+      "png_case_assertions": 17,
+      "provider_contract_case_assertions": 12,
+      "filesystem_receipt_sha256": "3f33a32a9332e42667f0c2fa9106edb672c56e72f35ab2188c2ae942e87df92b"
+    },
+    {
+      "command": "cargo clippy --locked --offline --all-targets --all-features -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "status": "passed"
+    },
+    {
+      "command": "uv tool run --from 'zensical==0.0.51' zensical build --clean --strict",
+      "status": "passed",
+      "html_index_documents": 36,
+      "note": "Project-pinned uv 0.11 was unavailable locally; uv 0.12.18 launched the exact pinned Zensical version independently."
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed"
+    }
+  ],
+  "limitations": [
+    "Rust 1.85 minimum supported toolchain was not available locally; checks used 1.94.0.",
+    "Native macOS and hosted CI were not run or polled.",
+    "The existing scheduled filesystem stress test was ignored in the ordinary Rust target suite.",
+    "The provider recipes assert only pure contract refusals against synthetic declarations. #94 must prove actual subprocess limits, output cleanup, source stability, and atomic candidate artifact publication.",
+    "Encoded logical-byte reduction is not occupied-space or reclaimed-space evidence."
+  ]
+}

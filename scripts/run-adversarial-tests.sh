@@ -53,6 +53,8 @@ run_fuzz() {
 
 run_corpus() {
   run_case "filesystem-corpus" python3 scripts/filesystem-corpus.py --check --tier pr
+  run_case "png-corpus-drift" python3 scripts/png-corpus.py --check
+  run_case "png-corpus-validation" cargo test --locked --test png_corpus --test png_provider_corpus
 }
 
 if [[ $# -eq 0 ]]; then

@@ -235,7 +235,7 @@
       "type": "object",
       "required": ["kind", "schema", "path"],
       "properties": {
-        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set", "execution_plan", "execution_approval", "execution_finalization_preview", "execution_finalization_authorization"] },
+        "kind": { "enum": ["run", "report", "plan", "effective_policy", "artifact_set", "execution_plan", "execution_approval", "execution_finalization_preview", "execution_finalization_authorization", "png_candidate", "png_candidate_evidence", "png_candidate_artifact_set"] },
         "schema": { "type": "string", "minLength": 1 },
         "run_id": { "type": "string", "minLength": 1 },
         "path": { "$ref": "#/$defs/serialized_path" }
@@ -327,7 +327,19 @@
             "execution_capacity_unavailable",
             "execution_capacity_insufficient",
             "execution_unsupported",
-            "execution_destination_occupied"
+            "execution_destination_occupied",
+            "candidate_input_invalid",
+            "candidate_unsupported_png",
+            "candidate_invalid_png",
+            "candidate_source_changed",
+            "candidate_provider_unavailable",
+            "candidate_provider_changed",
+            "candidate_provider_failed",
+            "candidate_provider_timed_out",
+            "candidate_output_bound_exceeded",
+            "candidate_validation_failed",
+            "candidate_not_smaller",
+            "candidate_uncommitted"
           ]
         },
         "severity": { "enum": ["information", "warning", "error", "fatal"] },

@@ -22,6 +22,7 @@ pub enum Contract {
     EffectivePolicy,
     MediaProfileEvidence,
     PngCandidateContract,
+    PngCandidateEvidence,
     ExtensionManifest,
     ExtensionLock,
     ExtensionInvocation,
@@ -39,10 +40,11 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
         | Contract::ExecutionFinalizationPreview
         | Contract::ExecutionFinalizationAuthorization
         | Contract::ExecutionFinalizationEvent
-        | Contract::ExecutionFinalizationStatus => jsonschema::options()
+        | Contract::ExecutionFinalizationStatus
+        | Contract::PngCandidateEvidence => jsonschema::options()
             .should_validate_formats(true)
             .build(&schema_document)
-            .context("failed to compile execution schema")?,
+            .context("failed to compile strict-format schema")?,
         Contract::Report => {
             let run_schema = schema(Contract::Run)?;
             let media_profile_schema = schema(Contract::MediaProfileEvidence)?;
@@ -108,6 +110,9 @@ pub fn schema(contract: Contract) -> Result<Value> {
         }
         Contract::PngCandidateContract => {
             include_str!("../schemas/png-candidate-contract-v1.schema.json")
+        }
+        Contract::PngCandidateEvidence => {
+            include_str!("../schemas/png-candidate-evidence-v1.schema.json")
         }
         Contract::ExtensionManifest => include_str!("../schemas/extension-manifest-v1.schema.json"),
         Contract::ExtensionLock => include_str!("../schemas/extension-lock-v1.schema.json"),
