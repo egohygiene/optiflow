@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/execution-properties-macos-cross-copy-v1.schema.json",
+  "title": "Optiflow macOS cross-copy property review contract v1",
+  "description": "Standalone structural contract for the macos-apfs-cross-copy/v1 property profile. Valid data is not proof of native observation, metadata preservation, durability, dependency qualification or permission to mutate. This contract does not alter existing execution or recovery evidence. Runtime parsing additionally rejects raw input larger than 3 MiB (3145728 bytes), requires strictly byte-sorted unique xattr names, and bounds the sum of decoded xattr value lengths to 1 MiB (1048576 bytes).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile",
+    "uid",
+    "gid",
+    "mode",
+    "mtime",
+    "birthtime",
+    "bsd_flags",
+    "xattrs",
+    "acl"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.execution-properties-macos-cross-copy.v1"
+    },
+    "profile": {
+      "const": "macos-apfs-cross-copy/v1"
+    },
+    "uid": {
+      "$ref": "#/$defs/u32"
+    },
+    "gid": {
+      "$ref": "#/$defs/u32"
+    },
+    "mode": {
+      "type": "integer",
+      "minimum": 32768,
+      "maximum": 36863,
+      "description": "Regular-file type bits (0100000) plus the exact 12 permission and special-mode bits."
+    },
+    "mtime": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "birthtime": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "bsd_flags": {
+      "const": 0,
+      "description": "This initial profile refuses every nonzero BSD inode flag."
+    },
+    "xattrs": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/xattr"
+      },
+      "description": "Runtime semantics require strictly increasing decoded name bytes, reject duplicate names, and cap cumulative decoded value bytes at 1048576. Array order is not normalized by the parser."
+    },
+    "acl": {
+      "$ref": "#/$defs/acl"
+    }
+  },
+  "$defs": {
+    "u32": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295
+    },
+    "timestamp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seconds",
+        "nanoseconds"
+      ],
+      "properties": {
+        "seconds": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "nanoseconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Exact normalized Unix timestamp: signed whole seconds plus nonnegative fractional nanoseconds. Access time and change time are deliberately outside this profile."
+    },
+    "xattr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name_hex",
+        "value_hex"
+      ],
+      "properties": {
+        "name_hex": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 510,
+          "pattern": "^(?:0[1-9a-f]|[1-9a-f][0-9a-f]){1,255}(?![\\s\\S])",
+          "description": "One through 255 non-NUL bytes, encoded as lowercase hexadecimal pairs."
+        },
+        "value_hex": {
+          "type": "string",
+          "maxLength": 131072,
+          "pattern": "^(?:[0-9a-f]{2})*(?![\\s\\S])",
+          "description": "Zero through 65536 bytes, encoded as lowercase hexadecimal pairs."
+        }
+      }
+    },
+    "acl": {
+      "description": "Required explicit ACL state. Absent and present with zero entries are distinct. Unavailable, unreadable or omitted ACL evidence must not be converted to absent. Entry order, duplicate principals and opaque private ACL-header flags remain significant.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state"
+          ],
+          "properties": {
+            "state": {
+              "const": "absent"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "flags",
+            "entries"
+          ],
+          "properties": {
+            "state": {
+              "const": "present"
+            },
+            "flags": {
+              "type": "integer",
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "maximum": 65535
+                },
+                {
+                  "minimum": 131072,
+                  "maximum": 196607
+                }
+              ],
+              "description": "Preserve low 16 private bits and optional NO_INHERIT (0x00020000). DEFER_INHERIT (0x00010000) and all other public bits are refused by this initial copy profile."
+            },
+            "entries": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "$ref": "#/$defs/ace"
+              },
+              "description": "Exact ordered entries. Duplicates are permitted and must not be sorted or removed."
+            }
+          }
+        }
+      ]
+    },
+    "ace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "principal_hex",
+        "kind",
+        "flags",
+        "permissions"
+      ],
+      "properties": {
+        "principal_hex": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}(?![\\s\\S])",
+          "description": "Raw 16-byte principal UUID, with no account lookup or textual UUID normalization."
+        },
+        "kind": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "flags": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 496,
+          "multipleOf": 16,
+          "description": "Only the five ACE inheritance bits in mask 0x000001f0 are accepted."
+        },
+        "permissions": {
+          "$ref": "#/$defs/permissions"
+        }
+      }
+    },
+    "permissions": {
+      "type": "integer",
+      "multipleOf": 2,
+      "anyOf": [
+        {
+          "minimum": 0,
+          "maximum": 16382
+        },
+        {
+          "minimum": 1048576,
+          "maximum": 1064958
+        },
+        {
+          "minimum": 2097152,
+          "maximum": 2113534
+        },
+        {
+          "minimum": 3145728,
+          "maximum": 3162110
+        },
+        {
+          "minimum": 4194304,
+          "maximum": 4210686
+        },
+        {
+          "minimum": 5242880,
+          "maximum": 5259262
+        },
+        {
+          "minimum": 6291456,
+          "maximum": 6307838
+        },
+        {
+          "minimum": 7340032,
+          "maximum": 7356414
+        },
+        {
+          "minimum": 8388608,
+          "maximum": 8404990
+        },
+        {
+          "minimum": 9437184,
+          "maximum": 9453566
+        },
+        {
+          "minimum": 10485760,
+          "maximum": 10502142
+        },
+        {
+          "minimum": 11534336,
+          "maximum": 11550718
+        },
+        {
+          "minimum": 12582912,
+          "maximum": 12599294
+        },
+        {
+          "minimum": 13631488,
+          "maximum": 13647870
+        },
+        {
+          "minimum": 14680064,
+          "maximum": 14696446
+        },
+        {
+          "minimum": 15728640,
+          "maximum": 15745022
+        },
+        {
+          "minimum": 16777216,
+          "maximum": 16793598
+        },
+        {
+          "minimum": 17825792,
+          "maximum": 17842174
+        },
+        {
+          "minimum": 18874368,
+          "maximum": 18890750
+        },
+        {
+          "minimum": 19922944,
+          "maximum": 19939326
+        },
+        {
+          "minimum": 20971520,
+          "maximum": 20987902
+        },
+        {
+          "minimum": 22020096,
+          "maximum": 22036478
+        },
+        {
+          "minimum": 23068672,
+          "maximum": 23085054
+        },
+        {
+          "minimum": 24117248,
+          "maximum": 24133630
+        },
+        {
+          "minimum": 25165824,
+          "maximum": 25182206
+        },
+        {
+          "minimum": 26214400,
+          "maximum": 26230782
+        },
+        {
+          "minimum": 27262976,
+          "maximum": 27279358
+        },
+        {
+          "minimum": 28311552,
+          "maximum": 28327934
+        },
+        {
+          "minimum": 29360128,
+          "maximum": 29376510
+        },
+        {
+          "minimum": 30408704,
+          "maximum": 30425086
+        },
+        {
+          "minimum": 31457280,
+          "maximum": 31473662
+        },
+        {
+          "minimum": 32505856,
+          "maximum": 32522238
+        }
+      ],
+      "description": "Exact allowed-rights mask 0x01f03ffe: bits 1 through 13 and 20 through 24. The 32 disjoint bands select the high bits; even values in each band select the low bits. All unknown rights bits are refused."
+    }
+  }
+}

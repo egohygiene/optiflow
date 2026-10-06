@@ -109,6 +109,27 @@ fn source(path: &Path) -> (Vec<u8>, u64, u64, i64, i64, u32) {
     )
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn assert_rename_properties(before: &fs::Metadata, path: &Path) {
+    let after = fs::metadata(path).unwrap();
+    assert_eq!(before.dev(), after.dev());
+    assert_eq!(before.ino(), after.ino());
+    assert_eq!(before.nlink(), after.nlink());
+    assert_eq!(before.uid(), after.uid());
+    assert_eq!(before.gid(), after.gid());
+    assert_eq!(before.mode(), after.mode());
+    assert_eq!(before.len(), after.len());
+    assert_eq!(before.mtime(), after.mtime());
+    assert_eq!(before.mtime_nsec(), after.mtime_nsec());
+    #[cfg(target_os = "macos")]
+    assert_eq!(before.created().unwrap(), after.created().unwrap());
+    // Reading content may update atime; a rename may update ctime. Neither
+    // belongs in the identity-preserving rename property assertion.
+    let mut attribute = [0u8; 64];
+    let length = rustix::fs::getxattr(path, "user.optiflow_recovery", &mut attribute).unwrap();
+    assert_eq!(&attribute[..length], b"preserved synthetic metadata");
+}
+
 #[test]
 fn approved_dry_run_is_durable_but_does_not_mutate_sources_or_quarantine() {
     let f = Fixture::new();
@@ -682,7 +703,7 @@ fn empty_duplicates_are_valid_without_inventing_savings() {
     assert_eq!(run.savings.physical_reclaimed_bytes, None);
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn approved_quarantine_moves_synthetic_duplicates_one_at_a_time_with_durable_v2_evidence() {
     let mut f = Fixture::new();
@@ -752,7 +773,7 @@ fn approved_quarantine_moves_synthetic_duplicates_one_at_a_time_with_durable_v2_
     );
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn live_apply_refuses_stale_missing_links_bounds_and_wrong_authority() {
     for case in 0..5 {
@@ -799,7 +820,7 @@ fn live_apply_refuses_stale_missing_links_bounds_and_wrong_authority() {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn live_cli_requires_approval_and_reports_same_versioned_result() {
     let f = Fixture::new();
@@ -831,6 +852,198 @@ fn live_cli_requires_approval_and_reports_same_versioned_result() {
     assert_eq!(v["result"]["plan_fingerprint"], p.fingerprint);
     assert_eq!(v["result"]["status"], "completed");
     contracts::validate(Contract::ExecutionMutation, &v["result"]).unwrap();
+}
+
+#[cfg(target_os = "macos")]
+fn assert_macos_cross_filesystem_mutation_refused(
+    f: &Fixture,
+    p: &ExecutionPlan,
+    run_id: &str,
+) {
+    let approval = f.approval(p);
+    assert_eq!(
+        execution::apply_quarantine(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            &SignalState::default()
+        )
+        .unwrap_err()
+        .code,
+        Code::ExecutionUnsupported
+    );
+    for result in [
+        execution::resume(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            run_id,
+            &SignalState::default(),
+        ),
+        execution::restore(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default(),
+        ),
+        execution::cleanup(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            run_id,
+            &SignalState::default(),
+        ),
+    ] {
+        assert_eq!(result.unwrap_err().code, Code::ExecutionUnsupported);
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn macos_cross_filesystem_intent_is_refused_before_journal_or_source_mutation() {
+    let f = Fixture::new();
+    let mut p = f.plan();
+    // Model an explicitly cross-volume plan without mounting a volume or
+    // depending on a second disk. This is a declaration-boundary proof, not
+    // evidence of physical external-volume behavior or native qualification.
+    let source_device = p.body.actions[0]
+        .candidate
+        .identity
+        .filesystem_id
+        .parse::<u64>()
+        .unwrap();
+    p.body.quarantine.identity.filesystem_id = source_device.wrapping_add(1).to_string();
+    p.body.actions[0].topology = Topology::CrossFilesystem;
+    seal(&mut p);
+    // The complete versioned plan is valid; unsupported topology must win
+    // before fresh directory comparison or opening the writable journal.
+    execution::write_document(&f.args.output, &p, &p).unwrap();
+    assert_eq!(
+        execution::load_plan(&f.args.output).unwrap().fingerprint,
+        p.fingerprint
+    );
+    let keeper = source(&f.args.keep);
+    let candidate = source(&f.args.candidate[0]);
+    assert_macos_cross_filesystem_mutation_refused(&f, &p, &uuid::Uuid::now_v7().to_string());
+    assert_eq!(source(&f.args.keep), keeper);
+    assert_eq!(source(&f.args.candidate[0]), candidate);
+    assert_eq!(fs::read_dir(&f.args.quarantine).unwrap().count(), 0);
+    assert_eq!(fs::read_dir(&f.state).unwrap().count(), 0);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn macos_mixed_topology_refusal_preserves_existing_journal_and_retained_bytes() {
+    let mut f = Fixture::new();
+    let second_root = f.base.join("z-second-source");
+    fs::create_dir(&second_root).unwrap();
+    let second_candidate = second_root.join("candidate.bin");
+    fs::write(&second_candidate, fs::read(&f.args.keep).unwrap()).unwrap();
+    f.args.root.push(second_root.clone());
+    f.args.candidate.push(second_candidate.clone());
+    let mut p = f.plan();
+
+    // Keep valid preexisting evidence that a writable journal opener would
+    // recover. Refusal must neither rewrite it nor recreate its released lock.
+    let mut unfinished = f.run(&p).unwrap();
+    assert_eq!(unfinished.status, Status::Validated);
+    unfinished.status = Status::Validating;
+    unfinished.completed_at = None;
+    unfinished.attempts.clear();
+    unfinished.validation.status = Status::Validating;
+    unfinished.commit.status = "not_started".to_owned();
+    contracts::validate(Contract::Execution, &unfinished).unwrap();
+    let connection = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
+    connection
+        .execute(
+            "UPDATE execution_runs SET status = 'validating', document_json = ?2 WHERE run_id = ?1",
+            rusqlite::params![unfinished.run_id, serde_json::to_string(&unfinished).unwrap()],
+        )
+        .unwrap();
+    drop(connection);
+    fs::remove_file(f.state.join("execution.lock")).unwrap();
+
+    // Keep the first action executable by declaration. Only the later action
+    // crosses the declared volume boundary, so a per-action gate is too late.
+    let other_device = p
+        .body
+        .quarantine
+        .identity
+        .filesystem_id
+        .parse::<u64>()
+        .unwrap()
+        .wrapping_add(1)
+        .to_string();
+    for directory in p.body.roots.iter_mut().chain(&mut p.body.subtrees) {
+        if directory.path.to_path_buf() == second_root {
+            directory.identity.filesystem_id = other_device.clone();
+        }
+    }
+    assert_eq!(p.body.actions[0].topology, Topology::SameFilesystem);
+    assert_eq!(
+        p.body.actions[1].candidate.path.to_path_buf(),
+        second_candidate
+    );
+    p.body.actions[1].candidate.identity.filesystem_id = other_device.clone();
+    p.body.actions[1].candidate.directory.identity.filesystem_id = other_device;
+    p.body.actions[1].topology = Topology::CrossFilesystem;
+    seal(&mut p);
+    execution::write_document(&f.args.output, &p, &p).unwrap();
+    assert_eq!(
+        execution::load_plan(&f.args.output).unwrap().fingerprint,
+        p.fingerprint
+    );
+
+    let retained_namespace = f.args.quarantine.join("retained-evidence");
+    fs::create_dir(&retained_namespace).unwrap();
+    let retained = retained_namespace.join("retained.bin");
+    fs::write(&retained, b"previously retained synthetic bytes").unwrap();
+    let retained_before = source(&retained);
+    let keeper_before = source(&f.args.keep);
+    let candidates_before: Vec<_> = f.args.candidate.iter().map(|p| source(p)).collect();
+    let database_before = source(&f.state.join("state.sqlite3"));
+    let entries = |directory: &Path| {
+        let mut names: Vec<_> = fs::read_dir(directory)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        names.sort();
+        names
+    };
+    let state_entries = entries(&f.state);
+    let quarantine_entries = entries(&f.args.quarantine);
+
+    assert_macos_cross_filesystem_mutation_refused(&f, &p, &unfinished.run_id);
+
+    assert_eq!(source(&f.args.keep), keeper_before);
+    for (path, before) in f.args.candidate.iter().zip(candidates_before) {
+        assert_eq!(source(path), before);
+    }
+    assert_eq!(source(&retained), retained_before);
+    assert_eq!(source(&f.state.join("state.sqlite3")), database_before);
+    assert_eq!(entries(&f.state), state_entries);
+    assert_eq!(entries(&f.args.quarantine), quarantine_entries);
+    assert_eq!(
+        entries(&retained_namespace),
+        vec![std::ffi::OsString::from("retained.bin")]
+    );
+    assert!(!f.state.join("execution.lock").exists());
+    assert!(!f.args.quarantine.join(&p.fingerprint).exists());
+    assert_eq!(
+        serde_json::to_value(
+            execution::load_execution(&f.state, &unfinished.run_id)
+                .unwrap()
+                .unwrap()
+        )
+        .unwrap(),
+        serde_json::to_value(&unfinished).unwrap()
+    );
 }
 
 #[cfg(target_os = "linux")]
@@ -891,15 +1104,27 @@ fn cross_filesystem_copy_commits_destination_before_source_removal_when_availabl
     assert_eq!(run.savings.physical_reclaimed_bytes, None);
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn recovery_status_restore_and_empty_cleanup_are_idempotent() {
     let f = Fixture::new();
+    fs::set_permissions(&f.args.candidate[0], fs::Permissions::from_mode(0o640)).unwrap();
+    rustix::fs::setxattr(
+        &f.args.candidate[0],
+        "user.optiflow_recovery",
+        b"preserved synthetic metadata",
+        rustix::fs::XattrFlags::CREATE,
+    )
+    .unwrap();
     let p = f.documents();
     let a = f.approval(&p);
     let original = source(&f.args.candidate[0]);
+    let properties = fs::metadata(&f.args.candidate[0]).unwrap();
     let run =
         execution::apply_quarantine(&p, &a, &f.state, &f.policy, &SignalState::default()).unwrap();
+    assert_eq!(run.status, execution::MutationStatus::Completed);
+    let destination = run.attempts[0].destination.to_path_buf();
+    assert_rename_properties(&properties, &destination);
     let status = execution::execution_status(&f.state, &run.run_id).unwrap();
     assert_eq!(status.status, "quarantined");
     assert_eq!(status.recovery_authority, "bound_v3_context");
@@ -907,6 +1132,25 @@ fn recovery_status_restore_and_empty_cleanup_are_idempotent() {
     for event in &status.events {
         contracts::validate(Contract::ExecutionRecoveryEvent, event).unwrap();
     }
+    // Resuming a fully committed run must revalidate it without another move
+    // or a second commit event. Interrupted remaining-action coverage lives
+    // with the private recovery fixture, without timing-dependent signals.
+    let resumed = execution::resume(
+        &p,
+        &a,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &SignalState::default(),
+    )
+    .unwrap();
+    assert_eq!(resumed.status, "quarantined");
+    assert_eq!(
+        serde_json::to_value(&resumed.events).unwrap(),
+        serde_json::to_value(&status.events).unwrap()
+    );
+    assert_rename_properties(&properties, &destination);
+    assert!(!f.args.candidate[0].exists());
     let status_cli = cli(&f, &["--json", "execution", "status", "--run", &run.run_id]);
     assert!(status_cli.status.success());
     let value: Value = serde_json::from_slice(&status_cli.stdout).unwrap();
@@ -941,6 +1185,8 @@ fn recovery_status_restore_and_empty_cleanup_are_idempotent() {
     let returned = source(&f.args.candidate[0]);
     assert_eq!(returned.0, original.0);
     assert_eq!((returned.1, returned.2), (original.1, original.2));
+    assert_rename_properties(&properties, &f.args.candidate[0]);
+    assert!(!destination.exists());
     let again = execution::restore(
         &p,
         &a,
@@ -952,6 +1198,22 @@ fn recovery_status_restore_and_empty_cleanup_are_idempotent() {
     )
     .unwrap();
     assert_eq!(restored.events.len(), again.events.len());
+    let unowned = run.namespace.to_path_buf().join("unowned-synthetic-file");
+    fs::write(&unowned, b"not an execution artifact").unwrap();
+    assert!(
+        execution::cleanup(
+            &p,
+            &a,
+            &f.state,
+            &f.policy,
+            &run.run_id,
+            &SignalState::default()
+        )
+        .is_err()
+    );
+    assert_eq!(fs::read(&unowned).unwrap(), b"not an execution artifact");
+    assert_rename_properties(&properties, &f.args.candidate[0]);
+    fs::remove_file(unowned).unwrap();
     let cleaned = execution::cleanup(
         &p,
         &a,
@@ -982,7 +1244,7 @@ fn recovery_status_restore_and_empty_cleanup_are_idempotent() {
     );
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn recovery_refuses_collision_and_changed_policy_without_moving_quarantine() {
     let f = Fixture::new();
@@ -993,6 +1255,8 @@ fn recovery_refuses_collision_and_changed_policy_without_moving_quarantine() {
     let destination = run.attempts[0].destination.to_path_buf();
     let saved = fs::read(&destination).unwrap();
     fs::write(&f.args.candidate[0], b"collision with independent data").unwrap();
+    let collision = source(&f.args.candidate[0]);
+    let quarantined = source(&destination);
     assert_eq!(
         execution::restore(
             &p,
@@ -1008,6 +1272,8 @@ fn recovery_refuses_collision_and_changed_policy_without_moving_quarantine() {
         Code::ExecutionDestinationOccupied
     );
     assert_eq!(fs::read(&destination).unwrap(), saved);
+    assert_eq!(source(&f.args.candidate[0]), collision);
+    assert_eq!(source(&destination), quarantined);
     fs::remove_file(&f.args.candidate[0]).unwrap();
     let config = f.base.join("alternate-policy.toml");
     fs::write(
@@ -1039,7 +1305,7 @@ fn recovery_refuses_collision_and_changed_policy_without_moving_quarantine() {
     assert_eq!(fs::read(&destination).unwrap(), saved);
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn recovery_refuses_changed_extended_attributes_after_commit() {
     let f = Fixture::new();
@@ -1081,7 +1347,7 @@ fn recovery_refuses_changed_extended_attributes_after_commit() {
     assert!(destination.exists());
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn recovery_refuses_contention_permission_change_and_disconnected_quarantine() {
     use rustix::fs::{FlockOperation, flock};
@@ -1234,7 +1500,7 @@ fn pending_reverse_copy_and_unowned_temporary_remain_for_inspection() {
     assert!(!f.args.candidate[0].exists());
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn read_only_status_keeps_a_pending_transition_ambiguous() {
     let f = Fixture::new();
@@ -1747,7 +2013,7 @@ fn finalization_rejects_other_authority_aliases_and_stale_quarantine() {
     );
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn finalization_refuses_same_filesystem_restore_without_retained_copy() {
     use optiflow::execution::finalization;
@@ -1773,18 +2039,26 @@ fn finalization_refuses_same_filesystem_restore_without_retained_copy() {
     )
     .unwrap();
     let selected = vec![plan.body.actions[0].action_id.clone()];
-    assert!(
-        finalization::preview(
-            &plan,
-            &approval,
-            &f.state,
-            &f.policy,
-            &run.run_id,
-            &selected,
-            &SignalState::default()
-        )
-        .is_err()
+    let before = source(&f.args.candidate[0]);
+    let error = finalization::preview(
+        &plan,
+        &approval,
+        &f.state,
+        &f.policy,
+        &run.run_id,
+        &selected,
+        &SignalState::default(),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.code,
+        if cfg!(target_os = "macos") {
+            Code::ExecutionUnsupported
+        } else {
+            Code::ExecutionSourceStale
+        }
     );
+    assert_eq!(source(&f.args.candidate[0]), before);
 }
 
 #[cfg(target_os = "linux")]

@@ -7,8 +7,9 @@ proving byte-identical duplicate groups, calculating reclaimable storage, and
 producing immutable review plans.
 
 The published v0.1.1 product is read-only with respect to source media. Current
-development source adds Linux-only approved exact-duplicate quarantine; it
-cannot permanently delete, replace, or optimize source files.
+development source adds approved exact-duplicate quarantine on Linux and an
+[unvalidated macOS/APFS same-volume checkpoint](docs/work/111/HANDOFF.md).
+It cannot permanently delete, replace, or optimize source files.
 
 ## Current capabilities
 
@@ -51,18 +52,26 @@ Current source adds [explicit execution plans, approval records and
 `apply --dry-run`](docs/execution-dry-run.md) for selected exact duplicates.
 It rechecks file identity, metadata, full hashes, direct byte equality and
 capacity, and saves versioned validation/recovery evidence. [Bounded quarantine](docs/execution-quarantine.md)
-adds a separate v2 journal and Linux-only approved mutation path. These
+adds a separate v2 journal and an approved mutation path. The macOS/APFS
+checkpoint is limited to same-volume moves and recovery, refuses cross-volume
+plans pending a [safe ACL metadata backend](docs/work/111/MACOS_CROSS_VOLUME.md),
+and still needs native qualification. These
 features are not in the published v0.1.1 bundle. New development runs have
 [operator-initiated status, resume, restore and owned cleanup](docs/execution-recovery.md)
 with append-only v3 recovery evidence; older v2 runs remain inspection-only.
 Explicitly selected, restored cross-filesystem quarantine copies may be
 [previewed and separately authorized for irreversible finalization](docs/execution-finalization.md)
-under additive v4 evidence. This is absent from v0.1.1 and never applies to
+under additive v4 evidence on Linux only. This is absent from v0.1.1 and never applies to
 the restored original source.
+
+The draft also authors a [standalone macOS copy-property review contract](docs/execution-macos-copy-properties.md)
+for explicit ACL and metadata declarations. It does not observe or copy files,
+change historical recovery hashes, or enable cross-volume execution. Its
+synthetic checks and the native backend qualification remain unrun.
 
 ### Development addition: source-preserving PNG candidates
 
-The [#94 development branch](docs/png-candidate-production.md) adds a
+The [#94 implementation on main](docs/png-candidate-production.md) adds a
 separately installed, exact-version **OxiPNG v10.2.1** adapter for bounded,
 static noninterlaced 8-bit RGB/RGBA PNG candidates. It validates source and
 candidate bytes independently, publishes a private candidate/evidence set,
@@ -73,7 +82,7 @@ usage are unmeasured; the signed v0.1.1 release contains none of this path.
 ### Media capability matrix
 
 **The published v0.1.1 release does not produce optimized media or apply
-replacements.** The #94 development branch produces source-preserving PNG
+replacements.** The #94 development implementation produces source-preserving PNG
 candidates only. Inventory, optional probing, review evidence, candidate
 validation, production and replacement are separate capabilities.
 
