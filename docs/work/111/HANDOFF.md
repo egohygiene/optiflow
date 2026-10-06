@@ -3,15 +3,16 @@
 ## Current checkpoint
 
 - Parent: [#111](https://github.com/egohygiene/optiflow/issues/111), remains open.
-- Role: implementation proposal; third checkpoint, unvalidated draft.
-- Outcome: a concrete safe descriptor ACL dependency extension patch, in
-  addition to the earlier same-volume implementation and recovery hardening.
+- Role: implementation proposal; fourth checkpoint, unvalidated draft.
+- Outcome: deterministic failure coverage and native preservation cases for
+  the safe descriptor ACL dependency extension proposal, in addition to the
+  earlier same-volume implementation and recovery hardening.
   The adapter is not adopted or linked; Mac cross-volume copying and
   restoration remain unsupported.
 - Base: `c5dbcd1761e810aea228389b8ba017acc97a411e`, verified 2026-10-05.
 - Base tree: `30c4b1f26f20d66e3ce43f284eee4c25d8f7abac`.
-- Previous remote checkpoint: `1e197a1eb497e3fcf140dcab0e093d4f0052ea41`,
-  tree `592662f3fb2eada0ffd507a608b2b06e6f3dc1f5`, reconciled 2026-10-06 UTC.
+- Previous remote checkpoint: `37a655efae67e60f6f0497b1565e26fff1bd1e5c`,
+  tree `757d2bcb8b06c49dc62195790be4860e73ae2d2b`, reconciled 2026-10-06 UTC.
 - Candidate branch: `feat/optiflow-111-macos-same-volume`.
 - Candidate PR: [#122](https://github.com/egohygiene/optiflow/pull/122), draft.
 - Candidate SHA: resolve the live branch and linked parent issue; this file
@@ -39,6 +40,35 @@ does not grant merge or source-media mutation authority.
 
 ## Implemented source
 
+### Fourth checkpoint: adapter failure boundaries
+
+The dependency proposal now separates its two native calls behind a private
+transport boundary. The public borrowed-descriptor API and its bounds remain
+unchanged. Scripted transport cases exercise the same read/replace control
+flow, including refusal before a setter, native errors, capability loss,
+malformed replies and independent read-back mismatch after a write. They
+assert bounded requests and that failure triggers neither retry nor rollback.
+They do not simulate native filesystem semantics or prove syscall safety.
+
+Eleven new scripted cases and three additional native cases bring the proposal
+to 26 authored tests (18 internal, eight native). The new native cases cover
+ownership/mode/mtime/content preservation and
+replacement of an ACL inherited from a destination directory. Their fixtures
+must establish the required inherited state; unavailable behavior is not a
+passing result. All tests remain authored and unrun. The updated
+[adapter packet](acl-adapter/README.md) identifies the test inventory and
+remaining native qualification.
+
+This slice advances the dependency proposal while executable checks remain
+deferred. Same-volume finalization is not an independent feature to enable:
+same-volume restore returns the quarantine inode to its original path and
+leaves no retained copy. Existing finalization applies only after cross-volume
+restore, so Mac finalization still depends on the cross-volume work.
+
+No application code, dependency, lockfile, public API, property fingerprint,
+schema or migration changed in this checkpoint. No tests or patch-application
+checks were executed, and no upstream submission or dependency adoption occurred.
+
 ### Third checkpoint: dependency adapter proposal
 
 The [adapter review packet](acl-adapter/README.md) contains a concrete patch
@@ -49,8 +79,9 @@ with bounded buffers and independent destination read-back. It avoids the
 existing convenience representation's account-name resolution and omitted
 ACL-level state. Native ABI and filesystem behavior remain unqualified.
 
-The patch adds seven authored unit cases and five native cases inside the proposed
-dependency. It is an inert review artifact under `docs/work/111/acl-adapter/`;
+The third checkpoint added seven authored unit cases and five native cases
+inside the proposed dependency; the fourth extends this inventory. The patch
+is an inert review artifact under `docs/work/111/acl-adapter/`;
 Optiflow's build does not discover or execute it. No dependency, lockfile,
 unsafe-code policy, runtime dispatch or existing evidence format changed.
 No upstream submission or fork was created. The upstream descriptor API
@@ -147,7 +178,8 @@ these source observations is executable proof of acceptance.
 Actually performed: read current GitHub refs/issues/PRs, clone the verified base,
 inspect source diffs, review safe rustix platform APIs and the SQLite durability
 boundary, inspect the cross-volume metadata APIs and recovery identity boundaries,
-author and independently source-review the pinned dependency proposal, and
+author and independently source-review the pinned dependency proposal and its
+failure-injection/native-preservation cases, and
 reconcile the documentation. No test, compiler, build, formatting,
 lint, schema, smoke or CI command was executed. Local readiness: **unknown**.
 Native Mac evidence: **unavailable in this Linux workspace**. Remote CI:

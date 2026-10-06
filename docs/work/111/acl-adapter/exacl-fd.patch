@@ -1,9 +1,9 @@
 diff --git a/src/fd_macos.rs b/src/fd_macos.rs
 new file mode 100644
-index 0000000..b820c50
+index 0000000..dcb3628
 --- /dev/null
 +++ b/src/fd_macos.rs
-@@ -0,0 +1,436 @@
+@@ -0,0 +1,781 @@
 +//! Descriptor-only ACL evidence for 64-bit macOS.
 +//!
 +//! This API does not use the name-resolving [`crate::AclEntry`] representation.
@@ -117,13 +117,17 @@ index 0000000..b820c50
 +/// Unsupported capability, unknown bits, decoding limits, malformed responses
 +/// and native errors are returned without converting them to `Absent`.
 +pub fn read_fd(fd: BorrowedFd<'_>, limits: Limits) -> io::Result<AclSnapshot> {
++    read_with(&mut NativeTransport { fd }, limits)
++}
++
++fn read_with(transport: &mut impl Transport, limits: Limits) -> io::Result<AclSnapshot> {
 +    limits.validate()?;
-+    require_extended_security(fd)?;
++    require_extended_security(transport)?;
 +    let mut request = AttrList::new(EXTENDED_SECURITY, 0);
 +    let mut buffer = vec![0; SECURITY_REPLY_HEADER + FILESEC_HEADER + limits.maximum_entries * ACE_BYTES];
-+    get_attributes(fd, &mut request, &mut buffer)?;
++    transport.get(&mut request, &mut buffer, REPORT_FULL_SIZE)?;
 +    let snapshot = decode_security_reply(&buffer, limits)?;
-+    require_extended_security(fd)?;
++    require_extended_security(transport)?;
 +    Ok(snapshot)
 +}
 +
@@ -144,26 +148,25 @@ index 0000000..b820c50
 +    snapshot: &AclSnapshot,
 +    limits: Limits,
 +) -> io::Result<AclSnapshot> {
++    replace_with(&mut NativeTransport { fd }, snapshot, limits)
++}
++
++fn replace_with(
++    transport: &mut impl Transport,
++    snapshot: &AclSnapshot,
++    limits: Limits,
++) -> io::Result<AclSnapshot> {
 +    limits.validate()?;
 +    let payload = encode_filesec(snapshot, limits)?;
 +    // Establish that the target can be observed before requesting a change.
-+    read_fd(fd, limits)?;
++    read_with(transport, limits)?;
 +    let mut buffer = Vec::with_capacity(8 + payload.len());
 +    buffer.extend_from_slice(&8_i32.to_ne_bytes());
 +    buffer.extend_from_slice(&(payload.len() as u32).to_ne_bytes());
 +    buffer.extend_from_slice(&payload);
 +    let mut request = AttrList::new(EXTENDED_SECURITY, 0);
-+    // SAFETY: fd remains borrowed for this call; request has the public C ABI
-+    // layout; buffer is initialized, writable and lives for its exact length.
-+    // Only EXTENDED_SECURITY is selected, and its relative reference stays
-+    // wholly inside buffer. LP64 Darwin declares options as unsigned int.
-+    let result = unsafe {
-+        fsetattrlist(fd.as_raw_fd(), (&raw mut request).cast(), buffer.as_mut_ptr().cast(), buffer.len(), 0)
-+    };
-+    if result != 0 {
-+        return Err(io::Error::last_os_error());
-+    }
-+    let observed = read_fd(fd, limits)?;
++    transport.set(&mut request, &mut buffer, 0)?;
++    let observed = read_with(transport, limits)?;
 +    if &observed != snapshot {
 +        return Err(invalid("ACL changed or was normalized during descriptor replacement; write may have occurred"));
 +    }
@@ -171,6 +174,7 @@ index 0000000..b820c50
 +}
 +
 +#[repr(C)]
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 +struct AttrList {
 +    bitmapcount: u16,
 +    reserved: u16,
@@ -194,24 +198,51 @@ index 0000000..b820c50
 +    fn fsetattrlist(fd: c_int, attributes: *mut c_void, buffer: *mut c_void, size: usize, options: c_uint) -> c_int;
 +}
 +
-+fn get_attributes(fd: BorrowedFd<'_>, request: &mut AttrList, buffer: &mut [u8]) -> io::Result<()> {
-+    // SAFETY: the borrowed fd cannot be closed by safe Rust during this call;
-+    // AttrList matches the public LP64 ABI, and buffer is writable for exactly
-+    // buffer.len() bytes. No pointer is retained by fgetattrlist. REPORT_FULLSIZE
-+    // exposes truncation rather than letting a short copied prefix look whole.
-+    let result = unsafe {
-+        fgetattrlist(fd.as_raw_fd(), (request as *mut AttrList).cast(), buffer.as_mut_ptr().cast(), buffer.len(), REPORT_FULL_SIZE)
-+    };
-+    if result != 0 {
-+        return Err(io::Error::last_os_error());
-+    }
-+    Ok(())
++// The transport owns no buffers and cannot change the operation's allocation
++// bounds. Keeping it private leaves the descriptor-only public API unchanged.
++trait Transport {
++    fn get(&mut self, request: &mut AttrList, buffer: &mut [u8], options: c_uint) -> io::Result<()>;
++    fn set(&mut self, request: &mut AttrList, buffer: &mut [u8], options: c_uint) -> io::Result<()>;
 +}
 +
-+fn require_extended_security(fd: BorrowedFd<'_>) -> io::Result<()> {
++struct NativeTransport<'fd> {
++    fd: BorrowedFd<'fd>,
++}
++
++impl Transport for NativeTransport<'_> {
++    fn get(&mut self, request: &mut AttrList, buffer: &mut [u8], options: c_uint) -> io::Result<()> {
++        // SAFETY: the borrowed fd cannot be closed by safe Rust during this call;
++        // AttrList matches the public LP64 ABI, and buffer is writable for exactly
++        // buffer.len() bytes. No pointer is retained by fgetattrlist. Callers use
++        // REPORT_FULLSIZE so a truncated prefix cannot appear complete.
++        let result = unsafe {
++            fgetattrlist(self.fd.as_raw_fd(), (request as *mut AttrList).cast(), buffer.as_mut_ptr().cast(), buffer.len(), options)
++        };
++        if result != 0 {
++            return Err(io::Error::last_os_error());
++        }
++        Ok(())
++    }
++
++    fn set(&mut self, request: &mut AttrList, buffer: &mut [u8], options: c_uint) -> io::Result<()> {
++        // SAFETY: fd remains borrowed for this call; request has the public C ABI
++        // layout; buffer is initialized, writable and lives for its exact length.
++        // Only EXTENDED_SECURITY is selected, and its relative reference stays
++        // wholly inside buffer. LP64 Darwin declares options as unsigned int.
++        let result = unsafe {
++            fsetattrlist(self.fd.as_raw_fd(), (request as *mut AttrList).cast(), buffer.as_mut_ptr().cast(), buffer.len(), options)
++        };
++        if result != 0 {
++            return Err(io::Error::last_os_error());
++        }
++        Ok(())
++    }
++}
++
++fn require_extended_security(transport: &mut impl Transport) -> io::Result<()> {
 +    let mut request = AttrList::new(0, VOL_INFO | VOL_CAPABILITIES);
 +    let mut buffer = [0; 36]; // length + capabilities[4] + valid[4]
-+    get_attributes(fd, &mut request, &mut buffer)?;
++    transport.get(&mut request, &mut buffer, REPORT_FULL_SIZE)?;
 +    decode_capability_reply(&buffer)
 +}
 +
@@ -329,6 +360,123 @@ index 0000000..b820c50
 +#[cfg(test)]
 +mod tests {
 +    use super::*;
++    use std::collections::VecDeque;
++
++    #[derive(Debug, Clone, PartialEq, Eq)]
++    enum Call {
++        Get { request: AttrList, capacity: usize, options: c_uint },
++        Set { request: AttrList, bytes: Vec<u8>, options: c_uint },
++    }
++
++    #[derive(Clone)]
++    enum Reply {
++        Bytes(Vec<u8>),
++        Set,
++        Errno(i32),
++        SetThenErrno(i32),
++    }
++
++    struct ScriptedTransport {
++        replies: VecDeque<Reply>,
++        calls: Vec<Call>,
++        written: Option<Vec<u8>>,
++    }
++
++    impl ScriptedTransport {
++        fn new(replies: Vec<Reply>) -> Self {
++            Self { replies: replies.into(), calls: Vec::new(), written: None }
++        }
++
++        fn assert_finished(&self, expected: &[Call]) {
++            assert_eq!(self.calls, expected);
++            assert!(self.replies.is_empty(), "all and only expected native boundaries must be reached");
++        }
++    }
++
++    impl Transport for ScriptedTransport {
++        fn get(&mut self, request: &mut AttrList, buffer: &mut [u8], options: c_uint) -> io::Result<()> {
++            assert!(buffer.iter().all(|byte| *byte == 0), "read buffers must be initialized");
++            assert!(buffer.len() <= 56 + 128 * 24);
++            self.calls.push(Call::Get { request: *request, capacity: buffer.len(), options });
++            match self.replies.pop_front().expect("unexpected read or retry") {
++                Reply::Bytes(bytes) => {
++                    // Model REPORT_FULLSIZE: a large claimed reply may have only
++                    // its bounded prefix copied, never an unbounded allocation.
++                    let copied = bytes.len().min(buffer.len());
++                    buffer[..copied].copy_from_slice(&bytes[..copied]);
++                    Ok(())
++                }
++                Reply::Errno(errno) => Err(io::Error::from_raw_os_error(errno)),
++                _ => panic!("unexpected read at a setter boundary"),
++            }
++        }
++
++        fn set(&mut self, request: &mut AttrList, buffer: &mut [u8], options: c_uint) -> io::Result<()> {
++            assert!(buffer.len() <= 8 + 44 + 128 * 24);
++            self.calls.push(Call::Set { request: *request, bytes: buffer.to_vec(), options });
++            match self.replies.pop_front().expect("unexpected write, retry or rollback") {
++                Reply::Set => {
++                    self.written = Some(buffer.to_vec());
++                    Ok(())
++                }
++                Reply::Errno(errno) => Err(io::Error::from_raw_os_error(errno)),
++                Reply::SetThenErrno(errno) => {
++                    self.written = Some(buffer.to_vec());
++                    Err(io::Error::from_raw_os_error(errno))
++                }
++                Reply::Bytes(_) => panic!("unexpected setter at a read boundary"),
++            }
++        }
++    }
++
++    fn capability(supported: bool, valid: bool) -> Vec<u8> {
++        let mut bytes = vec![0; 36];
++        bytes[..4].copy_from_slice(&36_u32.to_ne_bytes());
++        if supported { bytes[8..12].copy_from_slice(&0x400_u32.to_ne_bytes()); }
++        if valid { bytes[24..28].copy_from_slice(&0x400_u32.to_ne_bytes()); }
++        bytes
++    }
++
++    fn read_replies(snapshot: &AclSnapshot) -> Vec<Reply> {
++        vec![
++            Reply::Bytes(capability(true, true)),
++            Reply::Bytes(reply(&encode_filesec(snapshot, Limits::default()).unwrap())),
++            Reply::Bytes(capability(true, true)),
++        ]
++    }
++
++    fn request(commonattr: u32, volattr: u32) -> AttrList {
++        AttrList { bitmapcount: 5, reserved: 0, commonattr, volattr, dirattr: 0, fileattr: 0, forkattr: 0 }
++    }
++
++    fn read_calls(limits: Limits) -> Vec<Call> {
++        let capability = Call::Get { request: request(0, 0x8002_0000), capacity: 36, options: 4 };
++        vec![capability.clone(), Call::Get {
++            request: request(0x0040_0000, 0), capacity: 56 + limits.maximum_entries * 24, options: 4,
++        }, capability]
++    }
++
++    fn setter_bytes(snapshot: &AclSnapshot) -> Vec<u8> {
++        let payload = encode_filesec(snapshot, Limits::default()).unwrap();
++        let mut bytes = 8_i32.to_ne_bytes().to_vec();
++        bytes.extend_from_slice(&(payload.len() as u32).to_ne_bytes());
++        bytes.extend_from_slice(&payload);
++        bytes
++    }
++
++    fn replace_calls(snapshot: &AclSnapshot, limits: Limits) -> Vec<Call> {
++        let mut calls = read_calls(limits);
++        calls.push(Call::Set { request: request(0x0040_0000, 0), bytes: setter_bytes(snapshot), options: 0 });
++        calls.extend(read_calls(limits));
++        calls
++    }
++
++    fn replace_replies(observed: &AclSnapshot) -> Vec<Reply> {
++        let mut replies = read_replies(&AclSnapshot::Absent);
++        replies.push(Reply::Set);
++        replies.extend(read_replies(observed));
++        replies
++    }
 +
 +    fn entry(kind: AceKind, principal: u8) -> Ace {
 +        Ace { principal: [principal; 16], kind, flags: 0x10, permissions: 0x01f0_0002 }
@@ -439,6 +587,203 @@ index 0000000..b820c50
 +        bytes[8..12].copy_from_slice(&0_u32.to_ne_bytes());
 +        assert!(decode_capability_reply(&bytes).is_err());
 +    }
++
++    #[test]
++    fn transport_reads_use_exact_abi_sequence_and_caller_sized_buffers() {
++        assert_eq!(std::mem::size_of::<AttrList>(), 24);
++        assert_eq!(std::mem::align_of::<AttrList>(), 4);
++        assert_eq!(std::mem::offset_of!(AttrList, commonattr), 4);
++        assert_eq!(std::mem::offset_of!(AttrList, volattr), 8);
++        assert_eq!(std::mem::offset_of!(AttrList, forkattr), 20);
++        for maximum_entries in [0, 1, 128] {
++            let limits = Limits { maximum_entries };
++            for snapshot in [AclSnapshot::Absent, AclSnapshot::Present {
++                flags: 0, entries: vec![entry(AceKind::Allow, 7); maximum_entries],
++            }] {
++                let mut transport = ScriptedTransport::new(read_replies(&snapshot));
++                assert_eq!(read_with(&mut transport, limits).unwrap(), snapshot);
++                transport.assert_finished(&read_calls(limits));
++                assert!(transport.written.is_none());
++            }
++        }
++    }
++
++    #[test]
++    fn every_read_boundary_preserves_errno_without_retry_or_absence() {
++        let limits = Limits::default();
++        for boundary in 0..3 {
++            // Darwin EACCES, ENOTSUP, EIO and EINTR, including no EINTR retry.
++            for errno in [13, 45, 5, 4] {
++                let mut replies = read_replies(&AclSnapshot::Absent);
++                replies.truncate(boundary + 1);
++                replies[boundary] = Reply::Errno(errno);
++                let mut transport = ScriptedTransport::new(replies);
++                assert_eq!(read_with(&mut transport, limits).unwrap_err().raw_os_error(), Some(errno));
++                transport.assert_finished(&read_calls(limits)[..=boundary]);
++                assert!(transport.written.is_none());
++            }
++        }
++    }
++
++    #[test]
++    fn unsupported_or_malformed_capability_stops_each_read_boundary() {
++        let limits = Limits::default();
++        let mut malformed = capability(true, true);
++        malformed[..4].copy_from_slice(&40_u32.to_ne_bytes());
++        for boundary in [0, 2] {
++            for (bytes, kind) in [
++                (capability(false, true), io::ErrorKind::Unsupported),
++                (capability(true, false), io::ErrorKind::Unsupported),
++                (malformed.clone(), io::ErrorKind::InvalidData),
++            ] {
++                let mut replies = read_replies(&AclSnapshot::Absent);
++                replies.truncate(boundary + 1);
++                replies[boundary] = Reply::Bytes(bytes);
++                let mut transport = ScriptedTransport::new(replies);
++                assert_eq!(read_with(&mut transport, limits).unwrap_err().kind(), kind);
++                transport.assert_finished(&read_calls(limits)[..=boundary]);
++            }
++        }
++    }
++
++    #[test]
++    fn malformed_or_oversized_acl_reply_stops_before_final_capability() {
++        let limits = Limits { maximum_entries: 1 };
++        let mut wrong_offset = reply(&[]);
++        wrong_offset[4..8].copy_from_slice(&0_u32.to_ne_bytes());
++        let oversized = AclSnapshot::Present { flags: 0, entries: vec![entry(AceKind::Allow, 1); 2] };
++        for bytes in [wrong_offset, reply(&encode_filesec(&oversized, Limits::default()).unwrap())] {
++            let mut transport = ScriptedTransport::new(vec![Reply::Bytes(capability(true, true)), Reply::Bytes(bytes)]);
++            assert_eq!(read_with(&mut transport, limits).unwrap_err().kind(), io::ErrorKind::InvalidData);
++            transport.assert_finished(&read_calls(limits)[..2]);
++        }
++    }
++
++    #[test]
++    fn replacement_performs_one_exact_set_between_two_complete_reads() {
++        for maximum_entries in [0, 1, 128] {
++            let limits = Limits { maximum_entries };
++            for snapshot in [AclSnapshot::Absent, AclSnapshot::Present {
++                flags: 0x0003_2345, entries: vec![entry(AceKind::Deny, 0x19); maximum_entries],
++            }] {
++                let mut transport = ScriptedTransport::new(replace_replies(&snapshot));
++                assert_eq!(replace_with(&mut transport, &snapshot, limits).unwrap(), snapshot);
++                transport.assert_finished(&replace_calls(&snapshot, limits));
++                let bytes = transport.written.as_ref().unwrap();
++                assert_eq!(word(bytes, 0).unwrap(), 8);
++                assert_eq!(word(bytes, 4).unwrap() as usize, bytes.len() - 8);
++                assert_eq!(word(bytes, 8).unwrap(), 0x012c_c16d);
++                assert_eq!(decode_filesec(&bytes[8..], limits).unwrap(), snapshot);
++            }
++        }
++    }
++
++    #[test]
++    fn replacement_errors_before_at_and_after_set_preserve_errno_and_do_not_retry() {
++        let limits = Limits::default();
++        let snapshot = AclSnapshot::Present { flags: 0, entries: vec![] };
++        for boundary in 0..7 {
++            for errno in [13, 45, 5, 4] {
++                let mut replies = replace_replies(&snapshot);
++                replies.truncate(boundary + 1);
++                replies[boundary] = Reply::Errno(errno);
++                let mut transport = ScriptedTransport::new(replies);
++                assert_eq!(replace_with(&mut transport, &snapshot, limits).unwrap_err().raw_os_error(), Some(errno));
++                transport.assert_finished(&replace_calls(&snapshot, limits)[..=boundary]);
++                assert_eq!(transport.written, (boundary > 3).then(|| setter_bytes(&snapshot)));
++            }
++        }
++    }
++
++    #[test]
++    fn setter_error_after_a_possible_write_does_not_attempt_rollback() {
++        let snapshot = AclSnapshot::Absent;
++        let limits = Limits::default();
++        let mut replies = read_replies(&snapshot);
++        replies.push(Reply::SetThenErrno(5));
++        let mut transport = ScriptedTransport::new(replies);
++        assert_eq!(replace_with(&mut transport, &snapshot, limits).unwrap_err().raw_os_error(), Some(5));
++        transport.assert_finished(&replace_calls(&snapshot, limits)[..4]);
++        assert_eq!(transport.written, Some(setter_bytes(&snapshot)));
++    }
++
++    #[test]
++    fn readback_mismatches_preserve_the_single_write_without_rollback() {
++        let empty = AclSnapshot::Present { flags: 0, entries: vec![] };
++        let ordered = AclSnapshot::Present {
++            flags: 0, entries: vec![entry(AceKind::Deny, 1), entry(AceKind::Allow, 2)],
++        };
++        for (requested, observed) in [
++            (AclSnapshot::Absent, empty.clone()),
++            (empty.clone(), AclSnapshot::Absent),
++            (empty, AclSnapshot::Present { flags: 1, entries: vec![] }),
++            (ordered.clone(), AclSnapshot::Present {
++                flags: 0, entries: vec![entry(AceKind::Allow, 2), entry(AceKind::Deny, 1)],
++            }),
++            (ordered.clone(), AclSnapshot::Present {
++                flags: 0, entries: vec![entry(AceKind::Deny, 1), entry(AceKind::Allow, 3)],
++            }),
++            (ordered, AclSnapshot::Present { flags: 0, entries: vec![entry(AceKind::Deny, 1)] }),
++        ] {
++            let mut transport = ScriptedTransport::new(replace_replies(&observed));
++            assert_eq!(replace_with(&mut transport, &requested, Limits::default()).unwrap_err().kind(), io::ErrorKind::InvalidData);
++            transport.assert_finished(&replace_calls(&requested, Limits::default()));
++            assert_eq!(transport.written, Some(setter_bytes(&requested)));
++        }
++    }
++
++    #[test]
++    fn capability_loss_around_replacement_never_becomes_success_or_rollback() {
++        let snapshot = AclSnapshot::Absent;
++        let limits = Limits::default();
++        for boundary in [0, 2, 4, 6] {
++            let mut replies = replace_replies(&snapshot);
++            replies.truncate(boundary + 1);
++            replies[boundary] = Reply::Bytes(capability(false, true));
++            let mut transport = ScriptedTransport::new(replies);
++            assert_eq!(replace_with(&mut transport, &snapshot, limits).unwrap_err().kind(), io::ErrorKind::Unsupported);
++            transport.assert_finished(&replace_calls(&snapshot, limits)[..=boundary]);
++            assert_eq!(transport.written, (boundary > 3).then(|| setter_bytes(&snapshot)));
++        }
++    }
++
++    #[test]
++    fn malformed_postwrite_observation_leaves_write_visible_without_rollback() {
++        let snapshot = AclSnapshot::Absent;
++        let limits = Limits::default();
++        let mut replies = replace_replies(&snapshot);
++        replies.truncate(6);
++        replies[5] = Reply::Bytes(vec![0; 12]);
++        let mut transport = ScriptedTransport::new(replies);
++        assert_eq!(replace_with(&mut transport, &snapshot, limits).unwrap_err().kind(), io::ErrorKind::InvalidData);
++        transport.assert_finished(&replace_calls(&snapshot, limits)[..6]);
++        assert_eq!(transport.written, Some(setter_bytes(&snapshot)));
++    }
++
++    #[test]
++    fn invalid_limits_or_snapshots_make_no_native_call() {
++        let mut bad_flags = entry(AceKind::Allow, 1);
++        bad_flags.flags = 0x200;
++        let mut bad_rights = entry(AceKind::Allow, 1);
++        bad_rights.permissions = 1;
++        let cases = [
++            (AclSnapshot::Absent, Limits { maximum_entries: 129 }),
++            (AclSnapshot::Present { flags: 0x40000, entries: vec![] }, Limits::default()),
++            (AclSnapshot::Present { flags: 0, entries: vec![bad_flags] }, Limits::default()),
++            (AclSnapshot::Present { flags: 0, entries: vec![bad_rights] }, Limits::default()),
++            (AclSnapshot::Present { flags: 0, entries: vec![entry(AceKind::Allow, 1)] }, Limits { maximum_entries: 0 }),
++            (AclSnapshot::Present { flags: 0, entries: vec![entry(AceKind::Allow, 1); 129] }, Limits::default()),
++        ];
++        for (snapshot, limits) in cases {
++            let mut transport = ScriptedTransport::new(vec![]);
++            assert_eq!(replace_with(&mut transport, &snapshot, limits).unwrap_err().kind(), io::ErrorKind::InvalidInput);
++            transport.assert_finished(&[]);
++            assert!(transport.written.is_none());
++        }
++        let mut transport = ScriptedTransport::new(vec![]);
++        assert_eq!(read_with(&mut transport, Limits { maximum_entries: 129 }).unwrap_err().kind(), io::ErrorKind::InvalidInput);
++        transport.assert_finished(&[]);
++    }
 +}
 diff --git a/src/lib.rs b/src/lib.rs
 index 9eb2c9d..4ed78c4 100644
@@ -457,18 +802,91 @@ index 9eb2c9d..4ed78c4 100644
  pub use aclentry::{AclEntry, AclEntryKind};
 diff --git a/tests/test_fd_macos.rs b/tests/test_fd_macos.rs
 new file mode 100644
-index 0000000..9d85a34
+index 0000000..14da370
 --- /dev/null
 +++ b/tests/test_fd_macos.rs
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,213 @@
 +//! Authored native qualification cases for the descriptor snapshot proposal.
 +//! These have not been executed as part of the Optiflow checkpoint.
 +#![cfg(all(target_os = "macos", target_pointer_width = "64"))]
 +
 +use exacl::fd_macos::{Ace, AceKind, AclSnapshot, Limits, read_fd, replace_fd};
-+use std::fs::{self, File};
-+use std::io;
++use exacl::{AclEntry, Flag, Perm, setfacl};
++use std::fs::{self, File, Metadata, OpenOptions, Permissions};
++use std::io::{self, Write};
 +use std::os::fd::AsFd;
++use std::os::unix::fs::{FileExt, MetadataExt, PermissionsExt};
++use std::path::Path;
++use std::time::{Duration, UNIX_EPOCH};
++
++const CONTENT: &[u8] = b"synthetic ACL qualification bytes\0\xff";
++
++fn set_owner_acl(path: &Path, file: &File, permissions: Perm, flags: Flag) -> io::Result<()> {
++    // Resolve this fixture's real owner through the existing API. These tests
++    // exercise preservation, not the permission effect of an arbitrary UUID.
++    let owner = file.metadata()?.uid().to_string();
++    setfacl(&[path], &[AclEntry::allow_user(&owner, permissions, flags)], None)
++}
++
++fn prepare_content(file: &mut File) -> io::Result<Metadata> {
++    file.write_all(CONTENT)?;
++    file.set_permissions(Permissions::from_mode(0o640))?;
++    file.set_modified(UNIX_EPOCH + Duration::new(1_600_000_000, 123_456_789))?;
++    file.metadata()
++}
++
++fn assert_file_properties_unchanged(file: &File, before: &Metadata) -> io::Result<()> {
++    let after = file.metadata()?;
++    assert_eq!(after.dev(), before.dev());
++    assert_eq!(after.ino(), before.ino());
++    assert_eq!(after.nlink(), before.nlink());
++    assert_eq!(after.uid(), before.uid());
++    assert_eq!(after.gid(), before.gid());
++    assert_eq!(after.mode(), before.mode());
++    assert_eq!(after.len(), before.len());
++    assert_eq!(after.mtime(), before.mtime());
++    assert_eq!(after.mtime_nsec(), before.mtime_nsec());
++    let mut actual = vec![0; CONTENT.len()];
++    file.read_exact_at(&mut actual, 0)?;
++    assert_eq!(actual.as_slice(), CONTENT);
++    // ACL updates may change ctime, and reading content may change atime.
++    Ok(())
++}
++
++fn inherited_child() -> io::Result<(tempfile::TempDir, File, File)> {
++    let directory = tempfile::tempdir()?;
++    let parent_path = directory.path().join("inheriting-parent");
++    fs::create_dir(&parent_path)?;
++    let parent = File::open(&parent_path)?;
++    set_owner_acl(
++        &parent_path,
++        &parent,
++        Perm::WRITE,
++        Flag::FILE_INHERIT | Flag::ONLY_INHERIT,
++    )?;
++    let child = OpenOptions::new()
++        .read(true)
++        .write(true)
++        .create_new(true)
++        .open(parent_path.join("child"))?;
++    let parent_acl = read_fd(parent.as_fd(), Limits::default())?;
++    let AclSnapshot::Present { entries: parent_entries, .. } = &parent_acl else {
++        panic!("fixture parent must have an inheritable ACL");
++    };
++    assert_eq!(parent_entries.len(), 1);
++    let child_acl = read_fd(child.as_fd(), Limits::default())?;
++    let AclSnapshot::Present { entries, .. } = &child_acl else {
++        panic!("new child must actually inherit its parent ACL");
++    };
++    assert!(entries.iter().any(|entry| {
++        entry.principal == parent_entries[0].principal
++            && entry.kind == AceKind::Allow
++            && entry.permissions == Perm::WRITE.bits()
++            && entry.flags & Flag::INHERITED.bits() != 0
++    }));
++    // Do not assume an exact rewrite of the parent's other inheritance flags.
++    Ok((directory, parent, child))
++}
 +
 +fn snapshot() -> AclSnapshot {
 +    // Raw UUIDs intentionally need not resolve through Directory Services.
@@ -536,5 +954,68 @@ index 0000000..9d85a34
 +fn native_non_filesystem_descriptor_errors_are_not_absence() -> io::Result<()> {
 +    let (socket, _peer) = std::os::unix::net::UnixStream::pair()?;
 +    assert!(read_fd(socket.as_fd(), Limits::default()).is_err());
++    Ok(())
++}
++
++#[test]
++fn native_acl_install_and_removal_preserve_file_properties() -> io::Result<()> {
++    let source = tempfile::NamedTempFile::new()?;
++    set_owner_acl(source.path(), source.as_file(), Perm::READ, Flag::empty())?;
++    let expected = read_fd(source.as_file().as_fd(), Limits::default())?;
++    assert!(matches!(&expected, AclSnapshot::Present { entries, .. } if entries.len() == 1));
++
++    let mut target = tempfile::tempfile()?;
++    replace_fd(target.as_fd(), &AclSnapshot::Absent, Limits::default())?;
++    let before = prepare_content(&mut target)?;
++    assert_eq!(replace_fd(target.as_fd(), &expected, Limits::default())?, expected);
++    assert_file_properties_unchanged(&target, &before)?;
++    assert_eq!(read_fd(target.as_fd(), Limits::default())?, expected);
++
++    assert_eq!(
++        replace_fd(target.as_fd(), &AclSnapshot::Absent, Limits::default())?,
++        AclSnapshot::Absent,
++    );
++    assert_file_properties_unchanged(&target, &before)?;
++    assert_eq!(read_fd(target.as_fd(), Limits::default())?, AclSnapshot::Absent);
++    Ok(())
++}
++
++#[test]
++fn native_source_acl_replaces_inherited_destination_entries_exactly() -> io::Result<()> {
++    let source = tempfile::NamedTempFile::new()?;
++    set_owner_acl(source.path(), source.as_file(), Perm::READ, Flag::empty())?;
++    let expected = read_fd(source.as_file().as_fd(), Limits::default())?;
++    let (_directory, parent, mut destination) = inherited_child()?;
++    let inherited = read_fd(destination.as_fd(), Limits::default())?;
++    assert_ne!(inherited, expected);
++    let parent_before = read_fd(parent.as_fd(), Limits::default())?;
++    let before = prepare_content(&mut destination)?;
++    assert_eq!(read_fd(destination.as_fd(), Limits::default())?, inherited);
++
++    assert_eq!(replace_fd(destination.as_fd(), &expected, Limits::default())?, expected);
++    assert_eq!(read_fd(destination.as_fd(), Limits::default())?, expected);
++    assert_file_properties_unchanged(&destination, &before)?;
++    assert_eq!(read_fd(parent.as_fd(), Limits::default())?, parent_before);
++    assert_eq!(read_fd(source.as_file().as_fd(), Limits::default())?, expected);
++    Ok(())
++}
++
++#[test]
++fn native_absent_source_acl_removes_inherited_destination_entries() -> io::Result<()> {
++    let source = tempfile::tempfile()?;
++    replace_fd(source.as_fd(), &AclSnapshot::Absent, Limits::default())?;
++    let expected = read_fd(source.as_fd(), Limits::default())?;
++    assert_eq!(expected, AclSnapshot::Absent);
++    let (_directory, parent, mut destination) = inherited_child()?;
++    let inherited = read_fd(destination.as_fd(), Limits::default())?;
++    let parent_before = read_fd(parent.as_fd(), Limits::default())?;
++    let before = prepare_content(&mut destination)?;
++    assert_eq!(read_fd(destination.as_fd(), Limits::default())?, inherited);
++
++    assert_eq!(replace_fd(destination.as_fd(), &expected, Limits::default())?, expected);
++    assert_eq!(read_fd(destination.as_fd(), Limits::default())?, AclSnapshot::Absent);
++    assert_file_properties_unchanged(&destination, &before)?;
++    assert_eq!(read_fd(parent.as_fd(), Limits::default())?, parent_before);
++    assert_eq!(read_fd(source.as_fd(), Limits::default())?, AclSnapshot::Absent);
 +    Ok(())
 +}

@@ -24,6 +24,17 @@ supersedes: []
 
 # OptiFlow Roadmap
 
+## 2026-10-06 UTC ACL adapter failure-boundary checkpoint
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) extends the
+proposed dependency with a private native-call transport and authored failure
+cases for denied/unsupported observations, setter errors and failed or unequal
+read-back. Additional native cases cover property preservation and inherited
+destination ACL replacement. These cases remain unrun; the adapter is still
+an inert proposal. Native qualification and dependency adoption must precede
+Mac cross-volume integration and retained-copy finalization. See the
+[adapter packet](docs/work/111/acl-adapter/README.md) for the remaining matrix.
+
 ## 2026-10-06 UTC descriptor ACL dependency proposal
 
 Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) now contains a

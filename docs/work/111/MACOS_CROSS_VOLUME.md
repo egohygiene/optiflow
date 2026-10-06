@@ -20,9 +20,12 @@ the transaction. No suitable safe descriptor-based ACL reader/writer was found
 in this bounded investigation. This is a dependency/API gap, not proof that
 macOS cannot support the operation.
 
-The next checkpoint now supplies a [concrete exacl extension proposal](acl-adapter/README.md)
+The draft supplies a [concrete exacl extension proposal](acl-adapter/README.md)
 against a pinned upstream revision. It is an unvalidated patch artifact, not an
 installed dependency, accepted upstream change or enabled transfer path.
+Its private transport now has authored deterministic failure cases, alongside
+native ownership/property and inherited-ACL replacement cases. These remain
+unrun and do not establish native behavior or satisfy the adoption gate.
 
 All Mac plans containing a cross-volume action continue to fail with
 `ExecutionUnsupported` before opening writable execution state or creating a

@@ -51,20 +51,51 @@ detect storage corruption that the kernel does not expose.
 No serialized wire format is introduced by these Rust types. Optiflow must
 separately define its durable evidence profile before adopting the adapter.
 
+### Failure boundary
+
+A private transport owns the borrowed descriptor in production and delegates
+to the two native attribute-list calls. The read/replace control flow uses
+that same private interface in deterministic tests; a scripted implementation
+records requests and injects responses without opening files or fabricating
+descriptors. The public API, request ABI and allocation bounds are unchanged.
+Native errors are captured immediately after the failing call.
+
+Reading makes at most three calls: capability, ACL, capability. Replacement
+makes at most seven: the three-call initial read, one setter and a fresh
+three-call read. Any error stops at that point. Invalid requested snapshots
+and limits stop before any transport call. No failure retries the setter or
+attempts to restore the prior ACL. A setter error or any error after a setter
+can leave changed destination metadata and must not authorize source removal.
+
+The simulated transport asserts request fields, buffer bounds, call order and
+the exact setter payload. It exercises error propagation and refusal logic;
+it does not prove native ABI correctness, filesystem semantics, durability or
+behavior against concurrent writers.
+
 ## Patch manifest
 
-Patch SHA-256: `bff610bce37ee3ade01c33882b6f4fb92117c6390915cf18fabab3d14edb8788`.
+Patch SHA-256: `6fa75a507e89826573520c4a74ddfd336f791f51c8e0ac564272115cc8ed9118`.
 This identifies the authored artifact; it is not test or patch-application proof.
 
 | Upstream path | Authored change |
 | --- | --- |
-| `src/fd_macos.rs` | Descriptor API, bounded native bridge and decoder/encoder; seven unit cases. |
+| `src/fd_macos.rs` | Descriptor API, bounded native bridge, private injectable transport and decoder/encoder; seven parser/unit cases and eleven deterministic transport cases. |
 | `src/lib.rs` | 64-bit macOS-only module export. |
-| `tests/test_fd_macos.rs` | Five native cases covering ordered ACL round trips, absent/empty distinction, held-descriptor identity after path replacement, invalid input/bounds, and non-filesystem descriptor refusal. |
+| `tests/test_fd_macos.rs` | Eight native cases covering ordered ACL round trips, absent/empty distinction, held-descriptor identity after path replacement, invalid input/bounds, non-filesystem descriptor refusal, ordinary file-property preservation, and replacement/removal of inherited ACL entries. |
 
-All twelve tests are unrun. The native failure matrix still needs permission
-and unsupported-volume cases, syscall/read-back failure injection, private
-header flags and inheritance across final rename on both Mac architectures.
+All 26 tests (18 internal and eight native) are unrun. The fourth checkpoint
+adds eleven transport cases and three native cases to the previous twelve.
+The qualification inventory separates authored simulation
+from native evidence that must still be obtained:
+
+| Boundary | Authored coverage | Qualification still owed |
+| --- | --- | --- |
+| Permission, unsupported operation, I/O and interrupted-call errors | Scripted errors at all three read and all seven replacement call boundaries; exact call prefix and unchanged error code, including no interrupted-call retry. | Execute these cases; independently establish real permission-denied and unsupported-filesystem behavior on native fixtures. |
+| Setter or read-back failure | Setter failure, read-back errors/malformed replies, capability loss and unequal snapshots; no retry or rollback. | Execute cases and assess native partial-write/normalization behavior. A simulated state change is not a native observation. |
+| Exact replacement | Native inherited destination ACL replacement/removal and existing ordered-entry/absent/empty cases. | Execute with observed inheritance prerequisites on both Mac architectures. |
+| Ordinary file properties | Native descriptor ownership, mode, mtime and content observations around installation/removal. | Execute; creation time, BSD flags, xattrs/resource forks and full copy ordering remain Optiflow integration obligations. |
+| Private flags and publication rename | Pure encoding preserves private header bits; no native rename qualification claimed. | Native private-flag behavior and deferred inheritance across final publication; initially reject deferred inheritance or reobserve after rename. |
+| Build and platform profile | Proposed module remains gated to 64-bit macOS. | Patch application, Rust 1.85, upstream regressions and both native architectures with exact lockfile/host/filesystem receipts. |
 
 ## Adoption sequence
 
