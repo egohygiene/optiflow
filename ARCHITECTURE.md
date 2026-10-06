@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.3
+version: 0.1.4
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-16
+updated: 2026-10-06
 governed_by:
   - architecture-architecture
 depends_on:
@@ -87,6 +87,16 @@ static PNG subset, including full decode and direct preservation comparisons.
 Its opaque result supplies byte facts only; filesystem stability, provider
 execution, resource measurements, candidate generation, and media publication
 remain future architecture work. Neither API is connected to the CLI.
+
+The unvalidated development module `execution::property_evidence` separately
+reviews bounded Mac cross-copy property declarations under its own schema and
+profile. It performs no IO and neither consumes the proposed ACL dependency nor
+emits transaction events. The schema/profile and complete ordered properties
+bind its fingerprint; structural review never grants observation or mutation
+authority. Historical property fingerprints and execution v1–v4 formats retain
+their meaning. Native observation and a discriminated persistence envelope must
+be integrated after reviewed backend adoption; see the
+[property protocol](docs/execution-macos-copy-properties.md).
 
 ### Infrastructure Layer
 

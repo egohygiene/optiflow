@@ -1,18 +1,35 @@
 # #111 — macOS/APFS mutation port
 
+## Resume and checkpoint boundary — 2026-10-06
+
+The owner resumed the paused fifth checkpoint at 13:27 America/New_York and
+reaffirmed that GitHub Actions and linting checks are deferred until the later
+sprint cleanup. The earlier test/build/schema/native deferrals also remain.
+Finish this bounded checkpoint, push it to draft PR #122, then return for sync.
+Do not merge, enable Mac cross-volume dispatch or start another checkpoint.
+
+The pause's source-review finding is corrected in the authored byte parser:
+an object-shape pass refuses positional sequence representations at the root,
+timestamp, xattr, ACL and ACE boundaries. Typed deserialization then consumes
+the original bytes, preserving duplicate-key rejection rather than decoding
+only from the intermediate `Value`. Three added regression groups bring the
+focused suite to 20 authored, unrun tests, including sequence shapes, duplicate
+fields and strict hex string endings. This correction is source-reviewed,
+not executable proof. The published candidate is identified by the live PR.
+
 ## Current checkpoint
 
 - Parent: [#111](https://github.com/egohygiene/optiflow/issues/111), remains open.
-- Role: implementation proposal; fourth checkpoint, unvalidated draft.
-- Outcome: deterministic failure coverage and native preservation cases for
-  the safe descriptor ACL dependency extension proposal, in addition to the
-  earlier same-volume implementation and recovery hardening.
+- Role: implementation proposal; fifth checkpoint, unvalidated draft.
+- Outcome: a standalone application-owned Mac cross-copy property declaration
+  model, bounded structural review and schema/profile-bound fingerprint, in
+  addition to the earlier same-volume draft and dependency proposal.
   The adapter is not adopted or linked; Mac cross-volume copying and
   restoration remain unsupported.
 - Base: `c5dbcd1761e810aea228389b8ba017acc97a411e`, verified 2026-10-05.
 - Base tree: `30c4b1f26f20d66e3ce43f284eee4c25d8f7abac`.
-- Previous remote checkpoint: `37a655efae67e60f6f0497b1565e26fff1bd1e5c`,
-  tree `757d2bcb8b06c49dc62195790be4860e73ae2d2b`, reconciled 2026-10-06 UTC.
+- Previous remote checkpoint: `e5090aafcfbdecd8aae7ce216ca53333b9995182`,
+  tree `1f4868136b363e59d4a441cc60e76474f5c9992d`, reconciled 2026-10-06 UTC.
 - Candidate branch: `feat/optiflow-111-macos-same-volume`.
 - Candidate PR: [#122](https://github.com/egohygiene/optiflow/pull/122), draft.
 - Candidate SHA: resolve the live branch and linked parent issue; this file
@@ -39,6 +56,39 @@ issue acceptance and current user instructions govern this work. This handoff
 does not grant merge or source-media mutation authority.
 
 ## Implemented source
+
+### Fifth checkpoint: application property declarations
+
+`execution::property_evidence` is a host-neutral structural review module,
+independent of the proposed exacl Rust API. Its separate
+`optiflow.execution-properties-macos-cross-copy.v1` schema and required
+`macos-apfs-cross-copy/v1` profile bind ownership, regular-file mode, exact
+mtime/birthtime, zero BSD flags, bounded canonical xattrs and complete ordered
+ACL declarations. Missing or unavailable ACL data cannot become `absent`;
+present-empty remains distinct. Deferred inheritance and unsupported flags or
+rights refuse in this initial profile.
+
+The byte parser caps input before deserialization; semantic review enforces
+counts, sizes, canonical hex/name ordering and timestamp normalization before
+fingerprinting. It gates JSON object shapes before decoding the original bytes
+to preserve duplicate-field refusal. Recursive object-key ordering is explicit, including when
+serde_json uses insertion-ordered maps. The private reviewed wrapper exposes
+immutable data and a domain-bound digest; it is never native observation or
+mutation authority. No paths or descriptors are read. See the
+[protocol](../../execution-macos-copy-properties.md), registered schema,
+synthetic example and `tests/execution_property_evidence.rs`.
+
+This is representation and validation source, not another proposal-test tranche
+or an enabled copy path. Runtime mutation/recovery/journal modules, dependencies,
+lockfile, the 26-test dependency patch, existing schemas and migrations are
+unchanged by this checkpoint. Old Linux and same-volume Mac property encodings
+remain intact. The new fingerprint must not be inserted into an untagged v3
+event; future persistence requires a discriminated envelope or reviewed migration.
+
+All 20 focused tests and other executable checks remain unrun. No native ABI or
+filesystem behavior has been established. Independent source review and the
+documented supported subset do not satisfy the backend adoption gate. This
+independent contract does not stack a runtime consumer on the uncertain API.
 
 ### Fourth checkpoint: adapter failure boundaries
 
@@ -180,7 +230,9 @@ inspect source diffs, review safe rustix platform APIs and the SQLite durability
 boundary, inspect the cross-volume metadata APIs and recovery identity boundaries,
 author and independently source-review the pinned dependency proposal and its
 failure-injection/native-preservation cases, and
-reconcile the documentation. No test, compiler, build, formatting,
+author the application property contract, schema/example and focused synthetic
+coverage, review their source and pinned Apple constants, and reconcile the
+documentation. No test, compiler, build, formatting,
 lint, schema, smoke or CI command was executed. Local readiness: **unknown**.
 Native Mac evidence: **unavailable in this Linux workspace**. Remote CI:
 **deferred**. Publication uses `[skip ci]`; no workflow dispatch, polling,
@@ -190,6 +242,7 @@ The following commands are a future execution plan, **not passed evidence**:
 
 | Check | Command or procedure | Required result |
 | --- | --- | --- |
+| Standalone property declarations | `cargo test --locked --test execution_property_evidence` | Closed schema/example, canonical fingerprints, explicit ACL state and bounded refusal cases agree. This proves no native property observation. |
 | Same-volume behavior, Linux and native Mac | `cargo test --locked --test execution` | Quarantine/restore preserve identity and supported properties; collisions/refusals leave sources intact; no fabricated savings. |
 | Recovery boundaries | `cargo test --locked --lib execution::recovery::tests` | Resume is idempotent; ambiguous transitions refuse; limits remain enforced. |
 | Topology prerequisite | `cargo test --locked --lib execution::filesystem::tests` | Pure Mac topology policy refuses cross-volume and mixed plans without I/O; public authority checks may read path metadata before reaching this policy. This does not qualify APFS. |
@@ -219,7 +272,9 @@ Qualification must record that coverage as unavailable when the fixture skips.
    and adopt the safe descriptor ACL backend specified in
    [MACOS_CROSS_VOLUME.md](MACOS_CROSS_VOLUME.md). Then implement bounded Mac
    cross-volume copy/restore. Preserve ownership, ACLs, xattrs, flags and birth
-   time with explicit refusals and versioned property evidence. Add the
+   time with explicit refusals. Bind the new standalone property profile to
+   fresh descriptor observations and explicitly discriminated journal evidence;
+   do not repurpose the legacy v3 fingerprint field. Add the
    relevant synthetic and interruption coverage. The current dependencies
    do not yet include the proposed backend; do not simply widen Linux platform cfgs.
 3. Implement Mac retained-copy finalization parity with the existing separate
@@ -234,7 +289,7 @@ Qualification must record that coverage as unavailable when the fixture skips.
 On resume, read this file and the changed execution modules, verify the live
 base/PR head and working tree, and reconcile any concurrent work. The next
 concrete job is dependency proposal review/qualification and adoption, then
-cross-volume evidence and copy/restore integration;
+native property observation, discriminated journal evidence and copy/restore integration;
 focused validation remains owed before relying on this draft. Owner-directed
 implementation-first continuation does not erase those obligations. Do not close
 #111 from an implementation-only PR.

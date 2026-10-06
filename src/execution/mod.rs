@@ -3,6 +3,7 @@ mod filesystem;
 pub mod finalization;
 mod journal;
 pub mod model;
+pub mod property_evidence;
 mod mutation;
 mod recovery;
 mod validation;

@@ -80,9 +80,14 @@ interruption and separate irreversible-finalization authority remain intact.
 Cross-volume copy/unlink cannot be made atomic by these checks. A visible SQLite
 event is recorded evidence; a later explicit device flush can still fail.
 
+The [standalone property declaration module](../../execution-macos-copy-properties.md)
+now authors the separate `macos-apfs-cross-copy/v1` profile, its closed schema,
+bounded structural validator and domain-bound fingerprint. It performs no
+native observation and is not connected to the transaction or journal.
+
 Do not add ACL bytes to the existing `macos-apfs/v1` property digest silently.
 The existing same-volume Mac digest and Linux digest must keep their meaning.
-Specify an explicit cross-copy property profile with schema discrimination or
+Integrate the explicit cross-copy property profile through schema discrimination or
 an accepted migration before persisting the stronger evidence. Missing legacy
 ACL evidence must never be interpreted as an empty ACL or proof of preservation.
 

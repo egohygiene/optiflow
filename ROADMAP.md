@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.12
+version: 0.1.13
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-10-05
+updated: 2026-10-06
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,23 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-06 UTC standalone Mac property-contract checkpoint
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) adds an
+application-owned [cross-copy property declaration contract](docs/execution-macos-copy-properties.md).
+The host-neutral library reviews explicit ACL state, ordered entries, bounded
+xattrs, ownership, mode and exact timestamps, then computes a fingerprint bound
+to its new schema/profile. It neither observes nor mutates files; no old
+fingerprint or execution v1–v4 format is reinterpreted. The schema, synthetic
+example and focused tests are authored, with all executable checks deferred.
+
+This finishes a bounded representation prerequisite, not the native ACL gate.
+The next functional work remains backend qualification/adoption, fresh native
+observations and discriminated journal integration before Mac cross-volume
+copy/restore, finalization and #111's native qualification. #93 still owns the
+release; #95 and #121 remain downstream. The
+[handoff](docs/work/111/HANDOFF.md) owns the exact checkpoint and remaining work.
 
 ## 2026-10-06 UTC ACL adapter failure-boundary checkpoint
 

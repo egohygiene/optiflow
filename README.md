@@ -64,6 +64,11 @@ Explicitly selected, restored cross-filesystem quarantine copies may be
 under additive v4 evidence on Linux only. This is absent from v0.1.1 and never applies to
 the restored original source.
 
+The draft also authors a [standalone macOS copy-property review contract](docs/execution-macos-copy-properties.md)
+for explicit ACL and metadata declarations. It does not observe or copy files,
+change historical recovery hashes, or enable cross-volume execution. Its
+synthetic checks and the native backend qualification remain unrun.
+
 ### Development addition: source-preserving PNG candidates
 
 The [#94 implementation on main](docs/png-candidate-production.md) adds a
