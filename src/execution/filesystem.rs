@@ -95,6 +95,32 @@ pub fn metadata(file: &File) -> Result<Metadata> {
         .map_err(|e| failure(Code::ExecutionSourceUnavailable, e.to_string()))
 }
 
+#[cfg(any(target_os = "macos", test))]
+const MACOS_CROSS_VOLUME_METADATA_UNAVAILABLE: &str = "macOS cross-volume quarantine and restore require a reviewed descriptor-bound ACL observation and preservation backend; same-volume APFS renames remain the supported mutation profile";
+
+/// Check the complete topology intent before opening or synchronizing any
+/// filesystem object. Passing this policy check is not filesystem qualification:
+/// the caller must still establish APFS identity and durable synchronization.
+///
+/// Extended attributes do not attest Darwin ACLs. A successful metadata-copy
+/// call also cannot replace independent destination ACL observation before
+/// removing the source, so cross-volume intent remains unsupported.
+#[cfg(any(target_os = "macos", test))]
+fn check_macos_mutation_topologies(
+    topologies: impl IntoIterator<Item = super::model::Topology>,
+) -> Result<()> {
+    if topologies
+        .into_iter()
+        .any(|topology| topology != super::model::Topology::SameFilesystem)
+    {
+        return Err(failure(
+            Code::ExecutionUnsupported,
+            MACOS_CROSS_VOLUME_METADATA_UNAVAILABLE,
+        ));
+    }
+    Ok(())
+}
+
 /// The mutation platform gate is deliberately separate from read-only preview.
 /// Linux keeps its existing contract. macOS v1 supports only same-volume APFS
 /// renames and requires the filesystem's durable synchronization operation.
@@ -106,14 +132,8 @@ pub fn check_mutation_platform(_plan: &ExecutionPlan) -> Result<()> {
 #[cfg(target_os = "macos")]
 pub fn check_mutation_platform(plan: &ExecutionPlan) -> Result<()> {
     use std::os::unix::fs::MetadataExt;
-    use super::model::Topology;
     // Reject unsupported intent before journal creation or any source change.
-    if plan.body.actions.iter().any(|action| action.topology != Topology::SameFilesystem) {
-        return Err(failure(
-            Code::ExecutionUnsupported,
-            "macOS quarantine, resume and restore support same-volume APFS renames only",
-        ));
-    }
+    check_macos_mutation_topologies(plan.body.actions.iter().map(|action| action.topology))?;
     let quarantine = check_directory(&plan.body.quarantine)?;
     require_apfs(&quarantine)?;
     sync_directory(&quarantine)?;
@@ -548,4 +568,38 @@ pub fn interrupted(signals: &SignalState) -> Box<crate::outcome::Diagnostic> {
         code,
         "execution interrupted; inspect durable evidence and filesystem paths before retry",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Code, check_macos_mutation_topologies};
+    use crate::execution::model::Topology::{CrossFilesystem, SameFilesystem};
+
+    #[test]
+    fn macos_topology_policy_admits_only_same_volume_intent() {
+        // This is a pure policy check, not an APFS or native durability proof.
+        assert!(check_macos_mutation_topologies([SameFilesystem]).is_ok());
+        assert!(check_macos_mutation_topologies([SameFilesystem, SameFilesystem]).is_ok());
+    }
+
+    #[test]
+    fn macos_topology_policy_identifies_the_missing_metadata_backend() {
+        let error = check_macos_mutation_topologies([CrossFilesystem, CrossFilesystem])
+            .expect_err("cross-volume intent must remain unsupported");
+        assert_eq!(error.code, Code::ExecutionUnsupported);
+        assert!(error.message.contains("descriptor-bound ACL observation and preservation"));
+    }
+
+    #[test]
+    fn macos_topology_policy_refuses_mixed_plans_in_either_order() {
+        for topologies in [
+            [SameFilesystem, CrossFilesystem],
+            [CrossFilesystem, SameFilesystem],
+        ] {
+            let error = check_macos_mutation_topologies(topologies)
+                .expect_err("a supported prefix cannot authorize a mixed plan");
+            assert_eq!(error.code, Code::ExecutionUnsupported);
+            assert!(error.message.contains("descriptor-bound ACL observation and preservation"));
+        }
+    }
 }

@@ -855,6 +855,56 @@ fn live_cli_requires_approval_and_reports_same_versioned_result() {
 }
 
 #[cfg(target_os = "macos")]
+fn assert_macos_cross_filesystem_mutation_refused(
+    f: &Fixture,
+    p: &ExecutionPlan,
+    run_id: &str,
+) {
+    let approval = f.approval(p);
+    assert_eq!(
+        execution::apply_quarantine(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            &SignalState::default()
+        )
+        .unwrap_err()
+        .code,
+        Code::ExecutionUnsupported
+    );
+    for result in [
+        execution::resume(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            run_id,
+            &SignalState::default(),
+        ),
+        execution::restore(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            run_id,
+            &p.body.actions[0].action_id,
+            &SignalState::default(),
+        ),
+        execution::cleanup(
+            p,
+            &approval,
+            &f.state,
+            &f.policy,
+            run_id,
+            &SignalState::default(),
+        ),
+    ] {
+        assert_eq!(result.unwrap_err().code, Code::ExecutionUnsupported);
+    }
+}
+
+#[cfg(target_os = "macos")]
 #[test]
 fn macos_cross_filesystem_intent_is_refused_before_journal_or_source_mutation() {
     let f = Fixture::new();
@@ -871,7 +921,6 @@ fn macos_cross_filesystem_intent_is_refused_before_journal_or_source_mutation() 
     p.body.quarantine.identity.filesystem_id = source_device.wrapping_add(1).to_string();
     p.body.actions[0].topology = Topology::CrossFilesystem;
     seal(&mut p);
-    let approval = f.approval(&p);
     // The complete versioned plan is valid; unsupported topology must win
     // before fresh directory comparison or opening the writable journal.
     execution::write_document(&f.args.output, &p, &p).unwrap();
@@ -881,52 +930,120 @@ fn macos_cross_filesystem_intent_is_refused_before_journal_or_source_mutation() 
     );
     let keeper = source(&f.args.keep);
     let candidate = source(&f.args.candidate[0]);
-    assert_eq!(
-        execution::apply_quarantine(
-            &p,
-            &approval,
-            &f.state,
-            &f.policy,
-            &SignalState::default()
-        )
-        .unwrap_err()
-        .code,
-        Code::ExecutionUnsupported
-    );
-    let unknown_run = uuid::Uuid::now_v7().to_string();
-    for result in [
-        execution::resume(
-            &p,
-            &approval,
-            &f.state,
-            &f.policy,
-            &unknown_run,
-            &SignalState::default(),
-        ),
-        execution::restore(
-            &p,
-            &approval,
-            &f.state,
-            &f.policy,
-            &unknown_run,
-            &p.body.actions[0].action_id,
-            &SignalState::default(),
-        ),
-        execution::cleanup(
-            &p,
-            &approval,
-            &f.state,
-            &f.policy,
-            &unknown_run,
-            &SignalState::default(),
-        ),
-    ] {
-        assert_eq!(result.unwrap_err().code, Code::ExecutionUnsupported);
-    }
+    assert_macos_cross_filesystem_mutation_refused(&f, &p, &uuid::Uuid::now_v7().to_string());
     assert_eq!(source(&f.args.keep), keeper);
     assert_eq!(source(&f.args.candidate[0]), candidate);
     assert_eq!(fs::read_dir(&f.args.quarantine).unwrap().count(), 0);
     assert_eq!(fs::read_dir(&f.state).unwrap().count(), 0);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn macos_mixed_topology_refusal_preserves_existing_journal_and_retained_bytes() {
+    let mut f = Fixture::new();
+    let second_root = f.base.join("z-second-source");
+    fs::create_dir(&second_root).unwrap();
+    let second_candidate = second_root.join("candidate.bin");
+    fs::write(&second_candidate, fs::read(&f.args.keep).unwrap()).unwrap();
+    f.args.root.push(second_root.clone());
+    f.args.candidate.push(second_candidate.clone());
+    let mut p = f.plan();
+
+    // Keep valid preexisting evidence that a writable journal opener would
+    // recover. Refusal must neither rewrite it nor recreate its released lock.
+    let mut unfinished = f.run(&p).unwrap();
+    assert_eq!(unfinished.status, Status::Validated);
+    unfinished.status = Status::Validating;
+    unfinished.completed_at = None;
+    unfinished.attempts.clear();
+    unfinished.validation.status = Status::Validating;
+    unfinished.commit.status = "not_started".to_owned();
+    contracts::validate(Contract::Execution, &unfinished).unwrap();
+    let connection = rusqlite::Connection::open(f.state.join("state.sqlite3")).unwrap();
+    connection
+        .execute(
+            "UPDATE execution_runs SET status = 'validating', document_json = ?2 WHERE run_id = ?1",
+            rusqlite::params![unfinished.run_id, serde_json::to_string(&unfinished).unwrap()],
+        )
+        .unwrap();
+    drop(connection);
+    fs::remove_file(f.state.join("execution.lock")).unwrap();
+
+    // Keep the first action executable by declaration. Only the later action
+    // crosses the declared volume boundary, so a per-action gate is too late.
+    let other_device = p
+        .body
+        .quarantine
+        .identity
+        .filesystem_id
+        .parse::<u64>()
+        .unwrap()
+        .wrapping_add(1)
+        .to_string();
+    for directory in p.body.roots.iter_mut().chain(&mut p.body.subtrees) {
+        if directory.path.to_path_buf() == second_root {
+            directory.identity.filesystem_id = other_device.clone();
+        }
+    }
+    assert_eq!(p.body.actions[0].topology, Topology::SameFilesystem);
+    assert_eq!(
+        p.body.actions[1].candidate.path.to_path_buf(),
+        second_candidate
+    );
+    p.body.actions[1].candidate.identity.filesystem_id = other_device.clone();
+    p.body.actions[1].candidate.directory.identity.filesystem_id = other_device;
+    p.body.actions[1].topology = Topology::CrossFilesystem;
+    seal(&mut p);
+    execution::write_document(&f.args.output, &p, &p).unwrap();
+    assert_eq!(
+        execution::load_plan(&f.args.output).unwrap().fingerprint,
+        p.fingerprint
+    );
+
+    let retained_namespace = f.args.quarantine.join("retained-evidence");
+    fs::create_dir(&retained_namespace).unwrap();
+    let retained = retained_namespace.join("retained.bin");
+    fs::write(&retained, b"previously retained synthetic bytes").unwrap();
+    let retained_before = source(&retained);
+    let keeper_before = source(&f.args.keep);
+    let candidates_before: Vec<_> = f.args.candidate.iter().map(|p| source(p)).collect();
+    let database_before = source(&f.state.join("state.sqlite3"));
+    let entries = |directory: &Path| {
+        let mut names: Vec<_> = fs::read_dir(directory)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        names.sort();
+        names
+    };
+    let state_entries = entries(&f.state);
+    let quarantine_entries = entries(&f.args.quarantine);
+
+    assert_macos_cross_filesystem_mutation_refused(&f, &p, &unfinished.run_id);
+
+    assert_eq!(source(&f.args.keep), keeper_before);
+    for (path, before) in f.args.candidate.iter().zip(candidates_before) {
+        assert_eq!(source(path), before);
+    }
+    assert_eq!(source(&retained), retained_before);
+    assert_eq!(source(&f.state.join("state.sqlite3")), database_before);
+    assert_eq!(entries(&f.state), state_entries);
+    assert_eq!(entries(&f.args.quarantine), quarantine_entries);
+    assert_eq!(
+        entries(&retained_namespace),
+        vec![std::ffi::OsString::from("retained.bin")]
+    );
+    assert!(!f.state.join("execution.lock").exists());
+    assert!(!f.args.quarantine.join(&p.fingerprint).exists());
+    assert_eq!(
+        serde_json::to_value(
+            execution::load_execution(&f.state, &unfinished.run_id)
+                .unwrap()
+                .unwrap()
+        )
+        .unwrap(),
+        serde_json::to_value(&unfinished).unwrap()
+    );
 }
 
 #[cfg(target_os = "linux")]

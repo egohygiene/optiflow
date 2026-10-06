@@ -30,6 +30,11 @@ because reads can change it; ctime can change on rename. Same-inode moves retain
 ACLs, but this checkpoint does not independently enumerate or fingerprint
 Darwin ACL entries. Hostile concurrent ACL changes remain outside its proof.
 Cross-volume copy/restore and irreversible finalization remain refused on Mac.
+The [cross-volume prerequisite](work/111/MACOS_CROSS_VOLUME.md) records the
+missing safe descriptor-bound ACL backend and its proposed preservation and
+verification contract. The refusal applies to the complete plan before
+mutation-capability probes or writable journal/namespace access, including a
+supported same-volume prefix. Authority checks may still read path metadata.
 
 ## Authority and execution
 

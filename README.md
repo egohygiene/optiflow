@@ -54,7 +54,8 @@ It rechecks file identity, metadata, full hashes, direct byte equality and
 capacity, and saves versioned validation/recovery evidence. [Bounded quarantine](docs/execution-quarantine.md)
 adds a separate v2 journal and an approved mutation path. The macOS/APFS
 checkpoint is limited to same-volume moves and recovery, refuses cross-volume
-plans, and still needs native qualification. These
+plans pending a [safe ACL metadata backend](docs/work/111/MACOS_CROSS_VOLUME.md),
+and still needs native qualification. These
 features are not in the published v0.1.1 bundle. New development runs have
 [operator-initiated status, resume, restore and owned cleanup](docs/execution-recovery.md)
 with append-only v3 recovery evidence; older v2 runs remain inspection-only.

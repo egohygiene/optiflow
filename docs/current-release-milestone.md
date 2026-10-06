@@ -51,7 +51,7 @@ all succeeded.
 | Released in `v0.1.1` | Extension, media-profile, bounded PNG library-validation, documentation, performance, filesystem-corpus, and native pilot work from the immutable released source. Each feature retains its documented CLI/library boundary. |
 | Development source | Explicit execution plans and approvals, dry-run validation, Linux bounded quarantine/recovery/finalization, and merged #94 source-preserving PNG candidates. Not in `v0.1.1`. |
 | Unvalidated #111 candidate | Same-volume macOS/APFS quarantine, resume, restore, and empty cleanup; [checkpoint and deferred checks](work/111/HANDOFF.md). |
-| Planned | Remaining #111 cross-volume/finalization/native qualification, #93 mutation release, and #95 validated PNG replacement. |
+| Planned | Remaining #111 cross-volume work, gated on the [safe ACL adapter prerequisite](work/111/MACOS_CROSS_VOLUME.md), finalization/native qualification, #93 mutation release, and #95 validated PNG replacement. |
 | Unsupported | macOS cross-volume mutation/finalization, PNG source replacement, direct original-path deletion, and causal physical-space reclamation claims. |
 
 Version `0.1.1` is read-only with respect to source media. A review plan is

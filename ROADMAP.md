@@ -24,6 +24,17 @@ supersedes: []
 
 # OptiFlow Roadmap
 
+## 2026-10-06 cross-volume prerequisite and recovery hardening
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) continues #111
+with explicit whole-plan Mac refusal coverage and recovery identity checks.
+The cross-volume investigation identified a missing safe descriptor-bound
+Darwin ACL backend. The [proposed adapter contract](docs/work/111/MACOS_CROSS_VOLUME.md)
+specifies preservation, independent verification, bounds and evidence compatibility.
+Cross-volume Mac mutation remains unsupported; this checkpoint does not claim
+that a copy path has been implemented. The same-volume draft still needs all
+deferred checks. See the [handoff](docs/work/111/HANDOFF.md) for the finite sequence.
+
 ## 2026-10-05 macOS/APFS first checkpoint
 
 The current candidate starts from `c5dbcd1761e810aea228389b8ba017acc97a411e`.

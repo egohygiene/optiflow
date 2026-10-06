@@ -69,6 +69,17 @@ rename. The verified quarantine copy remains; there is no automatic deletion
 of that copy. A repeated successful restore verifies the result and appends
 no events.
 
+New apply/resume commit events bind the observed quarantine inode using the
+existing optional v3 identity field. Cross-filesystem recovery and retained-copy
+rechecks compare that identity whenever it is present, even when replacement
+bytes and copied properties match. Historical apply events with no identity
+retain their existing content/property checks; they do not gain identity proof.
+Before publishing a reverse-copy temporary file, recovery also reopens its
+entry relative to the held source parent and compares it with the verified
+handle, then rechecks committed properties. A mismatch leaves the source path
+vacant and preserves temporary/quarantine evidence for inspection. These checks
+do not make the subsequent rename atomic with respect to a hostile writer.
+
 Mac recovery refuses any approved plan containing a cross-volume action before
 opening writable state. It binds BSD flags and birth time in addition to the
 existing property fields, without changing Linux v3 fingerprint bytes or the

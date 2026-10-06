@@ -3,13 +3,17 @@
 ## Current checkpoint
 
 - Parent: [#111](https://github.com/egohygiene/optiflow/issues/111), remains open.
-- Role: implementation; first checkpoint only, unvalidated draft.
-- Outcome: same-volume macOS/APFS quarantine, resume, collision-safe restore,
-  and verified empty-namespace cleanup using the existing execution contracts.
+- Role: implementation; second checkpoint, unvalidated draft.
+- Outcome: existing same-volume macOS/APFS implementation plus cross-volume
+  prerequisite/refusal coverage and recovery identity hardening. Mac
+  cross-volume copying and restoration remain unsupported.
 - Base: `c5dbcd1761e810aea228389b8ba017acc97a411e`, verified 2026-10-05.
 - Base tree: `30c4b1f26f20d66e3ce43f284eee4c25d8f7abac`.
+- Previous remote checkpoint: `05cde06b1e088cf1c523def97dc5bae1db23b5c6`,
+  tree `6007e8f2a1c5e927afd13db4013e8736e5906cc9`, reconciled 2026-10-06.
 - Candidate branch: `feat/optiflow-111-macos-same-volume`.
-- Candidate SHA/PR: resolve the live branch and linked parent issue; this file
+- Candidate PR: [#122](https://github.com/egohygiene/optiflow/pull/122), draft.
+- Candidate SHA: resolve the live branch and linked parent issue; this file
   was authored before publication and cannot contain its own eventual SHA.
 - Strategy: Aether worker-strategy v0.1.0 at
   [`db5f4bd339f9266758c74c3435d47c8005f89a8e`](https://github.com/egohygiene/aether/blob/db5f4bd339f9266758c74c3435d47c8005f89a8e/library/organization/specs/methodology/worker-strategy.spec.md),
@@ -34,6 +38,36 @@ does not grant merge or source-media mutation authority.
 
 ## Implemented source
 
+### Second checkpoint: prerequisite and recovery hardening
+
+Source investigation found that the locked rustix descriptor-copy API requires
+unsafe state management, while the reviewed exacl API is path-based. No usable
+safe descriptor ACL observer/writer was identified. `unsafe_code = "forbid"`
+remains intact. A new inode cannot inherit an unsupported claim that Darwin
+ACLs were copied just because ordinary xattrs match. Consequently the planned
+cross-volume implementation is blocked on the
+[reviewable metadata adapter contract](MACOS_CROSS_VOLUME.md).
+
+- The complete Mac topology policy is isolated before mutation-capability
+  probes and writable journal access and names
+  the ACL backend prerequisite. Authored pure policy tests cover same-volume,
+  cross-volume and mixed action ordering.
+- Authored integration coverage retains the empty-state refusal and adds a
+  mixed plan with a same-volume prefix and existing unfinished journal evidence.
+  Refusal must not classify that evidence, create a lock/namespace, or touch
+  selected source and retained quarantine bytes.
+- Recovery hardening records identity for new apply commit events, checks
+  recorded quarantine identity when available, and rechecks a reverse-copy
+  temporary pathname against its held descriptor plus both property
+  fingerprints before source publication. Authored Linux regressions inject
+  equivalent-inode replacement and late temporary/quarantine xattr changes.
+  Historical v3 events lacking identity keep their existing content/property
+  checks; this does not manufacture missing identity evidence.
+- No new dependency, unsafe exemption, ACL fingerprint, schema or migration is
+  introduced. This is preparation and hardening, not functional Mac transfer.
+
+### First checkpoint: retained implementation
+
 - `src/execution/filesystem.rs`: mutation-only APFS/topology and actual-handle
   checks; same-volume plans only on macOS. Darwin fsync plus F_FULLFSYNC without
   a silent fallback; unknown/unsupported guarantees refuse.
@@ -55,7 +89,7 @@ does not grant merge or source-media mutation authority.
 - README, roadmap and execution protocols distinguish draft implementation
   from released behavior and qualification.
 
-Checkpoint acceptance at source level: supported-host dispatch exists;
+First-checkpoint acceptance at source level: supported-host dispatch exists;
 cross-volume intent refuses before writable journal access; source paths are
 never overwrite targets; recovery retains ambiguity and rechecks authority;
 Linux evidence encoding remains intact; deferred checks are explicit. None of
@@ -89,7 +123,8 @@ these source observations is executable proof of acceptance.
 
 Actually performed: read current GitHub refs/issues/PRs, clone the verified base,
 inspect source diffs, review safe rustix platform APIs and the SQLite durability
-boundary, and reconcile the documentation. No test, compiler, build, formatting,
+boundary, inspect the cross-volume metadata APIs and recovery identity boundaries,
+and reconcile the documentation. No test, compiler, build, formatting,
 lint, schema, smoke or CI command was executed. Local readiness: **unknown**.
 Native Mac evidence: **unavailable in this Linux workspace**. Remote CI:
 **deferred**. Publication uses `[skip ci]`; no workflow dispatch, polling,
@@ -101,6 +136,7 @@ The following commands are a future execution plan, **not passed evidence**:
 | --- | --- | --- |
 | Same-volume behavior, Linux and native Mac | `cargo test --locked --test execution` | Quarantine/restore preserve identity and supported properties; collisions/refusals leave sources intact; no fabricated savings. |
 | Recovery boundaries | `cargo test --locked --lib execution::recovery::tests` | Resume is idempotent; ambiguous transitions refuse; limits remain enforced. |
+| Topology prerequisite | `cargo test --locked --lib execution::filesystem::tests` | Pure Mac topology policy refuses cross-volume and mixed plans without I/O; public authority checks may read path metadata before reaching this policy. This does not qualify APFS. |
 | Platform compilation and MSRV | `cargo +1.85.0 check --locked --all-targets --all-features` on supported targets | No platform-only API/type errors; dependency floor verified. |
 | Linux regression suite | `cargo test --locked --all-targets` | Existing v1–v4 and cross-volume behavior remains valid. |
 | Formatting/lints | `cargo fmt --all -- --check`; `cargo clippy --locked --all-targets --all-features -- -D warnings` | No formatting/lint findings. |
@@ -108,18 +144,25 @@ The following commands are a future execution plan, **not passed evidence**:
 | Native durability failure campaign | Inject refused/failed directory, database and file full-sync; interrupt between pending, rename and completion records | No next source move after failure; visible state is treated as recorded evidence; recovery never invents a commit. |
 | APFS physical qualification | `docs/external-drive-mutation-pilot.md`, disposable media only | Actual disconnect/reconnect, property, identity and capacity observations; no qualification inferred from synthetic runs. |
 
-The synthetic cross-volume-intent test constructs a valid approved declaration
-and tests upfront refusal. It is not a real two-volume APFS pilot. Native tests
+The synthetic cross-volume-intent tests construct valid approved declarations
+and test upfront refusal, including existing-state preservation. They are not
+a real two-volume APFS pilot. Native tests
 must fail on missing expected guarantees rather than silently skip them.
+The existing Linux cross-volume fixture uses `/dev/shm` when it is a different
+device and otherwise skips; its new recovery cases retain that limitation.
+Qualification must record that coverage as unavailable when the fixture skips.
 
 ## Finite remaining sequence and resume
 
 1. Review this draft and perform its focused Linux/native-Mac compilation,
    same-volume and failure checks before relying on this boundary. Resolve
    findings in this checkpoint; do not stack a consumer on an uncertain API.
-2. Implement bounded Mac cross-volume copy/restore with explicit ownership,
-   ACL/xattr/flags/birth-time preservation policy or refusals. Add the relevant
-   synthetic and interruption coverage.
+2. Review and provide the safe descriptor ACL backend specified in
+   [MACOS_CROSS_VOLUME.md](MACOS_CROSS_VOLUME.md), then implement bounded Mac
+   cross-volume copy/restore. Preserve ownership, ACLs, xattrs, flags and birth
+   time with explicit refusals and versioned property evidence. Add the
+   relevant synthetic and interruption coverage. The current dependencies
+   cannot satisfy this prerequisite; do not simply widen Linux platform cfgs.
 3. Implement Mac retained-copy finalization parity with the existing separate
    irreversible authorization, then finish the native/disposable-volume and
    filesystem matrix required by #111. Loop back through all deferred checks
@@ -131,6 +174,7 @@ must fail on missing expected guarantees rather than silently skip them.
 
 On resume, read this file and the changed execution modules, verify the live
 base/PR head and working tree, and reconcile any concurrent work. The next
-concrete job is the focused validation of this draft, or another explicitly
-owner-selected bounded implementation checkpoint with these obligations kept
-open. Do not close #111 from an implementation-only PR.
+concrete implementation job is the reviewed descriptor ACL adapter prerequisite;
+focused validation remains owed before relying on this draft. Owner-directed
+implementation-first continuation does not erase those obligations. Do not close
+#111 from an implementation-only PR.
