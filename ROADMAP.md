@@ -24,6 +24,17 @@ supersedes: []
 
 # OptiFlow Roadmap
 
+## 2026-10-06 UTC descriptor ACL dependency proposal
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) now contains a
+[pinned exacl extension patch and adoption packet](docs/work/111/acl-adapter/README.md)
+for bounded, lossless descriptor-based Darwin ACL copying and verification.
+This is concrete dependency proposal source, not an adopted library or enabled
+Mac cross-volume path. Native validation, dependency acceptance and Optiflow
+evidence/copy integration remain outstanding. No checks, upstream submission,
+merge or release occurred. The [handoff](docs/work/111/HANDOFF.md) owns the
+remaining sequence.
+
 ## 2026-10-06 cross-volume prerequisite and recovery hardening
 
 Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) continues #111

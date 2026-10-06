@@ -20,6 +20,10 @@ the transaction. No suitable safe descriptor-based ACL reader/writer was found
 in this bounded investigation. This is a dependency/API gap, not proof that
 macOS cannot support the operation.
 
+The next checkpoint now supplies a [concrete exacl extension proposal](acl-adapter/README.md)
+against a pinned upstream revision. It is an unvalidated patch artifact, not an
+installed dependency, accepted upstream change or enabled transfer path.
+
 All Mac plans containing a cross-volume action continue to fail with
 `ExecutionUnsupported` before opening writable execution state or creating a
 namespace. The entire plan refuses, including a same-volume action followed by
@@ -38,7 +42,7 @@ Any proposal to change that boundary requires an explicit architecture review.
 | Property | Required observation and copy behavior |
 | --- | --- |
 | Object binding | Use the held source and exclusive destination handles; verify regular-file type, device/inode, link count and stable metadata before and after observations. Never reopen a user-controlled path to copy metadata. |
-| Darwin ACL | Observe an explicitly empty or complete ordered ACL. Preserve principal UUIDs, allow/deny tags, rights, entry inheritance flags and ACL-level flags without resolving names or reordering entries. Refuse unknown bits, unreadable entries or bound overflow. Independently reread the destination; a successful setter/copy call alone is insufficient. |
+| Darwin ACL | Distinguish absent from present-empty ACLs and preserve complete ordered entries. Preserve raw principal UUIDs, allow/deny tags, rights, entry inheritance flags and ACL-level flags without resolving names or reordering entries. Refuse unknown public bits, unreadable entries or bound overflow; preserve the native ACL-header private bits that Apple's contract requires callers to retain. Independently reread the destination; a successful setter/copy call alone is insufficient. |
 | ACL resource bounds | Establish finite entry/byte bounds before allocation and fingerprinting. Proposed initial bounds: 128 entries and 64 KiB encoded ACL; reject larger observations. These are proposed limits, not current runtime behavior. |
 | Ownership and permissions | Preserve uid, gid and mode exactly; refuse when privilege or destination policy prevents it. Recheck after ACL installation because operations may interact. |
 | Extended attributes | Retain the current 128-entry, 255-byte-name, 64-KiB-value and 1-MiB-total limits. Preserve complete values, including bounded resource forks. Reject unexplained destination-only attributes and unreadable source attributes. |
@@ -63,6 +67,9 @@ the file and directory before publishing the destination. Reopen and bind the
 published object to the verified temporary inode. Recheck source identity,
 content, properties, capacity, namespace and destination identity before the
 source-removal transition. Any failed observation or flush stops progression.
+In particular, an ACL with deferred inheritance may change on its first rename.
+Reject that flag in the initial copy profile or independently reobserve it
+after final publication before any destructive transition.
 
 Restoration must apply the same property contract in reverse, publish only into
 a vacant original path, and retain the quarantine copy. Existing ambiguity,
