@@ -25,7 +25,7 @@ Only its request fingerprint is computed from the declared request.
 The packet is separate from scan reports, review opportunities, executable
 plans, extension SDK v1, and artifact-set v1. It does not add a new extension
 role or permission. Run v5, report v6, plan v5, command-result v1, effective
-policy v1, and SQLite are unchanged. OFD-001's review-only boundary remains in
+policy v1, and SQLite are unchanged. OFD-0001's review-only boundary remains in
 force; no accepted architecture decision is superseded.
 
 The provider result and host evidence have separate shapes. A provider may
