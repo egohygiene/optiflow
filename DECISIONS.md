@@ -63,26 +63,26 @@ without changing IDs or history. This document will retain the index.
 
 | ID | Status | Decision |
 | --- | --- | --- |
-| OFD-001 | Accepted | End `v0.1.x` authority at review-only planning |
-| OFD-002 | Accepted | Use local SQLite plus immutable JSON artifacts |
-| OFD-003 | Accepted | Prove exact groups with complete BLAKE3 evidence |
-| OFD-004 | Accepted | Version wire contracts independently from the binary |
-| OFD-005 | Accepted | Invoke external adapters directly without a shell |
-| OFD-006 | Accepted | Integrate through `flow` as a subprocess contract |
-| OFD-007 | Accepted | Use a specification-schema-test evidence loop |
-| OFD-008 | Accepted | Compose one static site from isolated producers |
-| OFD-009 | Accepted | Treat cloud-native systems as replaceable platform capabilities |
-| OFD-010 | Accepted | Adopt the Aether architecture-document metadata contract manually |
-| OFD-011 | Accepted | Separate extension declaration, operator trust, and core acceptance |
-| OFD-012 | Proposed | Bind explicit selections and approval to a dry-run-only execution contract |
-| OFD-013 | Proposed | Separate quarantine mutation evidence from dry-run v1 |
-| OFD-014 | Proposed | Require pre-mutation authority and append-only recovery evidence |
-| OFD-015 | Proposed | Independently authorize irreversible retained-copy finalization |
-| OFD-016 | Proposed | Publish source-preserving PNG candidates under an independent artifact protocol |
+| OFD-0001 | Accepted | End `v0.1.x` authority at review-only planning |
+| OFD-0002 | Accepted | Use local SQLite plus immutable JSON artifacts |
+| OFD-0003 | Accepted | Prove exact groups with complete BLAKE3 evidence |
+| OFD-0004 | Accepted | Version wire contracts independently from the binary |
+| OFD-0005 | Accepted | Invoke external adapters directly without a shell |
+| OFD-0006 | Accepted | Integrate through `flow` as a subprocess contract |
+| OFD-0007 | Accepted | Use a specification-schema-test evidence loop |
+| OFD-0008 | Accepted | Compose one static site from isolated producers |
+| OFD-0009 | Accepted | Treat cloud-native systems as replaceable platform capabilities |
+| OFD-0010 | Accepted | Adopt the Aether architecture-document metadata contract manually |
+| OFD-0011 | Accepted | Separate extension declaration, operator trust, and core acceptance |
+| OFD-0012 | Proposed | Bind explicit selections and approval to a dry-run-only execution contract |
+| OFD-0013 | Proposed | Separate quarantine mutation evidence from dry-run v1 |
+| OFD-0014 | Proposed | Require pre-mutation authority and append-only recovery evidence |
+| OFD-0015 | Proposed | Independently authorize irreversible retained-copy finalization |
+| OFD-0016 | Proposed | Publish source-preserving PNG candidates under an independent artifact protocol |
 
 ## Active Decisions
 
-### OFD-001 — End `v0.1.x` authority at review-only planning
+### OFD-0001 — End `v0.1.x` authority at review-only planning
 
 - **Status:** Accepted
 - **Context:** Useful inventory and exact-duplicate evidence can ship before a
@@ -94,7 +94,7 @@ without changing IDs or history. This document will retain the index.
 - **Revisit when:** Transactional exact resolution satisfies the safety model
   and its release exit criteria together.
 
-### OFD-002 — Use local SQLite plus immutable JSON artifacts
+### OFD-0002 — Use local SQLite plus immutable JSON artifacts
 
 - **Status:** Accepted
 - **Context:** Scans need queryable cache and lifecycle state, while integrations
@@ -107,7 +107,7 @@ without changing IDs or history. This document will retain the index.
 - **Revisit when:** Shared or distributed execution demonstrates a concrete
   need that the current boundary cannot satisfy.
 
-### OFD-003 — Prove exact groups with complete BLAKE3 evidence
+### OFD-0003 — Prove exact groups with complete BLAKE3 evidence
 
 - **Status:** Accepted
 - **Context:** Metadata and partial signatures are efficient candidate filters
@@ -120,7 +120,7 @@ without changing IDs or history. This document will retain the index.
   boundary.
 - **Revisit when:** Cryptographic or platform evidence changes materially.
 
-### OFD-004 — Version wire contracts independently from the binary
+### OFD-0004 — Version wire contracts independently from the binary
 
 - **Status:** Accepted
 - **Context:** `flow`, shell scripts, and future services need stable semantics
@@ -132,7 +132,7 @@ without changing IDs or history. This document will retain the index.
 - **Revisit when:** Never for the principle; individual compatibility policies
   may evolve through a superseding decision.
 
-### OFD-005 — Invoke external adapters directly without a shell
+### OFD-0005 — Invoke external adapters directly without a shell
 
 - **Status:** Accepted
 - **Context:** Source paths and adapter inputs may contain spaces, Unicode, or
@@ -143,7 +143,7 @@ without changing IDs or history. This document will retain the index.
   pipelines cannot depend on shell composition shortcuts.
 - **Revisit when:** A sandboxed adapter protocol replaces local subprocesses.
 
-### OFD-006 — Integrate through `flow` as a subprocess contract
+### OFD-0006 — Integrate through `flow` as a subprocess contract
 
 - **Status:** Accepted
 - **Context:** OptiFlow must remain independently installable and releasable
@@ -156,7 +156,7 @@ without changing IDs or history. This document will retain the index.
 - **Revisit when:** A separately versioned SDK has multiple proven consumers and
   preserves the same boundary.
 
-### OFD-007 — Use a specification-schema-test evidence loop
+### OFD-0007 — Use a specification-schema-test evidence loop
 
 - **Status:** Accepted
 - **Context:** Documentation-only, schema-only, and test-only development each
@@ -168,7 +168,7 @@ without changing IDs or history. This document will retain the index.
   disagreement becomes a defect rather than implicit precedence.
 - **Revisit when:** The loop can be strengthened, not bypassed, by better tools.
 
-### OFD-008 — Compose one static site from isolated producers
+### OFD-0008 — Compose one static site from isolated producers
 
 - **Status:** Accepted
 - **Context:** The landing page, documentation, and schemas have separate source
@@ -181,7 +181,7 @@ without changing IDs or history. This document will retain the index.
 - **Revisit when:** Additional API, intelligence, or release surfaces join the
   composition contract.
 
-### OFD-009 — Treat cloud-native systems as replaceable platform capabilities
+### OFD-0009 — Treat cloud-native systems as replaceable platform capabilities
 
 - **Status:** Accepted
 - **Context:** The CNCF ecosystem offers many mature solutions, but embedding
@@ -196,7 +196,7 @@ without changing IDs or history. This document will retain the index.
 - **Revisit when:** A platform capability changes product semantics rather than
   execution context.
 
-### OFD-010 — Adopt the Aether architecture-document metadata contract manually
+### OFD-0010 — Adopt the Aether architecture-document metadata contract manually
 
 - **Status:** Accepted
 - **Context:** Empathy has proven a reusable 18-document architecture graph, but
@@ -209,7 +209,7 @@ without changing IDs or history. This document will retain the index.
   projection without changing document meaning.
 - **Revisit when:** Aether publishes the installation and migration contract.
 
-### OFD-011 — Separate extension declaration, operator trust, and core acceptance
+### OFD-0011 — Separate extension declaration, operator trust, and core acceptance
 
 - **Status:** Accepted
 - **Context:** The Flow suite roadmap now needs a native OptiFlow provider
@@ -237,7 +237,7 @@ without changing IDs or history. This document will retain the index.
   filesystem, and resource effects, or a semantic SDK change requires new wire
   identifiers and a migration.
 
-### OFD-012 — Bind explicit selections and approval to a dry-run-only execution contract
+### OFD-0012 — Bind explicit selections and approval to a dry-run-only execution contract
 
 - **Status:** Proposed for #90 review
 - **Context:** Review-plan keep defaults and plan existence cannot authorize the
@@ -258,7 +258,7 @@ without changing IDs or history. This document will retain the index.
   `schemas/execution-v1.schema.json`, migration 0006 and synthetic execution tests.
 - **Revisit when:** #91 earns bounded mutation and property-preserving recovery.
 
-### OFD-013 — Separate quarantine mutation evidence from dry-run v1
+### OFD-0013 — Separate quarantine mutation evidence from dry-run v1
 
 - **Status:** Proposed for #91 review
 - **Context:** v1 commit/recovery records explicitly forbid source mutation.
@@ -281,7 +281,7 @@ without changing IDs or history. This document will retain the index.
   same/cross-filesystem plus interruption tests.
 - **Revisit when:** #92 defines idempotent restore and fault-injected recovery.
 
-### OFD-014 — Require pre-mutation authority and append-only recovery evidence
+### OFD-0014 — Require pre-mutation authority and append-only recovery evidence
 
 - **Status:** Proposed for #92 review
 - **Context:** v2 mutation records cannot express new operator recovery
@@ -302,7 +302,7 @@ without changing IDs or history. This document will retain the index.
   interruption/collision/metadata tests.
 - **Revisit when:** #96 defines independently authorized finalization.
 
-### OFD-015 — Independently authorize irreversible retained-copy finalization
+### OFD-0015 — Independently authorize irreversible retained-copy finalization
 
 - **Status:** Proposed for #96 review
 - **Context:** A cross-filesystem restore retains a verified quarantine copy;
@@ -322,7 +322,7 @@ without changing IDs or history. This document will retain the index.
   synthetic cross-filesystem refusal/interruption tests.
 - **Revisit when:** #93 qualifies the release and reviews native target evidence.
 
-### OFD-016 — Publish source-preserving PNG candidates under an independent artifact protocol
+### OFD-0016 — Publish source-preserving PNG candidates under an independent artifact protocol
 
 - **Status:** Proposed for #94 review
 - **Context:** The #78 declaration packet and #80 library byte validator do
@@ -374,3 +374,26 @@ specific source artifacts that established an earlier choice.
   explicit.
 - Accepted records align with current implementation or an explicitly stated
   architecture boundary.
+
+## Identifier format migration (2026-10-18)
+
+The maintainer selected four-digit numbering in [Hygiene #73](https://github.com/egohygiene/hygiene/issues/73). This padding-only migration changes current labels and anchors; logical numbers, decision content, dates and disposition remain unchanged. Git retains prior versions. New canonical records use `ADR-NNNN` under Hygiene policy v1.2.0.
+
+| Previous ID | Current ID | Record |
+| --- | --- | --- |
+| `OFD-001` | `OFD-0001` | [DECISIONS.md](DECISIONS.md#ofd-0001--end-v01x-authority-at-review-only-planning) |
+| `OFD-002` | `OFD-0002` | [DECISIONS.md](DECISIONS.md#ofd-0002--use-local-sqlite-plus-immutable-json-artifacts) |
+| `OFD-003` | `OFD-0003` | [DECISIONS.md](DECISIONS.md#ofd-0003--prove-exact-groups-with-complete-blake3-evidence) |
+| `OFD-004` | `OFD-0004` | [DECISIONS.md](DECISIONS.md#ofd-0004--version-wire-contracts-independently-from-the-binary) |
+| `OFD-005` | `OFD-0005` | [DECISIONS.md](DECISIONS.md#ofd-0005--invoke-external-adapters-directly-without-a-shell) |
+| `OFD-006` | `OFD-0006` | [DECISIONS.md](DECISIONS.md#ofd-0006--integrate-through-flow-as-a-subprocess-contract) |
+| `OFD-007` | `OFD-0007` | [DECISIONS.md](DECISIONS.md#ofd-0007--use-a-specification-schema-test-evidence-loop) |
+| `OFD-008` | `OFD-0008` | [DECISIONS.md](DECISIONS.md#ofd-0008--compose-one-static-site-from-isolated-producers) |
+| `OFD-009` | `OFD-0009` | [DECISIONS.md](DECISIONS.md#ofd-0009--treat-cloud-native-systems-as-replaceable-platform-capabilities) |
+| `OFD-010` | `OFD-0010` | [DECISIONS.md](DECISIONS.md#ofd-0010--adopt-the-aether-architecture-document-metadata-contract-manually) |
+| `OFD-011` | `OFD-0011` | [DECISIONS.md](DECISIONS.md#ofd-0011--separate-extension-declaration-operator-trust-and-core-acceptance) |
+| `OFD-012` | `OFD-0012` | [DECISIONS.md](DECISIONS.md#ofd-0012--bind-explicit-selections-and-approval-to-a-dry-run-only-execution-contract) |
+| `OFD-013` | `OFD-0013` | [DECISIONS.md](DECISIONS.md#ofd-0013--separate-quarantine-mutation-evidence-from-dry-run-v1) |
+| `OFD-014` | `OFD-0014` | [DECISIONS.md](DECISIONS.md#ofd-0014--require-pre-mutation-authority-and-append-only-recovery-evidence) |
+| `OFD-015` | `OFD-0015` | [DECISIONS.md](DECISIONS.md#ofd-0015--independently-authorize-irreversible-retained-copy-finalization) |
+| `OFD-016` | `OFD-0016` | [DECISIONS.md](DECISIONS.md#ofd-0016--publish-source-preserving-png-candidates-under-an-independent-artifact-protocol) |
