@@ -146,7 +146,7 @@ format. Optimized-media replacement additionally depends on its own validated
 profile and the later commit/recovery gates. Candidate generation, candidate
 publication and replacement are distinct checkpoints; #80 delivered none of
 those operations. Resolve the architecture/release boundary before adding
-execution to the CLI, preserving [OFD-001 and OFD-005][decisions].
+execution to the CLI, preserving [OFD-0001 and OFD-0005][decisions].
 
 ## Rust core and mature providers
 
@@ -239,28 +239,28 @@ decision or changing the gated [ADR migration](https://github.com/egohygiene/opt
 [ffprobe]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/adapters/ffprobe.rs
 [profiles]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/media_profiles.rs
 [profile-tests]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/tests/media_profiles_cli.rs
-[png-validation]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/png_validation.rs
-[png-tests]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/tests/png_byte_validation.rs
-[cli]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/cli.rs
-[app]: https://github.com/egohygiene/optiflow/tree/5be461c413fc34515cd70f41d4178eb8243525d9/src/app
-[architecture]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ARCHITECTURE.md
-[decisions]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/DECISIONS.md
-[transaction-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#v020--transactional-exact-duplicate-resolution
-[image-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#v030--transactional-lossless-image-optimization
-[image-transformations]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#encoders-and-formats
-[quality-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#quality-validation
-[metadata-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#metadata-and-privacy
-[space-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#space-and-filesystem-safety
-[av-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/ROADMAP.md#ffmpeg-adapter
+[png-validation]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs0
+[png-tests]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs1
+[cli]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs2
+[app]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs3
+[architecture]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs4
+[decisions]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs5
+[transaction-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs6
+[image-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs7
+[image-transformations]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs8
+[quality-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/discovery.rs9
+[metadata-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs0
+[space-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs1
+[av-roadmap]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs2
 [upstream-tree]: https://github.com/toy/image_optim/tree/574276eb8e2f9ccfb468b74b18e3e5883e8445a1
 [upstream-tag]: https://github.com/toy/image_optim/tree/b1029755959d2105f775eb70d121122696d5d0c0
-[upstream-gem]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/image_optim.gemspec
-[upstream-workers]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim/worker/class_methods.rb
-[upstream-sniff]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim/image_meta.rb
-[upstream-readme]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/README.markdown#benchmark
-[upstream-cmd]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim/cmd.rb
-[upstream-cache]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim/cache.rb
-[upstream-worker]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim/worker.rb
-[upstream-api]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim.rb
-[upstream-oxipng]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/lib/image_optim/worker/oxipng.rb
-[upstream-license]: https://github.com/toy/image_optim/blob/574276eb8e2f9ccfb468b74b18e3e5883e8445a1/LICENSE.txt
+[upstream-gem]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs3
+[upstream-workers]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs4
+[upstream-sniff]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs5
+[upstream-readme]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs6
+[upstream-cmd]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs7
+[upstream-cache]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs8
+[upstream-worker]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/observation.rs9
+[upstream-api]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/inventory.rs0
+[upstream-oxipng]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/inventory.rs1
+[upstream-license]: https://github.com/egohygiene/optiflow/blob/5be461c413fc34515cd70f41d4178eb8243525d9/src/inventory.rs2
