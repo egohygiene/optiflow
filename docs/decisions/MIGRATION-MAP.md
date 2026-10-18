@@ -585,4 +585,4 @@ gates independently blocks continuous capture and public ledger activation.
 
 ## Numbering update — 2026-10-18
 
-The historical IDs above record the earlier inventory. Current inline labels use four digits with the same OFD prefix and logical number; every old/new pair is in the [root migration map](../../DECISIONS.md#identifier-format-migration-2026-10-18). Rationale, dates and disposition remain unchanged under the maintainer-authorized Hygiene #73 naming upgrade.
+The historical IDs above record the earlier inventory. Current inline labels use four digits with the same OFD prefix and logical number; every old/new pair is in the [root migration map](https://github.com/egohygiene/optiflow/blob/main/DECISIONS.md#identifier-format-migration-2026-10-18). Rationale, dates and disposition remain unchanged under the maintainer-authorized Hygiene #73 naming upgrade.
