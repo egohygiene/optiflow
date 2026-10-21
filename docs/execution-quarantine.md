@@ -1,10 +1,40 @@
 # Bounded exact-duplicate quarantine (development source)
 
-This #91 implementation is not in the immutable v0.1.1 release. Live apply is
-supported on Linux where the required no-replace rename, file identity, inode
+This development implementation is not in the immutable v0.1.1 release. Live apply is
+implemented on Linux where the required no-replace rename, file identity, inode
 flags, extended attributes, directory synchronization, and capacity checks are
-available. On other hosts it refuses before mutation. Test with synthetic files
+available. The [#111 first checkpoint](work/111/HANDOFF.md) adds an **unvalidated**
+macOS/APFS same-volume path; other hosts and macOS cross-volume plans refuse
+before mutation. Test with synthetic files
 first. No plan is ever applied to user media by the repository tests.
+
+## macOS/APFS checkpoint boundary
+
+Every selected action must stay on the quarantine filesystem. State,
+quarantine, and source/keeper directories must pass the APFS and directory
+identity checks. A mixed same-/cross-volume plan refuses as a whole before
+opening the writable journal. This checkpoint preserves the original inode
+through a no-replace rename; it does not implement a metadata-copy fallback.
+
+Darwin synchronization requests `fsync` followed by `F_FULLFSYNC`, and refuses
+when the required operation is unavailable. Mutation journals require SQLite
+`DELETE` journal mode and `synchronous=EXTRA`, request and read back `fullfsync`
+and `checkpoint_fullfsync`, and explicitly flush the bound database and state
+directory after each transition. These source-level
+requirements have **not** been executed or qualified on a native Mac here.
+They are not evidence of resilience to physical drive removal or power loss.
+
+The Mac property observation includes ownership, mode, mtime, bounded extended
+attributes, BSD flags and birth time. Access time is excluded from comparisons
+because reads can change it; ctime can change on rename. Same-inode moves retain
+ACLs, but this checkpoint does not independently enumerate or fingerprint
+Darwin ACL entries. Hostile concurrent ACL changes remain outside its proof.
+Cross-volume copy/restore and irreversible finalization remain refused on Mac.
+The [cross-volume prerequisite](work/111/MACOS_CROSS_VOLUME.md) records the
+missing safe descriptor-bound ACL backend and its proposed preservation and
+verification contract. The refusal applies to the complete plan before
+mutation-capability probes or writable journal/namespace access, including a
+supported same-volume prefix. Authority checks may still read path metadata.
 
 ## Authority and execution
 
@@ -41,7 +71,7 @@ for new runs with a pre-mutation v3 authority binding.
 On the same filesystem, a no-replace atomic rename preserves the file object
 and its ownership, permissions, timestamps, extended attributes and other
 inode properties. The source and destination directories are synchronized.
-Cross-filesystem execution creates an exclusive temporary file in quarantine,
+On Linux, cross-filesystem execution creates an exclusive temporary file in quarantine,
 copies bounded bytes, preserves and checks owner, mode, access/modification
 times and enumerated extended attributes (including ACLs), then synchronizes
 and verifies full content hash and independent byte equality. It refuses
@@ -57,12 +87,13 @@ allocation layout are not portable copy properties; a copy has a new identity.
 Migration 0007 adds `execution_mutation_runs` with strict
 `optiflow.execution-mutation.v2` records. It leaves the dry-run v1 schema and
 rows untouched: a v1 commit still cannot represent source mutation. SQLite
-uses full synchronization under an exclusive OS lock. The run and first
+uses full synchronization under an exclusive OS lock (the stricter Mac policy
+is described above). The run and first
 attempt are recorded before creating a namespace. Each action records its
 phase before and after rename, temporary copy, destination commitment, and
 source removal. A committed action requires a durable, verified destination
 and an absent source. A failure after any attempted filesystem step remains
-`interrupted`; it never becomes a completed run. The next journal opener
+`interrupted` when that terminal record can be saved. The next journal opener
 classifies an abandoned `running` mutation as `interrupted` without changing
 files. Retrying the same plan first recovers its abandoned record, then refuses
 the occupied namespace. `execution::load_mutation(state, run_id)` reads the
@@ -100,3 +131,10 @@ from untrusted concurrent changes. Network filesystems, quotas and remote
 power-loss durability are not qualified. An unsupported property or filesystem
 operation causes an explicit refusal and leaves any temporary copy and journal
 for inspection. There is no permanent deletion, encoding or automatic cleanup.
+
+A synchronization error can occur after SQLite has made a row visible. Status
+reports visible recorded state; it does not independently prove the last device
+flush or power-loss durability. An error is not a rollback guarantee: inspect
+the journal and actual paths even if a visible row says committed or restored.
+The caller propagates the error and stops before the next source action. Native
+fault-injection and disposable-volume qualification remain required under #111.

@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.11
+version: 0.1.13
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-28
+updated: 2026-10-06
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,75 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-06 UTC standalone Mac property-contract checkpoint
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) adds an
+application-owned [cross-copy property declaration contract](docs/execution-macos-copy-properties.md).
+The host-neutral library reviews explicit ACL state, ordered entries, bounded
+xattrs, ownership, mode and exact timestamps, then computes a fingerprint bound
+to its new schema/profile. It neither observes nor mutates files; no old
+fingerprint or execution v1–v4 format is reinterpreted. The schema, synthetic
+example and focused tests are authored, with all executable checks deferred.
+
+This finishes a bounded representation prerequisite, not the native ACL gate.
+The next functional work remains backend qualification/adoption, fresh native
+observations and discriminated journal integration before Mac cross-volume
+copy/restore, finalization and #111's native qualification. #93 still owns the
+release; #95 and #121 remain downstream. The
+[handoff](docs/work/111/HANDOFF.md) owns the exact checkpoint and remaining work.
+
+## 2026-10-06 UTC ACL adapter failure-boundary checkpoint
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) extends the
+proposed dependency with a private native-call transport and authored failure
+cases for denied/unsupported observations, setter errors and failed or unequal
+read-back. Additional native cases cover property preservation and inherited
+destination ACL replacement. These cases remain unrun; the adapter is still
+an inert proposal. Native qualification and dependency adoption must precede
+Mac cross-volume integration and retained-copy finalization. See the
+[adapter packet](docs/work/111/acl-adapter/README.md) for the remaining matrix.
+
+## 2026-10-06 UTC descriptor ACL dependency proposal
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) now contains a
+[pinned exacl extension patch and adoption packet](docs/work/111/acl-adapter/README.md)
+for bounded, lossless descriptor-based Darwin ACL copying and verification.
+This is concrete dependency proposal source, not an adopted library or enabled
+Mac cross-volume path. Native validation, dependency acceptance and Optiflow
+evidence/copy integration remain outstanding. No checks, upstream submission,
+merge or release occurred. The [handoff](docs/work/111/HANDOFF.md) owns the
+remaining sequence.
+
+## 2026-10-06 cross-volume prerequisite and recovery hardening
+
+Draft [PR #122](https://github.com/egohygiene/optiflow/pull/122) continues #111
+with explicit whole-plan Mac refusal coverage and recovery identity checks.
+The cross-volume investigation identified a missing safe descriptor-bound
+Darwin ACL backend. The [proposed adapter contract](docs/work/111/MACOS_CROSS_VOLUME.md)
+specifies preservation, independent verification, bounds and evidence compatibility.
+Cross-volume Mac mutation remains unsupported; this checkpoint does not claim
+that a copy path has been implemented. The same-volume draft still needs all
+deferred checks. See the [handoff](docs/work/111/HANDOFF.md) for the finite sequence.
+
+## 2026-10-05 macOS/APFS first checkpoint
+
+The current candidate starts from `c5dbcd1761e810aea228389b8ba017acc97a411e`.
+PR #113, including the stacked #114 implementation, and Dependabot PRs
+#116–#120 are merged. #112 and #94 are closed; PNG candidate production is
+development source, with real OxiPNG and native qualification still outstanding.
+
+[#111](https://github.com/egohygiene/optiflow/issues/111) now has a bounded
+same-volume macOS/APFS implementation checkpoint: quarantine, operator resume,
+collision-safe restore, and verified empty-namespace cleanup. It is **unvalidated
+draft work**, not a release or completed macOS port. Cross-volume plans and
+finalization remain refused on macOS. No checks or CI were run for this candidate.
+
+The [durable handoff](docs/work/111/HANDOFF.md) owns the remaining finite sequence:
+validate this boundary, implement cross-volume/property preservation and
+finalization parity, then complete native disposable-volume qualification before
+#93's release work. #95 remains gated on #93. The signed v0.1.1 is unchanged and
+read-only. Earlier dated handoffs below are historical snapshots.
 
 ## 2026-09-28 source-preserving PNG candidate review handoff
 

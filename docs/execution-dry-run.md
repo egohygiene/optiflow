@@ -49,9 +49,10 @@ optiflow --no-config --state-directory /local/optiflow-state --json \
 Both documents are create-only: existing destinations are refused. To change a
 selection, policy, scope, location, or limit, create and review a new plan and
 approval. Omitting `--approval` fails with `execution_approval_required`.
-Omitting `--dry-run` selects the separately versioned, Linux-only
+Omitting `--dry-run` selects the separately versioned
 [#91 quarantine transaction](execution-quarantine.md). Review the approval and
-plan before taking that consequential action.
+plan before taking that consequential action. Its #111 macOS/APFS same-volume
+checkpoint remains unvalidated; the published v0.1.1 release is unchanged.
 
 Roots and subtrees can be repeated; overlapping roots or subtrees are rejected.
 If no subtree is given, each declared root is the allowed subtree. The default

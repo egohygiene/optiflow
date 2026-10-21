@@ -13,6 +13,7 @@ pub enum Contract {
     ExecutionFinalizationAuthorization,
     ExecutionFinalizationEvent,
     ExecutionFinalizationStatus,
+    ExecutionMacosCopyProperties,
     ArtifactSet,
     Run,
     Report,
@@ -97,6 +98,9 @@ pub fn schema(contract: Contract) -> Result<Value> {
         }
         Contract::ExecutionFinalizationStatus => {
             include_str!("../schemas/execution-finalization-status-v4.schema.json")
+        }
+        Contract::ExecutionMacosCopyProperties => {
+            include_str!("../schemas/execution-properties-macos-cross-copy-v1.schema.json")
         }
         Contract::ArtifactSet => include_str!("../schemas/artifact-set-v1.schema.json"),
         Contract::Run => include_str!("../schemas/run.schema.json"),

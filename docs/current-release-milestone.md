@@ -49,13 +49,14 @@ all succeeded.
 | --- | --- |
 | Released in `v0.1.0` | Read-only inventory, exact-duplicate proof, conservative reclaimable-byte evidence, and immutable review planning from the released source pin. |
 | Released in `v0.1.1` | Extension, media-profile, bounded PNG library-validation, documentation, performance, filesystem-corpus, and native pilot work from the immutable released source. Each feature retains its documented CLI/library boundary. |
-| Development `main` after #96 | Explicit execution plans and approvals, dry-run validation, Linux-only bounded quarantine, status/resume/restore, and separately authorized finalization of restored retained copies. Not in `v0.1.1`. |
-| Planned | #93 disposable real-volume/native release qualification; #94 candidate production and #95 validated replacement remain separate. |
-| Unsupported | Mutation on macOS, PNG candidate production/replacement, direct original-path deletion, and causal physical-space reclamation claims. |
+| Development source | Explicit execution plans and approvals, dry-run validation, Linux bounded quarantine/recovery/finalization, and merged #94 source-preserving PNG candidates. Not in `v0.1.1`. |
+| Unvalidated #111 candidate | Same-volume macOS/APFS quarantine, resume, restore, and empty cleanup; [checkpoint and deferred checks](work/111/HANDOFF.md). |
+| Planned | Remaining #111 cross-volume work, gated on the [safe ACL adapter prerequisite](work/111/MACOS_CROSS_VOLUME.md), finalization/native qualification, #93 mutation release, and #95 validated PNG replacement. |
+| Unsupported | macOS cross-volume mutation/finalization, PNG source replacement, direct original-path deletion, and causal physical-space reclamation claims. |
 
 Version `0.1.1` is read-only with respect to source media. A review plan is
 evidence for an operator; it is never write authorization. Development `main`
-can mutate on Linux only after explicit execution approval and retains the
+can mutate only after explicit execution approval and retains the
 documented irreversible boundary. The existing signed release workflow refuses
 any new source/version pair until distinct qualification is ready.
 
@@ -97,8 +98,9 @@ has exactly one capability owner.
 | 4 | [#91](https://github.com/egohygiene/optiflow/issues/91) | Bounded exact-duplicate quarantine apply |
 | 5 | [#92](https://github.com/egohygiene/optiflow/issues/92) | Status, resume, restore, cleanup, and fault recovery |
 | 6 | [#96](https://github.com/egohygiene/optiflow/issues/96) | Separately authorized quarantine finalization |
+| Before mutation release | [#111](https://github.com/egohygiene/optiflow/issues/111) | macOS/APFS port and native qualification; same-volume draft checkpoint first |
 | 7 | [#93](https://github.com/egohygiene/optiflow/issues/93) | Removable-volume qualification and signed exact-deduplication `v0.2.0` |
-| Parallel after relevant #65 fixtures | [#94](https://github.com/egohygiene/optiflow/issues/94) | Bounded, source-preserving OxiPNG candidate production |
+| Merged through #113/#114 | [#94](https://github.com/egohygiene/optiflow/issues/94) | Source-preserving OxiPNG candidate implementation; real-provider/native qualification remains outstanding |
 | Join after #93 and #94 | [#95](https://github.com/egohygiene/optiflow/issues/95) | Transactional validated lossless PNG replacement and signed `v0.3.0` |
 
 The strict dependency shape is:

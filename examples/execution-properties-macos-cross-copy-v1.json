@@ -1,0 +1,40 @@
+{
+  "schema": "optiflow.execution-properties-macos-cross-copy.v1",
+  "profile": "macos-apfs-cross-copy/v1",
+  "uid": 501,
+  "gid": 20,
+  "mode": 33188,
+  "mtime": {
+    "seconds": 0,
+    "nanoseconds": 0
+  },
+  "birthtime": {
+    "seconds": 0,
+    "nanoseconds": 0
+  },
+  "bsd_flags": 0,
+  "xattrs": [
+    {
+      "name_hex": "636f6d2e6578616d706c65",
+      "value_hex": "73796e746865746963"
+    }
+  ],
+  "acl": {
+    "state": "present",
+    "flags": 0,
+    "entries": [
+      {
+        "principal_hex": "00000000000000000000000000000001",
+        "kind": "allow",
+        "flags": 16,
+        "permissions": 2
+      },
+      {
+        "principal_hex": "00000000000000000000000000000001",
+        "kind": "deny",
+        "flags": 0,
+        "permissions": 4
+      }
+    ]
+  }
+}
