@@ -1,0 +1,987 @@
+{
+  "schema": "optiflow.audit-validation.v1",
+  "source_revision": "c8eeab8a647f8f7598a06cb12a8bb38e53c5143b",
+  "frozen_provider_at": "2026-10-21T02:35:54.315Z",
+  "scope": "Public normalized audit receipts; full issue bodies and raw host logs are not embedded.",
+  "toolchain": {
+    "requested": "1.85.0",
+    "rustc": "rustc 1.85.0 (4d91de4e4 2025-02-17)",
+    "cargo": "cargo 1.85.0 (d73d2caf9 2024-12-31)",
+    "qualification": "explicit MSRV on Linux; moving stable/macOS not locally qualified"
+  },
+  "local_initial": {
+    "source_revision": "c8eeab8a647f8f7598a06cb12a8bb38e53c5143b",
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "receipts": [
+      {
+        "name": "filesystem-corpus-check",
+        "command": [
+          "python3",
+          "scripts/filesystem-corpus.py",
+          "--check",
+          "--tier",
+          "pr"
+        ],
+        "started_at": "2026-10-21T02:41:15.525378+00:00",
+        "elapsed_seconds": 0.044,
+        "exit_code": 2,
+        "executed": true,
+        "log_sha256": "f52d3c2cebc0539627bff72e6752eca1d0eb0750664aa42933afb5843e043028",
+        "log_bytes": 229
+      },
+      {
+        "name": "png-corpus-check",
+        "command": [
+          "python3",
+          "scripts/png-corpus.py",
+          "--check"
+        ],
+        "started_at": "2026-10-21T02:41:15.569175+00:00",
+        "elapsed_seconds": 0.046,
+        "exit_code": 0,
+        "executed": true,
+        "log_sha256": "327abbed122a2105345d5e4dca2afcbe49a735fb1f05d0509ef88aca0559cc8c",
+        "log_bytes": 39
+      },
+      {
+        "name": "python-unit-tests-initial",
+        "command": [
+          "python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests",
+          "-p",
+          "test_*.py",
+          "-v"
+        ],
+        "started_at": "2026-10-21T02:41:15.615060+00:00",
+        "elapsed_seconds": 0.947,
+        "exit_code": 1,
+        "executed": true,
+        "log_sha256": "e1fa3ce1f1aa562e27e1733243873cee6f931a59fec7704c0dc80e571a86ae94",
+        "log_bytes": 7482
+      },
+      {
+        "name": "generated-extension-docs",
+        "command": [
+          "python3",
+          "scripts/generate-extension-docs.py",
+          "--check"
+        ],
+        "started_at": "2026-10-21T02:41:16.561831+00:00",
+        "elapsed_seconds": 0.027,
+        "exit_code": 0,
+        "executed": true,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "log_bytes": 0
+      }
+    ]
+  },
+  "local_msrv": {
+    "source_revision": "c8eeab8a647f8f7598a06cb12a8bb38e53c5143b",
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "toolchain": "Rust 1.85.0 explicit MSRV",
+    "receipts": [
+      {
+        "name": "rust-version",
+        "command": [
+          "rustc",
+          "--version"
+        ],
+        "started_at": "2026-10-21T02:44:48.403738+00:00",
+        "elapsed_seconds": 0.016,
+        "exit_code": 0,
+        "executed": true,
+        "log_sha256": "8b146e8b52156f761a0981cbb12f8bd3bff8dc528f16cfcddc8791d55a1acb6f",
+        "log_bytes": 36
+      },
+      {
+        "name": "cargo-version",
+        "command": [
+          "cargo",
+          "--version"
+        ],
+        "started_at": "2026-10-21T02:44:48.426797+00:00",
+        "elapsed_seconds": 0.016,
+        "exit_code": 0,
+        "executed": true,
+        "log_sha256": "2d3bc7bb1b2e9f3bfeadb1b2a370e8462c3c3a0bc7481c2d8d5fa4e6953465bf",
+        "log_bytes": 36
+      },
+      {
+        "name": "rust-all-target-tests-msrv",
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--all-targets",
+          "--jobs",
+          "2"
+        ],
+        "started_at": "2026-10-21T02:44:48.445447+00:00",
+        "elapsed_seconds": 114.475,
+        "exit_code": 0,
+        "executed": true,
+        "log_sha256": "533bed4706ad050f29c0c074e2b125978c352ef7868a0f9aa8e6a91f05ac2f14",
+        "log_bytes": 35487
+      },
+      {
+        "name": "python-unit-tests-msrv",
+        "command": [
+          "python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests",
+          "-p",
+          "test_*.py",
+          "-v"
+        ],
+        "started_at": "2026-10-21T02:46:42.922676+00:00",
+        "elapsed_seconds": 5.682,
+        "exit_code": 0,
+        "executed": true,
+        "log_sha256": "01f8eb9af407ed4cd71bbb0552303b1b228e3753b03fac254354e0e87f83211d",
+        "log_bytes": 4558
+      }
+    ]
+  },
+  "identity_source_only": {
+    "source_revision": "c8eeab8a647f8f7598a06cb12a8bb38e53c5143b",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "tests.identity_integration",
+      "--verbose"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.061,
+    "summary": "4 passed; 2 skipped because pinned submodule and generated package are not prepared in audit checkout",
+    "log_sha256": "868683293d61debcea7fa9c45c0df35b7952b9e612757f88492eba46b9eca9ff"
+  },
+  "filesystem_index_diff": {
+    "source_revision": "c8eeab8a647f8f7598a06cb12a8bb38e53c5143b",
+    "differing_fields": {
+      "cargo_lock_sha256": {
+        "committed": "4e1f382de4f48c85705713b61d25890de6865fa517153d6afcd0b3cc1ac42306",
+        "computed": "1c77b5517da29ef329ee2199dd4c11f644f30b9faac3630c1338c5d807a9ea3e"
+      }
+    },
+    "canonical_files_written": false
+  },
+  "rust_test_summary": {
+    "passed": 277,
+    "failed": 0,
+    "ignored": 1,
+    "test_binaries": 19,
+    "ignored_note": "scheduled corpus case; not counted passed"
+  },
+  "hosted_checks": [
+    {
+      "name": "Pull-request supply-chain review",
+      "conclusion": "skipped",
+      "job_id": 118124681667,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39271495563/job/118124681667",
+      "started_at": "2026-10-19T14:43:14Z",
+      "completed_at": "2026-10-19T14:43:13Z"
+    },
+    {
+      "name": "Reproducible release evidence contract",
+      "conclusion": "success",
+      "job_id": 118124679214,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39271495563/job/118124679214",
+      "started_at": "2026-10-19T14:43:16Z",
+      "completed_at": "2026-10-19T14:43:33Z"
+    },
+    {
+      "name": "Licenses, advisories, bans, and sources (Cargo.toml)",
+      "conclusion": "success",
+      "job_id": 118124679118,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39271495563/job/118124679118",
+      "started_at": "2026-10-19T14:43:16Z",
+      "completed_at": "2026-10-19T14:43:52Z"
+    },
+    {
+      "name": "Licenses, advisories, bans, and sources (fuzz/Cargo.toml)",
+      "conclusion": "success",
+      "job_id": 118124679107,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39271495563/job/118124679107",
+      "started_at": "2026-10-19T14:43:16Z",
+      "completed_at": "2026-10-19T14:43:49Z"
+    },
+    {
+      "name": "Verified and unknown secret scan",
+      "conclusion": "success",
+      "job_id": 118124678982,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39271495563/job/118124678982",
+      "started_at": "2026-10-19T14:43:17Z",
+      "completed_at": "2026-10-19T14:43:31Z"
+    },
+    {
+      "name": "Bounded parser and reader fuzzing",
+      "conclusion": "skipped",
+      "job_id": 118021831301,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39241102039/job/118021831301",
+      "started_at": "2026-10-19T10:57:02Z",
+      "completed_at": "2026-10-19T10:57:02Z"
+    },
+    {
+      "name": "Properties and faults (${{ matrix.os }})",
+      "conclusion": "skipped",
+      "job_id": 118021830799,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39241102039/job/118021830799",
+      "started_at": "2026-10-19T10:57:02Z",
+      "completed_at": "2026-10-19T10:57:02Z"
+    },
+    {
+      "name": "Scheduled filesystem corpus (Linux)",
+      "conclusion": "failure",
+      "job_id": 118021829401,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39241102039/job/118021829401",
+      "started_at": "2026-10-19T10:57:05Z",
+      "completed_at": "2026-10-19T10:57:23Z"
+    },
+    {
+      "name": "Deploy public site",
+      "conclusion": "success",
+      "job_id": 117794966165,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986242/job/117794966165",
+      "started_at": "2026-10-18T21:28:52Z",
+      "completed_at": "2026-10-18T21:29:04Z"
+    },
+    {
+      "name": "Scheduled filesystem corpus (Linux)",
+      "conclusion": "skipped",
+      "job_id": 117794892851,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986172/job/117794892851",
+      "started_at": "2026-10-18T21:28:28Z",
+      "completed_at": "2026-10-18T21:28:27Z"
+    },
+    {
+      "name": "Pull-request supply-chain review",
+      "conclusion": "skipped",
+      "job_id": 117794892333,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986168/job/117794892333",
+      "started_at": "2026-10-18T21:28:28Z",
+      "completed_at": "2026-10-18T21:28:27Z"
+    },
+    {
+      "name": "Compose Pages artifact",
+      "conclusion": "success",
+      "job_id": 117794892076,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986242/job/117794892076",
+      "started_at": "2026-10-18T21:28:31Z",
+      "completed_at": "2026-10-18T21:28:48Z"
+    },
+    {
+      "name": "Bounded parser and reader fuzzing",
+      "conclusion": "success",
+      "job_id": 117794892032,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986172/job/117794892032",
+      "started_at": "2026-10-18T21:28:47Z",
+      "completed_at": "2026-10-18T21:33:52Z"
+    },
+    {
+      "name": "Properties and faults (macos-latest)",
+      "conclusion": "failure",
+      "job_id": 117794891983,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986172/job/117794891983",
+      "started_at": "2026-10-18T21:28:38Z",
+      "completed_at": "2026-10-18T21:30:07Z"
+    },
+    {
+      "name": "Minimum supported Rust (1.85)",
+      "conclusion": "success",
+      "job_id": 117794891863,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986165/job/117794891863",
+      "started_at": "2026-10-18T21:28:34Z",
+      "completed_at": "2026-10-18T21:29:16Z"
+    },
+    {
+      "name": "Read-only performance budgets",
+      "conclusion": "success",
+      "job_id": 117794891841,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986165/job/117794891841",
+      "started_at": "2026-10-18T21:28:45Z",
+      "completed_at": "2026-10-18T21:31:48Z"
+    },
+    {
+      "name": "Validate (macos-latest)",
+      "conclusion": "failure",
+      "job_id": 117794891823,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986165/job/117794891823",
+      "started_at": "2026-10-18T21:28:34Z",
+      "completed_at": "2026-10-18T21:29:39Z"
+    },
+    {
+      "name": "Verified and unknown secret scan",
+      "conclusion": "success",
+      "job_id": 117794891784,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986168/job/117794891784",
+      "started_at": "2026-10-18T21:28:31Z",
+      "completed_at": "2026-10-18T21:28:47Z"
+    },
+    {
+      "name": "Licenses, advisories, bans, and sources (Cargo.toml)",
+      "conclusion": "success",
+      "job_id": 117794891778,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986168/job/117794891778",
+      "started_at": "2026-10-18T21:28:31Z",
+      "completed_at": "2026-10-18T21:29:06Z"
+    },
+    {
+      "name": "Licenses, advisories, bans, and sources (fuzz/Cargo.toml)",
+      "conclusion": "success",
+      "job_id": 117794891761,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986168/job/117794891761",
+      "started_at": "2026-10-18T21:28:30Z",
+      "completed_at": "2026-10-18T21:29:09Z"
+    },
+    {
+      "name": "Properties and faults (ubuntu-latest)",
+      "conclusion": "failure",
+      "job_id": 117794891710,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986172/job/117794891710",
+      "started_at": "2026-10-18T21:28:30Z",
+      "completed_at": "2026-10-18T21:29:21Z"
+    },
+    {
+      "name": "Validate (ubuntu-latest)",
+      "conclusion": "success",
+      "job_id": 117794891647,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986165/job/117794891647",
+      "started_at": "2026-10-18T21:28:30Z",
+      "completed_at": "2026-10-18T21:30:41Z"
+    },
+    {
+      "name": "Reproducible release evidence contract",
+      "conclusion": "success",
+      "job_id": 117794891566,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986168/job/117794891566",
+      "started_at": "2026-10-18T21:28:30Z",
+      "completed_at": "2026-10-18T21:28:47Z"
+    },
+    {
+      "name": "Build static site",
+      "conclusion": "success",
+      "job_id": 117794891340,
+      "url": "https://github.com/egohygiene/optiflow/actions/runs/39167986080/job/117794891340",
+      "started_at": "2026-10-18T21:28:31Z",
+      "completed_at": "2026-10-18T21:28:45Z"
+    }
+  ],
+  "hosted_failure_log_identities": [
+    {
+      "job_id": 117794891823,
+      "sha256": "34c1ebff8df0513588281bc59653d74e33202d6ef81dd24fbeb29c5eb524c0a4",
+      "bytes": 94120
+    },
+    {
+      "job_id": 117794891710,
+      "sha256": "6cf82fecfce383da4b3e873a16afb1a6d9cf0d56c66dd30883b6a273ae264a8f",
+      "bytes": 69569
+    },
+    {
+      "job_id": 117794891983,
+      "sha256": "2ac7e3f87107890d8915c56652256b397cdd0120db629b78c876ce083f19d012",
+      "bytes": 70274
+    },
+    {
+      "job_id": 118021829401,
+      "sha256": "fbb9a4e9f7c1e16aeede8347be8664c61c738accdf28439e71583de96d2b2dcb",
+      "bytes": 34362
+    }
+  ],
+  "not_performed": [
+    "macOS/APFS native qualification",
+    "real OxiPNG qualification",
+    "physical volumes/interruption/disconnect",
+    "new release/signature verification",
+    "Identity package/compiler validation",
+    "local rustfmt or Clippy",
+    "production browser/DNS/TLS verification",
+    "real user media operations"
+  ],
+  "audit": {
+    "id": "flow-suite-20261021T025401Z",
+    "repository": "egohygiene/optiflow",
+    "branch": "audit/flow-suite-20261021T025401Z",
+    "report_path": "audits/flow-suite-20261021T025401Z.md",
+    "receipt_path": "audits/flow-suite-20261021T025401Z.json",
+    "report_url": "https://github.com/egohygiene/optiflow/blob/audit/flow-suite-20261021T025401Z/audits/flow-suite-20261021T025401Z.md",
+    "roadmap_url": "https://github.com/egohygiene/optiflow/issues/135",
+    "scope": "Repository planning audit, issue coverage and complete roadmap; not #61 post-roadmap closeout",
+    "publication_authority": "Root-owned publication workflow; product source unchanged during this audit",
+    "status": "partial",
+    "completion": {
+      "inspected_scope": "Repository planning inventory, representative source boundaries, complete9issue reconciliation, draft122 patches, current hosted evidence and safe Linux MSRV/Python/source-only Identity checks.",
+      "missing_scope": [
+        "native macOS/APFS and second-format qualification",
+        "physical interruption/disconnect and removable-volume behavior",
+        "real OxiPNG qualification",
+        "fresh signed release consumption",
+        "full Identity compiler/package verification",
+        "fresh production browser/DNS/TLS and accessibility runtime qualification",
+        "local moving-stable/rustfmt/Clippy validation"
+      ],
+      "reason": "These qualification scopes were unavailable or intentionally deferred in this planning-only synthetic audit; each relevant product outcome remains gated in its owning issue.",
+      "continuation": "Use the saved roadmap and owning issues to perform one separately authorized bounded checkpoint on a live source pin, with required native/tools/qualification hosts and fresh receipts. This partial report does not close61 or declare release readiness."
+    }
+  },
+  "findings": [
+    {
+      "id": "AUDIT-001",
+      "title": "Filesystem corpus lock binding is stale",
+      "classification": "confirmed defect",
+      "severity": "medium",
+      "confidence": "high",
+      "status": "confirmed",
+      "area": "validation/provenance",
+      "effort": "small",
+      "impact": "medium",
+      "observation": "The committed index differs from the in-memory generated index only in cargo_lock_sha256; local --check exits2 and exact-source hosted Linux/macOS/scheduled jobs show the same drift.",
+      "evidence": [
+        "https://github.com/egohygiene/optiflow/blob/c8eeab8a647f8f7598a06cb12a8bb38e53c5143b/scripts/filesystem-corpus.py",
+        "https://github.com/egohygiene/optiflow/blob/c8eeab8a647f8f7598a06cb12a8bb38e53c5143b/tests/fixtures/filesystem/index.json",
+        "https://github.com/egohygiene/optiflow/actions/runs/39241102039/job/118021829401"
+      ],
+      "recommendation": "Review and reconcile the dependency binding without weakening drift detection, exact dependency provenance, fixture proof identity or read-only CI.",
+      "validation": "Confirmed local index refusal and structural diff; corpus itself not executed by --check.",
+      "coverage": {
+        "existing_numbers": [
+          65
+        ],
+        "new_keys": [
+          "opt-corpus-lock"
+        ]
+      },
+      "dependencies": [],
+      "risks": [
+        "Resolve chosen dependency PR lockfile first; do not blindly regenerate proof entries."
+      ],
+      "impact_detail": "Current PR and scheduled filesystem corpus checks refuse before corpus execution.",
+      "why_it_matters": "Current PR and scheduled filesystem corpus checks refuse before corpus execution.",
+      "prior_audit_classification": "new",
+      "prior_audit_note": "Not reported as this specific regression in immutable .audits/2026-08-20-roadmap-reconciliation.md; this audit does not alter that historical record."
+    },
+    {
+      "id": "AUDIT-002",
+      "title": "Candidate-artifact unit fixtures fail on macOS temporary paths",
+      "classification": "confirmed defect",
+      "severity": "medium",
+      "confidence": "high",
+      "status": "confirmed",
+      "area": "platform validation",
+      "effort": "small",
+      "impact": "medium",
+      "observation": "Eight candidate_artifact unit cases fail on /var-aliased temporary paths. private_root uses tempdir while the strict production directory walk refuses symlink components. PNG integration fixtures already choose a canonical system temporary root.",
+      "evidence": [
+        "https://github.com/egohygiene/optiflow/blob/c8eeab8a647f8f7598a06cb12a8bb38e53c5143b/src/candidate_artifact.rs",
+        "https://github.com/egohygiene/optiflow/blob/c8eeab8a647f8f7598a06cb12a8bb38e53c5143b/tests/png_production.rs",
+        "https://github.com/egohygiene/optiflow/actions/runs/39167986165/job/117794891823"
+      ],
+      "recommendation": "Fix ordinary disposable fixture roots and retain explicit adversarial symlink tests and all production no-follow checks.",
+      "validation": "Hosted native failure log inspected; Linux MSRV unit cases pass. No local macOS or application-bypass claim.",
+      "coverage": {
+        "existing_numbers": [
+          65
+        ],
+        "new_keys": [
+          "opt-macos-fixture"
+        ]
+      },
+      "dependencies": [],
+      "risks": [
+        "Native macOS required to verify the repair; no transaction/APFS qualification inferred."
+      ],
+      "confidence_detail": "high for observed hosted failure and fixture cause; repair unverified",
+      "impact_detail": "Supported macOS Validate job fails before completing remaining checks.",
+      "why_it_matters": "Supported macOS Validate job fails before completing remaining checks.",
+      "prior_audit_classification": "new",
+      "prior_audit_note": "Not reported as this specific regression in immutable .audits/2026-08-20-roadmap-reconciliation.md; this audit does not alter that historical record."
+    },
+    {
+      "id": "AUDIT-003",
+      "title": "Current milestone and capability prose lag merged implementation",
+      "classification": "documentation gap",
+      "severity": "low",
+      "confidence": "high",
+      "status": "confirmed",
+      "area": "operator navigation",
+      "effort": "small",
+      "impact": "low",
+      "observation": "Current-main README and current-release-milestone lag merged #94/#112. Draft122 already fixes most rows and README; its diff leaves the #90 next-checkpoint paragraph.",
+      "evidence": [
+        "https://github.com/egohygiene/optiflow/blob/c8eeab8a647f8f7598a06cb12a8bb38e53c5143b/docs/current-release-milestone.md",
+        "https://github.com/egohygiene/optiflow/pull/122"
+      ],
+      "recommendation": "Reconcile remaining current claims during existing #111/#122 documentation handoff, preserve historic snapshot sections and distinguish shipped/main/draft/qualified state.",
+      "validation": "Compared frozen main with exact draft122 changed-file patches. No docs/product changes made.",
+      "coverage": {
+        "existing_numbers": [
+          111,
+          61
+        ],
+        "new_keys": []
+      },
+      "dependencies": [],
+      "risks": [
+        "Avoid duplicate doc work and unvalidated native support claims."
+      ],
+      "coverage_disposition": "covered in flight by existing111/122 docs handoff and later61 closeout; no duplicate issue",
+      "impact_detail": "Current prose points at delivered #90 and treats merged PNG candidate production as planned or unsupported.",
+      "why_it_matters": "Current prose points at delivered #90 and treats merged PNG candidate production as planned or unsupported.",
+      "prior_audit_classification": "new",
+      "prior_audit_note": "Not reported as this specific regression in immutable .audits/2026-08-20-roadmap-reconciliation.md; this audit does not alter that historical record."
+    }
+  ],
+  "original_issues": [
+    {
+      "number": 60,
+      "id": 5434787867,
+      "node_id": "I_kwDOTvGBec8AAAABQ_BIGw",
+      "url": "https://github.com/egohygiene/optiflow/issues/60",
+      "title": "Backfill repository ADR history and enable continuous decision capture",
+      "title_sha256": "c6adbea8a212c168ee4d3c69447eff3407c7b9b46a75e5883ad46634f343a685",
+      "body_sha256": "e5257cb87975253f95b26ecfefa3d52dbcdba87708d95a0b3a9a66e95ed6825a",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-09-12T17:05:08Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 61,
+      "id": 5442197130,
+      "node_id": "I_kwDOTvGBec8AAAABRGFWig",
+      "url": "https://github.com/egohygiene/optiflow/issues/61",
+      "title": "[Audit] Post-roadmap repository, backlog, and Identity audit",
+      "title_sha256": "dff8e95bb0018fac40b981f383232abd10cbc05f3b2b8eeaf7cfe6f75307f627",
+      "body_sha256": "51dc530b817c988c8f2e104e17cccc6b24b7f5f2411b2508d20efbca37bb4e26",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-09-13T19:19:33Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 65,
+      "id": 5461174567,
+      "node_id": "I_kwDOTvGBec8AAAABRYLpJw",
+      "url": "https://github.com/egohygiene/optiflow/issues/65",
+      "title": "Build a deterministic adversarial file and media corpus",
+      "title_sha256": "9ce9f18cb2955bf5aec5f521b49c535c812ebbab3a1460cf912d32b9441c87e1",
+      "body_sha256": "4134457050e2d6eb37946d76ce33d831adca062fd7d8e3639f847b3853276648",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-09-26T19:21:35Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 93,
+      "id": 5543129703,
+      "node_id": "I_kwDOTvGBec8AAAABSmVyZw",
+      "url": "https://github.com/egohygiene/optiflow/issues/93",
+      "title": "[Release] Qualify removable-volume exact deduplication and publish v0.2.0",
+      "title_sha256": "49eac0ca28c32518ff4e289efa74a3610721594a0b13cb49cab9a813af7654b7",
+      "body_sha256": "c3f4dd5e6b2c47c540fc62e645e36ced381718ebb5768ffb7dd033dae3e0af63",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-09-27T14:22:50Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 95,
+      "id": 5543129903,
+      "node_id": "I_kwDOTvGBec8AAAABSmVzLw",
+      "url": "https://github.com/egohygiene/optiflow/issues/95",
+      "title": "[OPT-Q05.6] Apply validated lossless PNG replacements through the transaction engine",
+      "title_sha256": "8d3f2d5977dcaead9ebe4552755d44ad7a4e17935ca964659044f040f8952894",
+      "body_sha256": "d5ec2d64b90ead7c17353c5cd761ca89cc93d57d8276609b5a8cc43dbc66102b",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-09-22T17:52:55Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 111,
+      "id": 5603400652,
+      "node_id": "I_kwDOTvGBec8AAAABTf0bzA",
+      "url": "https://github.com/egohygiene/optiflow/issues/111",
+      "title": "[OPT-Q05] Port bounded exact-dedup mutation and recovery to macOS/APFS",
+      "title_sha256": "ed00faa90efd863aceffb325b56f9d0e59d263490f64828f6fa5099cd6125e8d",
+      "body_sha256": "897cd25ce3ea7cd8b16809fd20bcc1a2f7deffba1f26a4a6b6d71258379e60f2",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-10-06T17:33:14Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 115,
+      "id": 5621410591,
+      "node_id": "I_kwDOTvGBec8AAAABTw_rHw",
+      "url": "https://github.com/egohygiene/optiflow/issues/115",
+      "title": "🏷️ [Release checkpoint] Adopt product-facing names after Relay publishes the contract",
+      "title_sha256": "4cd69bb4c6c61cbfccf1022b61088550ffce3db137970b730bb51e74975a7cb5",
+      "body_sha256": "d574f0aa048fda2e47965e53e1566d8927f384de5df31e40773cb64b7791dd31",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-09-28T21:21:26Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 121,
+      "id": 5713443814,
+      "node_id": "I_kwDOTvGBec8AAAABVIw75g",
+      "url": "https://github.com/egohygiene/optiflow/issues/121",
+      "title": "Add recursive low-space optimization with explicitly authorized original disposal",
+      "title_sha256": "58e6cfe9fc2621a09e432f4e031a2e96caf4659992b022440972aaccb1a2a912",
+      "body_sha256": "f0864b1d50ae5466548c2aa4901219c22c4fd815409f60edd2be33a828cc9b9f",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-10-05T14:05:25Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    },
+    {
+      "number": 133,
+      "id": 5903783491,
+      "node_id": "I_kwDOTvGBec8AAAABX-SWQw",
+      "url": "https://github.com/egohygiene/optiflow/issues/133",
+      "title": "[AI] Add optional explanations of immutable inventory and optimization evidence",
+      "title_sha256": "bc86ccd0de58286dd9a7c3d951fcb236cfa0ff27ff70723abeb67ed3e8335c20",
+      "body_sha256": "786210dab2f9e37e0d2d41342ab4f41403596812a9817c60b451689d8a631448",
+      "labels": [],
+      "labels_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "state_at_snapshot": "open",
+      "updated_at_snapshot": "2026-10-17T22:31:53Z",
+      "native_parent_at_snapshot": null,
+      "native_children_at_snapshot": [],
+      "identity_scope": "Exact original title/body/label names; no raw issue body embedded"
+    }
+  ],
+  "issue_coverage": [
+    {
+      "number": 60,
+      "readiness": "gated",
+      "assessment": "Preserve explicit shared-system/human-authority gate, legacy OFD history and migration decisions.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 61,
+      "readiness": "deferred",
+      "assessment": "Future post-roadmap closeout remains open. This planning audit is an input and does not satisfy later native/release/site/Identity evidence.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 65,
+      "readiness": "ready",
+      "assessment": "Current supported-contract fixture tranches and both focused regressions can start. Broader families stay owned here without becoming a new v0.2 prerequisite.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 93,
+      "readiness": "gated",
+      "assessment": "Requires completed native port and separate physical-volume/install/upgrade/signing/independent release evidence; synthetic prep is insufficient.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 95,
+      "readiness": "gated",
+      "assessment": "Separate replacement/v0.3 join after qualified exact-dedup and merged production; retain reversible quarantine and exact byte validation.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 111,
+      "readiness": "bounded_start_ready_full_outcome_gated",
+      "assessment": "Review/test the existing unvalidated draft122, then preserve its safe backend/property-evidence/cross-volume/finalization/native sequence.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 115,
+      "readiness": "bounded_start_ready_full_outcome_gated",
+      "assessment": "Preserve .github20 textual Program/Parent history; compatible immutable producer publication remains required for adoption.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 121,
+      "readiness": "gated",
+      "assessment": "Later low-space/explicit disposal contract after replacement; proposed CLI is not implemented authority.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "number": 133,
+      "readiness": "bounded_start_ready_full_outcome_gated",
+      "assessment": "Optional fake-backend immutable-evidence sidecar can start; suite profile/runtime/credential integration follows independently.",
+      "disposition": "preserve open; original outcome and history unchanged"
+    },
+    {
+      "new_key": "opt-corpus-lock",
+      "finding_ids": [
+        "AUDIT-001"
+      ],
+      "parent_existing": 65,
+      "ready_for_implementation": true,
+      "full_outcome_gate": null,
+      "url": "https://github.com/egohygiene/optiflow/issues/136"
+    },
+    {
+      "new_key": "opt-macos-fixture",
+      "finding_ids": [
+        "AUDIT-002"
+      ],
+      "parent_existing": 65,
+      "ready_for_implementation": true,
+      "full_outcome_gate": null,
+      "url": "https://github.com/egohygiene/optiflow/issues/137"
+    }
+  ],
+  "evidence": {
+    "dependency_records": [
+      {
+        "url": "https://github.com/egohygiene/relay/issues/71",
+        "number": 71,
+        "title": "Separate consumer release names from validation profiles",
+        "state": "open",
+        "closed_at": null,
+        "updated_at": "2026-09-28T21:26:23Z",
+        "body_sha256": "baff3a61e87ce44dfa5665c56ec8963216eb530b975f6272f75849ead973025e"
+      },
+      {
+        "url": "https://github.com/egohygiene/flow/issues/11",
+        "number": 11,
+        "title": "[EPIC] Finish the flow suite and prove production-ready orchestration",
+        "state": "open",
+        "closed_at": null,
+        "updated_at": "2026-10-06T16:22:14Z",
+        "body_sha256": "fa759f75b779ceea3b74afc73b674191b84d9a8e7357953d02748262eefe2685"
+      },
+      {
+        "url": "https://github.com/egohygiene/hygiene/issues/15",
+        "number": 15,
+        "title": "Define the global Architecture Decision Record standard and inheritance contract",
+        "state": "closed",
+        "closed_at": "2026-09-12T17:22:26Z",
+        "updated_at": "2026-09-12T17:22:26Z",
+        "body_sha256": "62b413fc82df7f52e01024e8d9f892b236687bad566df0936d5bbe9ba3c300ac"
+      },
+      {
+        "url": "https://github.com/egohygiene/holon/issues/6",
+        "number": 6,
+        "title": "Add ADR scaffolding and inherited repository decision policy",
+        "state": "closed",
+        "closed_at": "2026-09-12T19:00:28Z",
+        "updated_at": "2026-09-12T19:00:28Z",
+        "body_sha256": "58102ce406f3ac92dfb0d758f497bc5572f243bd74129a285f7658f7d5f8e59d"
+      },
+      {
+        "url": "https://github.com/egohygiene/relay/issues/5",
+        "number": 5,
+        "title": "Validate architecture and repository structure in CI",
+        "state": "open",
+        "closed_at": null,
+        "updated_at": "2026-08-22T19:27:29Z",
+        "body_sha256": "b958072829c7010b86bd7718f865a94f241a3d7c77d0a95db38c2bf18e850f94"
+      },
+      {
+        "url": "https://github.com/egohygiene/relay/issues/27",
+        "number": 27,
+        "title": "Build the Repository Intelligence experience",
+        "state": "open",
+        "closed_at": null,
+        "updated_at": "2026-09-26T20:32:17Z",
+        "body_sha256": "2681b58df7ae73bb8be6408c9bdfb6cd71b0790de6cf4b7940d9083538bf8aa6"
+      },
+      {
+        "url": "https://github.com/egohygiene/relay/issues/33",
+        "number": 33,
+        "title": "Publish deterministic Repository Intelligence through reusable GitHub Actions",
+        "state": "open",
+        "closed_at": null,
+        "updated_at": "2026-09-26T18:09:34Z",
+        "body_sha256": "8df873b1fcfb526df5152d802b3b9bb7491081dc58004b974b4848b5c5e055d6"
+      },
+      {
+        "url": "https://github.com/egohygiene/pace/issues/5",
+        "number": 5,
+        "title": "[Capability 1] Roll out and reconcile the ADR baseline and Decisions views across the fleet",
+        "state": "open",
+        "closed_at": null,
+        "updated_at": "2026-10-10T19:49:15Z",
+        "body_sha256": "b2f7b2fe52f9d77b5dc699a59ae94c3c685b191ed5ea8a65cb0286649fe07b95"
+      },
+      {
+        "url": "https://github.com/egohygiene/optiflow/issues/25",
+        "number": 25,
+        "title": "Reconcile the audit roadmap with shipped product-site work",
+        "state": "closed",
+        "closed_at": "2026-08-20T14:04:01Z",
+        "updated_at": "2026-08-20T14:04:01Z",
+        "body_sha256": "0c2d1fbfe5a7e79df6479d44c5ab421aa8f0074be07580610f93e9aea6949226"
+      },
+      {
+        "url": "https://github.com/egohygiene/optiflow/issues/51",
+        "number": 51,
+        "title": "[Extensions] Add a safe plugin SDK for inspectors, analyzers, planners, and validators",
+        "state": "closed",
+        "closed_at": "2026-09-14T00:27:54Z",
+        "updated_at": "2026-09-14T00:27:54Z",
+        "body_sha256": "93a25460ed7250c88c0a27a09abc65b6ff9fe3fd36ec12fcf7e81cc10ac23226"
+      },
+      {
+        "url": "https://github.com/egohygiene/optiflow/issues/94",
+        "number": 94,
+        "title": "[OPT-Q05.5] Produce bounded, source-preserving OxiPNG candidates",
+        "state": "closed",
+        "closed_at": "2026-10-05T20:22:46Z",
+        "updated_at": "2026-10-05T20:22:47Z",
+        "body_sha256": "64b028a0c4c18574e1d39992d68fc67ac8bbe11ce65f24417f62734f88ce007a"
+      },
+      {
+        "url": "https://github.com/egohygiene/optiflow/issues/112",
+        "number": 112,
+        "title": "[Checkpoint 65.2] Add deterministic PNG candidate and provider corpus for #94",
+        "state": "closed",
+        "closed_at": "2026-10-05T20:22:46Z",
+        "updated_at": "2026-10-05T20:22:46Z",
+        "body_sha256": "433bb595d4cb63b63b18819e8dd5ea57aa7eba4c8c8c6d358c246ab111989613"
+      },
+      {
+        "url": "https://github.com/egohygiene/optiflow/issues/92",
+        "number": 92,
+        "title": "[OPT-Q05.3] Add execution status, resume, restore, cleanup, and fault recovery",
+        "state": "closed",
+        "closed_at": "2026-09-27T08:34:17Z",
+        "updated_at": "2026-09-27T08:34:17Z",
+        "body_sha256": "85c0342702e16107a512b2a5806c5d26fede6160a2bb3f7a9def53a499f2cbe3"
+      },
+      {
+        "url": "https://github.com/egohygiene/optiflow/issues/96",
+        "number": 96,
+        "title": "[OPT-Q05.4] Add separately authorized finalization of reviewed quarantine",
+        "state": "closed",
+        "closed_at": "2026-09-27T09:45:48Z",
+        "updated_at": "2026-09-27T09:45:48Z",
+        "body_sha256": "80af7b3e06f931fcb6d602e80464275d352110c93326dda3d8e70e780d5fb68a"
+      }
+    ],
+    "hierarchy": {
+      "observed_at": "2026-10-21T02:40:28.457Z",
+      "original_numbers": [
+        60,
+        61,
+        65,
+        93,
+        95,
+        111,
+        115,
+        121,
+        133
+      ],
+      "all_original_native_parents_absent": true,
+      "all_original_native_child_lists_empty": true,
+      "proposed_new_regression_parent": 65,
+      "textual_program_parent_115_preserved": "https://github.com/egohygiene/.github/issues/20"
+    },
+    "source_inventory": {
+      "git_tree": "76b2c8b4ab7b6cd2577442756c2c8bd19d713ec9",
+      "tracked_paths": 283,
+      "rust_source_files": 53,
+      "schema_files": 26,
+      "test_paths": 51,
+      "workflows": 7,
+      "tracked_AGENTS": false,
+      "tracked_CONTINUITY": false,
+      "identity_gitlink": "481e284a77e0a7cc3bf25f40dc91a71120d036ef"
+    },
+    "draft_pr_122": {
+      "head": "ac381942e4202d7221cbd1d8832d65058e146081",
+      "base": "c5dbcd1761e810aea228389b8ba017acc97a411e",
+      "draft": true,
+      "assessment": "Source/patch review only; existing unvalidated implementation remains owned by111. No merge approval."
+    },
+    "open_prs_separate": [
+      122,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132
+    ]
+  },
+  "preservation": {
+    "original_open_issues": 9,
+    "new_focused_work_issues": 2,
+    "total_work_items": 11,
+    "roadmap_parent_counted_as_work": false,
+    "product_source_edits": false,
+    "merges": false,
+    "release_publications": false,
+    "real_user_media_operations": false,
+    "canonical_fixture_rewrites": false,
+    "original_issue_scope_preserved": true,
+    "historical_audits_unchanged": true
+  },
+  "report_status": "partial",
+  "prior_audit_review": {
+    "path": ".audits/2026-08-20-roadmap-reconciliation.md",
+    "url": "https://github.com/egohygiene/optiflow/blob/c8eeab8a647f8f7598a06cb12a8bb38e53c5143b/.audits/2026-08-20-roadmap-reconciliation.md",
+    "historical_output_unchanged": true,
+    "findings": {
+      "AUDIT-001": "new",
+      "AUDIT-002": "new",
+      "AUDIT-003": "new"
+    },
+    "legacy_baseline_classification": "changed",
+    "legacy_baseline_note": "The August planning/release-hardening snapshot has advanced to the shipped read-only1.1 release and current execution/PNG development. Its then-open foundations are not recreated. Current report/source/release evidence is distinct from historical acceptance.",
+    "prior_audit_status": "Historical artifact inspected as evidence; no retroactive status or text edits."
+  },
+  "published_ledger": {
+    "roadmap": "https://github.com/egohygiene/optiflow/issues/135",
+    "review": "https://github.com/egohygiene/optiflow/pull/138",
+    "new_issues": {
+      "opt-corpus-lock": {
+        "number": 136,
+        "url": "https://github.com/egohygiene/optiflow/issues/136",
+        "title": "Repair filesystem corpus lockfile binding after dependency updates"
+      },
+      "opt-macos-fixture": {
+        "number": 137,
+        "url": "https://github.com/egohygiene/optiflow/issues/137",
+        "title": "Fix macOS candidate-artifact temporary-root fixtures"
+      }
+    },
+    "original_scope_preserved": true,
+    "publication_kind": "draft-audit-and-roadmap",
+    "product_repairs_performed": false
+  }
+}
