@@ -759,7 +759,7 @@ mod tests {
 
     use anyhow::bail;
     use serde_json::json;
-    use tempfile::{TempDir, tempdir};
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -839,7 +839,13 @@ mod tests {
     }
 
     fn private_root() -> TempDir {
-        let root = tempdir().unwrap();
+        // macOS commonly exposes its temporary directory through the /var
+        // symlink. Resolve the fixture parent before creating our private root;
+        // production paths and deliberate symlink cases must still be refused.
+        let root = tempfile::Builder::new()
+            .prefix("optiflow-candidate-artifact-")
+            .tempdir_in(std::env::temp_dir().canonicalize().unwrap())
+            .unwrap();
         fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700)).unwrap();
         root
     }
