@@ -79,6 +79,12 @@ encoding and records what must still be validated. The synthetic request and
 input recipe are development aids; no video optimizer CLI, provider execution,
 candidate publication or replacement is implemented by this checkpoint.
 
+The follow-on [video provider observation](docs/video-provider-observation.md)
+adds read-only source/provider binding and richer FFprobe-reported facts, plus
+an internal untrusted encoder-capture primitive. It is unqualified development
+source. Provider memory/scratch enforcement, complete candidate validation and
+video publication remain unavailable; no video optimizer CLI is exposed.
+
 ### Media capability matrix
 
 **The published v0.1.1 release does not produce optimized media or apply

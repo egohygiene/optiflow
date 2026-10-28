@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.13
+version: 0.1.14
 status: draft
 owners:
   - egohygiene
@@ -23,6 +23,24 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-28 video provider observation checkpoint
+
+The next [#146](https://github.com/egohygiene/optiflow/issues/146) checkpoint
+builds on draft [PR #148](https://github.com/egohygiene/optiflow/pull/148).
+It adds [source/provider observation](docs/video-provider-observation.md), a
+strict parser for the pinned provider's reported FFV1 subset, and an internal
+untrusted encoder-capture primitive using the same recipe as the planner.
+This source has not been built or executed. It exposes a development
+observation example, not an optimizer CLI or accepted video artifact.
+
+The runner's memory/scratch/process-tree enforcement and FFprobe's incomplete
+feature/decode coverage are explicit gaps. The full candidate workflow stays
+unavailable until those boundaries, independent output validation and video
+publication are implemented and qualified. No test, build, lint, schema/drift,
+native/provider/media or CI execution is claimed. The
+[handoff](docs/work/146/OBSERVATION.md) records continuation; all previous
+issue scopes and dated receipts below are preserved.
 
 ## 2026-10-28 video candidate planning checkpoint
 

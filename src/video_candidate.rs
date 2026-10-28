@@ -242,43 +242,7 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
         return Err(PlanRefusal::LimitExceeded);
     }
 
-    // Only fixed tokens and bounded enum/integer policy values enter argv.
-    // Future execution must feed a freshly observed descriptor on stdin and
-    // drain stdout through the host boundary; source paths never enter argv.
-    let mut arguments: Vec<String> = [
-        "-hide_banner", "-nostdin", "-loglevel", "error", "-xerror",
-        "-copyts", "-protocol_whitelist", "pipe", "-threads", "1",
-        "-f", "matroska", "-i", "pipe:0", "-map", "0:0",
-        "-map_metadata", "0", "-map_metadata:s:v:0", "0:s:0",
-        "-map_chapters", "-1",
-    ].into_iter().map(str::to_owned).collect();
-    arguments.extend([
-        "-disposition:v:0".to_owned(),
-        if media.disposition == "default" { "default" } else { "0" }.to_owned(),
-        "-avoid_negative_ts".to_owned(), "disabled".to_owned(),
-    ]);
-    let preservation_claim = match request.operation {
-        VideoOperation::StreamCopy => {
-            arguments.extend(["-c:v", "copy"].into_iter().map(str::to_owned));
-            "stream_copy_intent_only_not_verified_packet_or_timing_preservation"
-        }
-        VideoOperation::H264Lossy { crf, preset } => {
-            arguments.extend([
-                "-c:v".to_owned(), "libx264".to_owned(),
-                "-crf".to_owned(), crf.to_string(),
-                "-preset".to_owned(), preset.argument().to_owned(),
-                "-threads:v".to_owned(), "1".to_owned(),
-                "-pix_fmt".to_owned(), "+yuv420p".to_owned(),
-                "-fps_mode:v".to_owned(), "passthrough".to_owned(),
-                "-color_range".to_owned(), "tv".to_owned(),
-                "-colorspace".to_owned(), "bt709".to_owned(),
-                "-color_trc".to_owned(), "bt709".to_owned(),
-                "-color_primaries".to_owned(), "bt709".to_owned(),
-            ]);
-            "explicit_lossy_preview_no_exact_equivalence_or_quality_acceptance"
-        }
-    };
-    arguments.extend(["-f", "matroska", "pipe:1"].into_iter().map(str::to_owned));
+    let (arguments, preservation_claim) = invocation_recipe(request.operation, &media.disposition)?;
     let mut outstanding_validation = vec![
         "fresh_source_identity_content_and_complete_feature_observation",
         "exact_provider_build_identity_and_required_capabilities",
@@ -315,6 +279,57 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
         requested_limits: request.limits,
         outstanding_validation,
     })
+}
+
+/// Shared fixed recipe for review and internal untrusted capture. This does not
+/// establish source eligibility or consume the full requested resource policy.
+pub(crate) fn invocation_recipe(
+    operation: VideoOperation,
+    disposition: &str,
+) -> Result<(Vec<String>, &'static str), PlanRefusal> {
+    if !matches!(disposition, "none" | "default") {
+        return Err(PlanRefusal::UnsupportedSource);
+    }
+    if matches!(operation, VideoOperation::H264Lossy { crf, .. } if !(1..=51).contains(&crf)) {
+        return Err(PlanRefusal::InvalidShape);
+    }
+    // Only fixed tokens and bounded enum/integer policy values enter argv.
+    // Source paths never enter the provider command.
+    let mut arguments: Vec<String> = [
+        "-hide_banner", "-nostdin", "-loglevel", "error", "-xerror",
+        "-copyts", "-protocol_whitelist", "pipe", "-threads", "1",
+        "-f", "matroska", "-i", "pipe:0", "-map", "0:0",
+        "-map_metadata", "0", "-map_metadata:s:v:0", "0:s:0",
+        "-map_chapters", "-1",
+    ].into_iter().map(str::to_owned).collect();
+    arguments.extend([
+        "-disposition:v:0".to_owned(),
+        if disposition == "default" { "default" } else { "0" }.to_owned(),
+        "-avoid_negative_ts".to_owned(), "disabled".to_owned(),
+    ]);
+    let preservation_claim = match operation {
+        VideoOperation::StreamCopy => {
+            arguments.extend(["-c:v", "copy"].into_iter().map(str::to_owned));
+            "stream_copy_intent_only_not_verified_packet_or_timing_preservation"
+        }
+        VideoOperation::H264Lossy { crf, preset } => {
+            arguments.extend([
+                "-c:v".to_owned(), "libx264".to_owned(),
+                "-crf".to_owned(), crf.to_string(),
+                "-preset".to_owned(), preset.argument().to_owned(),
+                "-threads:v".to_owned(), "1".to_owned(),
+                "-pix_fmt".to_owned(), "+yuv420p".to_owned(),
+                "-fps_mode:v".to_owned(), "passthrough".to_owned(),
+                "-color_range".to_owned(), "tv".to_owned(),
+                "-colorspace".to_owned(), "bt709".to_owned(),
+                "-color_trc".to_owned(), "bt709".to_owned(),
+                "-color_primaries".to_owned(), "bt709".to_owned(),
+            ]);
+            "explicit_lossy_preview_no_exact_equivalence_or_quality_acceptance"
+        }
+    };
+    arguments.extend(["-f", "matroska", "pipe:1"].into_iter().map(str::to_owned));
+    Ok((arguments, preservation_claim))
 }
 
 fn check_provider(provider: &MediaProviderEvidence, name: &str) -> Result<(), PlanRefusal> {
