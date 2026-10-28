@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.14
+version: 0.1.15
 status: draft
 owners:
   - egohygiene
@@ -23,6 +23,22 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-28 video pipe limits and operation budget checkpoint
+
+The [#146 resource checkpoint](docs/video-resource-bounds.md) builds on draft
+[PR #149](https://github.com/egohygiene/optiflow/pull/149). The video adapter now
+uses opt-in nonblocking Linux/macOS pipe capture: first detected output overflow
+aborts capture, stdin is borrowed without a second full copy, and the child
+group is cleaned before its leader is reaped. A shared cooperative deadline
+covers the whole observation instead of resetting time for each provider call.
+
+Memory, total scratch and escaped-process containment remain unenforced. This
+is not the full RequestedLimits coordinator, a usable optimizer or a qualified
+native result. Code/tests remain unrun; builds, lint, schema/corpus/drift checks,
+provider/media execution and CI remain deferred. See the
+[handoff](docs/work/146/RESOURCES.md). Earlier receipts below retain their
+historical status; no existing PR was merged by this continuation.
 
 ## 2026-10-28 video provider observation checkpoint
 

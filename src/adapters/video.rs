@@ -1,8 +1,9 @@
 //! Byte-bound video providers for read-only observation and untrusted capture.
 //!
 //! This boundary does not consume video_candidate::RequestedLimits and cannot
-//! establish candidate acceptance. It bounds retained IO and direct-child time;
-//! RSS, provider scratch and process-tree containment remain unavailable.
+//! establish candidate acceptance. Pipe overflow aborts capture; one cooperative
+//! deadline covers a provider session. RSS, provider scratch and escaped-process
+//! containment remain unavailable.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,33 +16,36 @@ use serde::Serialize;
 use crate::domain::{EvidenceDigest, MediaProviderEvidence, NativePath};
 use crate::subprocess::{SubprocessCommand, SubprocessLimits, SubprocessOutput, SubprocessRunner};
 use crate::video_candidate::{PROVIDER_VERSION, VideoOperation, invocation_recipe};
-use crate::video_io::{BoundedFileObservation, validate_private_directory};
+use crate::video_budget::OperationBudget;
+use crate::video_io::{BoundedFileObservation, validate_private_directory_guarded};
 
 const MAX_BINARY_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_INPUT_BYTES: usize = 16 * 1024 * 1024;
 const VERSION_BYTES: usize = 64 * 1024;
 
-/// Per-invocation capture limits, not whole-workflow or provider memory quotas.
+/// Capture byte limits and a shared operation deadline, not provider memory quotas.
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct CaptureLimits {
     pub candidate_bytes: usize,
     pub probe_bytes: usize,
     pub stderr_bytes: usize,
+    /// Shared by source observation, provider binding and all calls through this
+    /// provider instance. Host IO checks are cooperative, not syscall preemption.
     pub elapsed_ms: u64,
 }
 
 impl CaptureLimits {
-    fn check(self) -> Result<()> {
+    pub(crate) fn check(self) -> Result<()> {
         ensure!((1..=16 * 1024 * 1024).contains(&self.candidate_bytes), "invalid candidate capture bound");
         ensure!((1..=4 * 1024 * 1024).contains(&self.probe_bytes), "invalid probe capture bound");
         ensure!((1..=256 * 1024).contains(&self.stderr_bytes), "invalid diagnostic capture bound");
-        ensure!((1..=30_000).contains(&self.elapsed_ms), "invalid child elapsed bound");
+        ensure!((1..=30_000).contains(&self.elapsed_ms), "invalid operation elapsed bound");
         Ok(())
     }
 
-    fn runner(self, stdout_bytes: usize) -> Result<SubprocessRunner> {
+    fn runner(self, stdout_bytes: usize, remaining: Duration) -> Result<SubprocessRunner> {
         Ok(SubprocessRunner::new(SubprocessLimits {
-            timeout: Duration::from_millis(self.elapsed_ms),
+            timeout: remaining,
             poll_interval: Duration::from_millis(10),
             max_stdout_bytes: stdout_bytes,
             max_stderr_bytes: self.stderr_bytes,
@@ -55,6 +59,11 @@ pub struct CaptureCapabilities {
     pub retained_stdout_and_stderr_bounded: bool,
     pub direct_child_elapsed_bounded: bool,
     pub output_cap_terminates_child_immediately: bool,
+    pub output_cap_aborts_capture_on_detection: bool,
+    pub stdin_requires_full_copy: bool,
+    pub process_group_cleanup_before_reap: bool,
+    pub shared_operation_deadline_checked: bool,
+    pub host_file_io_preemptible: bool,
     pub provider_memory_enforced: bool,
     pub provider_scratch_enforced: bool,
     pub process_tree_contained: bool,
@@ -66,6 +75,11 @@ pub fn capture_capabilities() -> CaptureCapabilities {
         retained_stdout_and_stderr_bounded: true,
         direct_child_elapsed_bounded: true,
         output_cap_terminates_child_immediately: false,
+        output_cap_aborts_capture_on_detection: crate::subprocess::bounded_pipe_capture_supported(),
+        stdin_requires_full_copy: false,
+        process_group_cleanup_before_reap: crate::subprocess::bounded_pipe_capture_supported(),
+        shared_operation_deadline_checked: true,
+        host_file_io_preemptible: false,
         provider_memory_enforced: false,
         provider_scratch_enforced: false,
         process_tree_contained: false,
@@ -87,7 +101,11 @@ pub struct InvocationEvidence {
     pub elapsed_ms: u64,
     pub stdout_limit_bytes: usize,
     pub stderr_limit_bytes: usize,
+    /// Rounded up for display; the exact child allocation is recorded below.
     pub child_elapsed_limit_ms: u64,
+    pub child_elapsed_limit_ns: u64,
+    pub operation_elapsed_limit_ms: u64,
+    pub operation_elapsed_ms: u64,
     pub capture_capabilities: CaptureCapabilities,
 }
 
@@ -111,6 +129,7 @@ pub struct VideoProviders {
     probe: LockedTool,
     workdir: PathBuf,
     limits: CaptureLimits,
+    budget: OperationBudget,
     // Refuse concurrent captures through this instance rather than queueing
     // beyond a caller's cancellation/deadline expectations.
     invocation_gate: Mutex<()>,
@@ -127,24 +146,45 @@ impl VideoProviders {
         limits: CaptureLimits,
         cancel: &impl Fn() -> bool,
     ) -> Result<Self> {
+        let budget = OperationBudget::new(limits.elapsed_ms)?;
+        Self::lock_with_budget(ffmpeg, ffprobe, workdir, limits, budget, cancel)
+    }
+
+    pub(crate) fn lock_with_budget(
+        ffmpeg: &Path,
+        ffprobe: &Path,
+        workdir: &Path,
+        limits: CaptureLimits,
+        budget: OperationBudget,
+        cancel: &impl Fn() -> bool,
+    ) -> Result<Self> {
         limits.check()?;
-        ensure!(!cancel(), "video provider selection cancelled");
-        empty_workdir(workdir)?;
-        let producer = bind_tool("ffmpeg", ffmpeg, workdir, limits, cancel)?;
-        let probe = bind_tool("ffprobe", ffprobe, workdir, limits, cancel)?;
+        ensure!(budget.limit() == Duration::from_millis(limits.elapsed_ms),
+            "operation budget differs from declared capture limits");
+        ensure!(crate::subprocess::bounded_pipe_capture_supported(),
+            "bounded video pipe capture requires Linux or macOS");
+        let guard = || budget.check(cancel);
+        guard()?;
+        empty_workdir(workdir, &guard)?;
+        let producer = bind_tool("ffmpeg", ffmpeg, workdir, limits, budget, cancel)?;
+        let probe = bind_tool("ffprobe", ffprobe, workdir, limits, budget, cancel)?;
         let providers = Self {
-            producer, probe, workdir: workdir.to_owned(), limits,
+            producer, probe, workdir: workdir.to_owned(), limits, budget,
             invocation_gate: Mutex::new(()),
         };
-        providers.verify_current()?;
-        ensure!(!cancel(), "video provider selection cancelled");
+        providers.verify_current_with_cancel(cancel)?;
         Ok(providers)
     }
 
     pub fn verify_current(&self) -> Result<()> {
-        self.producer.observation.verify_current()?;
-        self.probe.observation.verify_current()?;
-        empty_workdir(&self.workdir)
+        self.verify_current_with_cancel(&|| false)
+    }
+
+    pub(crate) fn verify_current_with_cancel(&self, cancel: &impl Fn() -> bool) -> Result<()> {
+        let guard = || self.budget.check(cancel);
+        self.producer.observation.verify_current_guarded(&guard)?;
+        self.probe.observation.verify_current_guarded(&guard)?;
+        empty_workdir(&self.workdir, &guard)
     }
 
     pub fn producer_build_fingerprint(&self) -> &EvidenceDigest {
@@ -195,6 +235,8 @@ impl VideoProviders {
             arguments, stdout_bytes, self.limits.stderr_bytes, self.limits.elapsed_ms,
             "bounded_host_owned_bytes_on_stdin", "untrusted_bounded_stdout_capture",
             "cleared_environment", NativePath::from_path(&self.workdir),
+            "nonblocking_pipes_abort_on_overflow_group_cleanup_before_reap",
+            "shared_cooperative_operation_deadline",
         );
         let mut hasher = blake3::Hasher::new();
         hasher.update(b"optiflow.video-provider-invocation.v1\0");
@@ -220,19 +262,22 @@ impl VideoProviders {
         let _permit = self.invocation_gate.try_lock()
             .map_err(|_| anyhow::anyhow!("video provider capture already active or gate poisoned"))?;
         ensure!(!bytes.is_empty() && bytes.len() <= MAX_INPUT_BYTES, "video input exceeds capture bounds");
-        ensure!(!cancel(), "video provider invocation cancelled");
-        tool.observation.verify_current()?;
-        empty_workdir(&self.workdir)?;
+        let guard = || self.budget.check(cancel);
+        guard()?;
+        tool.observation.verify_current_guarded(&guard)?;
+        empty_workdir(&self.workdir, &guard)?;
         let command = SubprocessCommand::new(tool.path.as_os_str().to_owned())
             .args(arguments.iter().map(String::as_str))
             .clear_environment().current_directory(&self.workdir);
-        let result = self.limits.runner(stdout_bytes)?.run_with_input_and_cancel(&command, bytes, cancel);
-        // Refuse changed identities or unowned scratch even on provider failure.
-        // Unexpected workdir members are retained, never recursively removed.
-        tool.observation.verify_current()?;
-        empty_workdir(&self.workdir)?;
+        let remaining = self.budget.remaining(cancel)?;
+        let result = self.limits.runner(stdout_bytes, remaining)?
+            .run_with_bounded_pipes_and_cancel(&command, bytes, cancel);
+        // On a runner error, do not start another potentially blocking host read.
+        // No capture can be accepted; unexpected workdir entries stay untouched.
         let output = result.context("video provider capture failed")?;
-        ensure!(!cancel(), "video provider invocation cancelled");
+        tool.observation.verify_current_guarded(&guard)?;
+        empty_workdir(&self.workdir, &guard)?;
+        guard()?;
         ensure!(output.stderr.is_empty(), "video provider emitted error diagnostics");
         ensure!(!output.stdout.is_empty(), "video provider returned empty output");
         let evidence = InvocationEvidence {
@@ -244,9 +289,13 @@ impl VideoProviders {
             captured_stderr_bytes: output.stderr.len() as u64,
             elapsed_ms: output.elapsed.as_millis().try_into().unwrap_or(u64::MAX),
             stdout_limit_bytes: stdout_bytes, stderr_limit_bytes: self.limits.stderr_bytes,
-            child_elapsed_limit_ms: self.limits.elapsed_ms,
+            child_elapsed_limit_ms: remaining.as_nanos().div_ceil(1_000_000).try_into().unwrap_or(u64::MAX),
+            child_elapsed_limit_ns: remaining.as_nanos().try_into().unwrap_or(u64::MAX),
+            operation_elapsed_limit_ms: self.limits.elapsed_ms,
+            operation_elapsed_ms: self.budget.elapsed().as_millis().try_into().unwrap_or(u64::MAX),
             capture_capabilities: capture_capabilities(),
         };
+        guard()?;
         Ok(UntrustedCapture { bytes: output.stdout, evidence })
     }
 }
@@ -256,21 +305,26 @@ fn bind_tool(
     path: &Path,
     workdir: &Path,
     limits: CaptureLimits,
+    budget: OperationBudget,
     cancel: &impl Fn() -> bool,
 ) -> Result<LockedTool> {
-    ensure!(!cancel(), "video provider selection cancelled");
-    let observation = BoundedFileObservation::open(path, MAX_BINARY_BYTES)?;
+    let guard = || budget.check(cancel);
+    guard()?;
+    let observation = BoundedFileObservation::open_guarded(path, MAX_BINARY_BYTES, &guard)?;
     ensure!(observation.snapshot().mode & 0o111 != 0, "video provider has no executable permission bits");
-    empty_workdir(workdir)?;
-    observation.verify_current()?;
+    ensure!(observation.snapshot().mode & 0o6000 == 0,
+        "setuid/setgid video providers are unsupported");
+    empty_workdir(workdir, &guard)?;
+    observation.verify_current_guarded(&guard)?;
     let command = SubprocessCommand::new(path.as_os_str().to_owned())
         .arg("-version").clear_environment().current_directory(workdir);
-    let result = limits.runner(VERSION_BYTES)?.run_with_cancel(&command, cancel);
-    observation.verify_current()?;
-    empty_workdir(workdir)?;
+    let result = limits.runner(VERSION_BYTES, budget.remaining(cancel)?)?
+        .run_with_bounded_pipes_and_cancel(&command, &[], cancel);
     let output = result.context("video provider version query failed")?;
-    ensure!(!cancel(), "video provider selection cancelled");
+    observation.verify_current_guarded(&guard)?;
+    empty_workdir(workdir, &guard)?;
     version_output(name, &output)?;
+    guard()?;
     Ok(LockedTool { name, path: path.to_owned(), observation, build_fingerprint: digest(&output.stdout) })
 }
 
@@ -284,11 +338,12 @@ fn version_output(name: &str, output: &SubprocessOutput) -> Result<()> {
     Ok(())
 }
 
-fn empty_workdir(path: &Path) -> Result<()> {
-    validate_private_directory(path)?;
+fn empty_workdir(path: &Path, guard: &impl Fn() -> Result<()>) -> Result<()> {
+    guard()?;
+    validate_private_directory_guarded(path, guard)?;
     ensure!(fs::read_dir(path)?.next().transpose()?.is_none(),
         "video workdir contains unowned entries; inspect and retain them");
-    Ok(())
+    guard()
 }
 
 fn digest(bytes: &[u8]) -> EvidenceDigest {
@@ -330,7 +385,21 @@ mod tests {
         let limits = capture_capabilities();
         assert!(!limits.provider_memory_enforced && !limits.provider_scratch_enforced);
         assert!(!limits.process_tree_contained && !limits.output_cap_terminates_child_immediately);
+        assert_eq!(limits.output_cap_aborts_capture_on_detection, crate::subprocess::bounded_pipe_capture_supported());
+        assert_eq!(limits.process_group_cleanup_before_reap, crate::subprocess::bounded_pipe_capture_supported());
+        assert!(!limits.stdin_requires_full_copy && !limits.host_file_io_preemptible);
+        assert!(limits.shared_operation_deadline_checked);
         assert!(!limits.source_or_candidate_validation);
+    }
+
+    #[test]
+    fn child_runner_uses_remaining_time_without_resetting_operation_budget() {
+        let limits = CaptureLimits { candidate_bytes: 1024, probe_bytes: 1024, stderr_bytes: 128, elapsed_ms: 30_000 };
+        let remaining = Duration::from_nanos(123_456);
+        let runner = limits.runner(512, remaining).unwrap();
+        assert_eq!(runner.limits().timeout, remaining);
+        assert_eq!(runner.limits().max_stdout_bytes, 512);
+        assert!(limits.runner(512, Duration::ZERO).is_err());
     }
 
     #[test]

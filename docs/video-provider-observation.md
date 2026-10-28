@@ -1,6 +1,6 @@
 # Video provider observation
 
-This second development checkpoint of
+This development path for
 [#146](https://github.com/egohygiene/optiflow/issues/146) acquires source and
 provider identities and parses the richer FFmpeg-reported view needed for
 video work. It builds on the review planner in
@@ -47,30 +47,48 @@ are not independent complete-decode proof. Consequently the observed
 `media.feature_observation_complete` remains false; these observations cannot
 be promoted directly into an eligible planner request.
 
-The adapter uses the existing subprocess runner with separate capture limits:
+The adapter uses an opt-in nonblocking pipe mode in the existing subprocess
+runner on Linux/macOS. Other targets refuse before source or provider IO.
+Legacy inventory and PNG runner behavior is unchanged. Capture limits are:
 
 | Limit | Current behavior |
 | --- | --- |
-| Encoded source | At most 16 MiB retained; runner also copies stdin bytes |
+| Encoded source | At most 16 MiB retained; strict runner borrows stdin bytes without a second full copy |
 | Provider executable | At most 128 MiB hashed with a bounded streaming buffer |
 | Version stdout | At most 64 KiB retained |
 | Probe stdout | At most 4 MiB retained |
 | Internal encoder stdout | At most 16 MiB retained |
 | Stderr | At most 256 KiB retained; diagnostics refuse success |
-| Elapsed time | At most 30 seconds per child invocation; excludes hashing and the complete workflow |
-| Provider memory, scratch, process tree, free space | Not enforced or claimed |
+| Elapsed time | One budget of at most 30 seconds, shared by source reads, hashes, both version queries, probe and re-observation; host checks are cooperative |
+| Child cleanup | Isolated process group, cleanup before direct-child reaping; escaped descendants are not contained |
+| Provider memory, scratch, free space | Not enforced or claimed |
 
-The output cap limits retained bytes. The existing runner drains excess output
-until process exit, then refuses truncation; it does not terminate the child
-as soon as the cap is crossed. Cancellation and timeout terminate the direct
-child, without claiming containment of descendants. Host file IO is bounded
-by byte count but has no wall-time deadline or in-read cancellation.
+The pipe pump refuses overflow on detection and terminates the child group
+instead of draining an unbounded stream until normal exit. It uses no input or
+output worker threads, so a descendant holding a pipe cannot strand those
+threads. Captured bytes never exceed their limits; kernel pipe buffers,
+allocator capacity and scheduling are outside that byte-count claim. Process
+group cleanup is not a security sandbox and does not contain descendants that
+leave the group. Cleanup/reaping can still be delayed by the kernel.
+
+`CaptureLimits.elapsed_ms` now means one operation/session budget rather than
+a fresh allowance per invocation. The provider instance retains that original
+deadline and does not reset it for a later call. Child capture receives only
+the remaining time; evidence records that exact allocation in nanoseconds and
+rounded-up milliseconds. File traversal and hashing check cancellation/time
+between operations and chunks. Parsing is checked before and after. Individual
+filesystem syscalls, parser work and scheduling cannot be preempted by those
+checks; this is not a hard wall-time guarantee. A checkpoint that observes
+expiry cannot return a successful observation. Caller serialization/output is
+outside the observation operation.
 
 The work directory must already be empty, have exact mode 0700, and contain no
 symlink components. Permission checks do not attest ownership or provide an OS
 sandbox. Before/after emptiness checks detect unexpected scratch; they are not
 a scratch quota. Unexpected entries are retained for inspection and refused,
-never recursively deleted by this adapter.
+never recursively deleted by this adapter. After a failed or timed-out child,
+the adapter returns the capture error without starting additional filesystem
+reads; the caller must inspect any retained work directory separately.
 
 An internal `capture_untrusted` method can invoke the shared stream-copy/lossy
 recipe and capture untrusted bytes. It has no public optimizer command and no
@@ -124,3 +142,6 @@ Source references:
 [pinned ffprobe implementation](https://github.com/FFmpeg/FFmpeg/blob/n8.0.1/fftools/ffprobe.c)
 and [FFprobe documentation](https://ffmpeg.org/ffprobe.html). Source inspection
 informs this design; it does not qualify the adapter on a native host.
+
+See [pipe limits and remaining enforcement work](video-resource-bounds.md) for
+the next checkpoint's exact scope and deferred qualification.
