@@ -79,6 +79,26 @@ and inspects or discards incomplete staging after an interruption. It neither
 replaces nor deletes the source. Peak provider memory and provider workdir
 usage are unmeasured; the signed v0.1.1 release contains none of this path.
 
+### Development addition: video candidate planning
+
+[#146](https://github.com/egohygiene/optiflow/issues/146) starts with a
+[pure FFmpeg recipe planner](docs/video-candidate-planning.md) for one declared
+video subset. It distinguishes stream-copy from explicitly configured lossy
+encoding and records what must still be validated. The synthetic request and
+input recipe are development aids; no video optimizer CLI, provider execution,
+candidate publication or replacement is implemented by this checkpoint.
+
+The follow-on [video provider observation](docs/video-provider-observation.md)
+adds read-only source/provider binding and richer FFprobe-reported facts, plus
+an internal untrusted encoder-capture primitive. It is unqualified development
+source. Provider memory/scratch enforcement, complete candidate validation and
+video publication remain unavailable; no video optimizer CLI is exposed.
+
+The next [resource checkpoint](docs/video-resource-bounds.md) adds output-cap
+termination, nonblocking pipe cleanup and one shared observation deadline on
+Linux/macOS. It removes the runner's extra stdin copy. This code is unrun;
+provider memory and total scratch quotas remain outstanding.
+
 ### Media capability matrix
 
 **The published v0.1.1 release does not produce optimized media or apply

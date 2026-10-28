@@ -16,6 +16,15 @@ use std::time::{Duration, Instant};
 
 use serde::de::DeserializeOwned;
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod pipe_capture;
+
+/// Whether this build includes the opt-in nonblocking pipe capture backend.
+/// This describes implemented source, not native runtime qualification.
+pub const fn bounded_pipe_capture_supported() -> bool {
+    cfg!(any(target_os = "linux", target_os = "macos"))
+}
+
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(10);
 const DEFAULT_MAX_STDOUT_BYTES: usize = 4 * 1024 * 1024;
@@ -550,6 +559,54 @@ impl SubprocessRunner {
         F: Fn() -> bool,
     {
         self.run_with_cancel_and_input(command, SubprocessInput::Bytes(input), is_cancelled)
+    }
+
+    /// Capture pipes without reader/writer threads or a second input copy.
+    ///
+    /// The Linux/macOS backend uses nonblocking IO and requests termination on
+    /// the first observed byte beyond either output cap. Cancellation and the
+    /// timeout are checked between bounded IO turns, including after the child
+    /// exits. The timeout includes permit acquisition but cannot preempt OS
+    /// spawn, signal delivery, or reaping. A dedicated process group is killed
+    /// before reaping its leader; descendants which escape that group are not
+    /// contained. Provider memory and filesystem writes are not limited.
+    ///
+    /// The caller must own child reaping: a competing SIGCHLD reaper invalidates
+    /// process identity ownership. Other targets refuse before starting a child.
+    /// Existing runner entry points retain their original behavior.
+    pub fn run_with_bounded_pipes_and_cancel<F>(
+        &self,
+        command: &SubprocessCommand,
+        input: &[u8],
+        is_cancelled: F,
+    ) -> Result<SubprocessOutput, SubprocessError>
+    where
+        F: Fn() -> bool,
+    {
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        {
+            let started = Instant::now();
+            let deadline = started.checked_add(self.limits.timeout).ok_or_else(|| {
+                SubprocessError::InvalidConfiguration {
+                    message: "subprocess deadline is not representable".to_owned(),
+                }
+            })?;
+            let _permit = self.permits.acquire(
+                command,
+                deadline,
+                self.limits.timeout,
+                self.limits.poll_interval,
+                &is_cancelled,
+            )?;
+            pipe_capture::run(command, input, self.limits, started, deadline, &is_cancelled)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        {
+            let _ = (command, input, is_cancelled);
+            Err(SubprocessError::InvalidConfiguration {
+                message: "nonblocking pipe capture is implemented only on Linux and macOS".to_owned(),
+            })
+        }
     }
 
     /// Run a JSON-producing command with a caller-owned byte document on stdin.

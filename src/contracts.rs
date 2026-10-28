@@ -24,6 +24,7 @@ pub enum Contract {
     MediaProfileEvidence,
     PngCandidateContract,
     PngCandidateEvidence,
+    VideoCandidateRequest,
     ExtensionManifest,
     ExtensionLock,
     ExtensionInvocation,
@@ -117,6 +118,9 @@ pub fn schema(contract: Contract) -> Result<Value> {
         }
         Contract::PngCandidateEvidence => {
             include_str!("../schemas/png-candidate-evidence-v1.schema.json")
+        }
+        Contract::VideoCandidateRequest => {
+            include_str!("../schemas/video-candidate-request-v1.schema.json")
         }
         Contract::ExtensionManifest => include_str!("../schemas/extension-manifest-v1.schema.json"),
         Contract::ExtensionLock => include_str!("../schemas/extension-lock-v1.schema.json"),

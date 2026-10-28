@@ -59,6 +59,21 @@ than OptiFlow was willing to trust.
 
 A truncated JSON response is never parsed as though it were complete.
 
+### Opt-in strict pipe capture
+
+The development video adapter uses `run_with_bounded_pipes_and_cancel` instead
+of the legacy methods described above. Its Linux/macOS nonblocking pump borrows
+input without copying it or spawning pipe threads. It refuses on the first
+observed over-cap byte and cleans an isolated process group before reaping the
+direct child. It checks cancellation/deadlines while feeding and draining,
+including after the direct child exits. Other targets refuse before spawn.
+
+This is source implementation, not native qualification. The caller must own
+child reaping. Escaped descendants, provider memory and filesystem writes are
+not contained; kernel spawn/reaping is not a hard real-time bound. See the
+[video resource contract](video-resource-bounds.md) for the shared operation
+budget and remaining enforcement work. Existing methods retain their behavior.
+
 ## Runtime and cancellation
 
 The timeout budget begins before the concurrency permit is acquired. Queue time

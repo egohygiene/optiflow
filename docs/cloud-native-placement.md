@@ -244,5 +244,5 @@ arrive.
 See the repository-level
 [`SYSTEM.md`](https://github.com/egohygiene/optiflow/blob/main/SYSTEM.md),
 [`ARCHITECTURE.md`](https://github.com/egohygiene/optiflow/blob/main/ARCHITECTURE.md),
-and decision `OFD-009` in
+and decision `OFD-0009` in
 [`DECISIONS.md`](https://github.com/egohygiene/optiflow/blob/main/DECISIONS.md).

@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.13
+version: 0.1.16
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-10-06
+updated: 2026-10-28
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,90 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-28 video pipe limits and operation budget checkpoint
+
+The [#146 resource checkpoint](docs/video-resource-bounds.md) builds on draft
+[PR #149](https://github.com/egohygiene/optiflow/pull/149). The video adapter now
+uses opt-in nonblocking Linux/macOS pipe capture: first detected output overflow
+aborts capture, stdin is borrowed without a second full copy, and the child
+group is cleaned before its leader is reaped. A shared cooperative deadline
+covers the whole observation instead of resetting time for each provider call.
+
+Memory, total scratch and escaped-process containment remain unenforced. This
+is not the full RequestedLimits coordinator, a usable optimizer or a qualified
+native result. Code/tests remain unrun; builds, lint, schema/corpus/drift checks,
+provider/media execution and CI remain deferred. See the
+[handoff](docs/work/146/RESOURCES.md). Earlier receipts below retain their
+historical status; no existing PR was merged by this continuation.
+
+## 2026-10-28 video provider observation checkpoint
+
+The next [#146](https://github.com/egohygiene/optiflow/issues/146) checkpoint
+builds on draft [PR #148](https://github.com/egohygiene/optiflow/pull/148).
+It adds [source/provider observation](docs/video-provider-observation.md), a
+strict parser for the pinned provider's reported FFV1 subset, and an internal
+untrusted encoder-capture primitive using the same recipe as the planner.
+This source has not been built or executed. It exposes a development
+observation example, not an optimizer CLI or accepted video artifact.
+
+The runner's memory/scratch/process-tree enforcement and FFprobe's incomplete
+feature/decode coverage are explicit gaps. The full candidate workflow stays
+unavailable until those boundaries, independent output validation and video
+publication are implemented and qualified. No test, build, lint, schema/drift,
+native/provider/media or CI execution is claimed. The
+[handoff](docs/work/146/OBSERVATION.md) records continuation; all previous
+issue scopes and dated receipts below are preserved.
+
+## 2026-10-28 video candidate planning checkpoint
+
+The #136 source repair merged through
+[PR #147](https://github.com/egohygiene/optiflow/pull/147) at
+`e8c70b381a072dbcb55f0c2930d01c5c507d4aa7`; its execution acceptance remains
+open. [#146](https://github.com/egohygiene/optiflow/issues/146) now begins with
+a [typed video request and FFmpeg recipe](docs/video-candidate-planning.md),
+an explicitly selected remux/lossy policy, and a synthetic input recipe. This
+prepares supplied declarations for review only. It executes no provider,
+produces no optimized file and exposes no new product command.
+
+The next producer checkpoint needs richer host observations, enforceable
+resource limits, independent byte/timing validation and versioned video
+candidate publication. Folder traversal and qualified replacement/disposal
+follow. [Flow #70](https://github.com/egohygiene/flow/issues/70) tracks explicit
+before/after composition through compatible released artifacts. PNG
+#95/#121, native #111/#93 and corpus #65 retain their existing scope. All
+testing, builds, lint, corpus/schema checks, native/media execution and CI are
+deferred. The [handoff](docs/work/146/HANDOFF.md) records the source and limits.
+
+## 2026-10-28 corpus repair and video-folder path
+
+The live issue ledger is [#135](https://github.com/egohygiene/optiflow/issues/135).
+This checkpoint authors [#136](https://github.com/egohygiene/optiflow/issues/136)'s
+dependency-only corpus binding repair against main
+`1fc964fd931f0a6bb4e47a45cbf085a9d57b1c80`. It retains the existing lockfile,
+changes only its recorded digest in the fixture index, and adds an explicit
+lock-only authoring helper. The [handoff](docs/work/136/HANDOFF.md) records
+dependency review scope and deferred qualification. Tests, corpus checks,
+lint and CI remain unrun; #136 stays open. #137's test-root correction is
+already on main but still awaits native qualification. #111 remains in draft
+[PR #122](https://github.com/egohygiene/optiflow/pull/122); #65 and #93 retain
+their corpus and native/release work.
+
+The user's folder-of-videos goal now has a separate implementation issue:
+[#146](https://github.com/egohygiene/optiflow/issues/146). Start with a small
+source-preserving video candidate trial and synthetic inputs, then bounded
+recursive candidate processing. Distinguish remuxing from explicitly selected
+lossy encoding; neither promises a size reduction on every input. Qualified
+replacement, recovery and explicit original disposal follow through the
+existing transaction engine. This candidate work can begin independently of
+PNG replacement; [#95](https://github.com/egohygiene/optiflow/issues/95) and
+PNG-first [#121](https://github.com/egohygiene/optiflow/issues/121) keep their
+scope. Current exact deduplication identifies identical video copies; current
+Optiflow does not yet recompress distinct videos. This is an implementation
+path, not a claim that video replacement is ready.
+
+Earlier dated handoffs and execution snapshots below are historical. The
+longer-horizon audio/video scope remains under the `v0.5.0` section.
 
 ## 2026-10-06 UTC standalone Mac property-contract checkpoint
 
