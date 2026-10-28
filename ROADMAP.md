@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.11
+version: 0.1.12
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-09-28
+updated: 2026-10-28
 governed_by:
   - architecture-roadmap
 depends_on:
@@ -23,6 +23,36 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-28 corpus repair and video-folder path
+
+The live issue ledger is [#135](https://github.com/egohygiene/optiflow/issues/135).
+This checkpoint authors [#136](https://github.com/egohygiene/optiflow/issues/136)'s
+dependency-only corpus binding repair against main
+`1fc964fd931f0a6bb4e47a45cbf085a9d57b1c80`. It retains the existing lockfile,
+changes only its recorded digest in the fixture index, and adds an explicit
+lock-only authoring helper. The [handoff](docs/work/136/HANDOFF.md) records
+dependency review scope and deferred qualification. Tests, corpus checks,
+lint and CI remain unrun; #136 stays open. #137's test-root correction is
+already on main but still awaits native qualification. #111 remains in draft
+[PR #122](https://github.com/egohygiene/optiflow/pull/122); #65 and #93 retain
+their corpus and native/release work.
+
+The user's folder-of-videos goal now has a separate implementation issue:
+[#146](https://github.com/egohygiene/optiflow/issues/146). Start with a small
+source-preserving video candidate trial and synthetic inputs, then bounded
+recursive candidate processing. Distinguish remuxing from explicitly selected
+lossy encoding; neither promises a size reduction on every input. Qualified
+replacement, recovery and explicit original disposal follow through the
+existing transaction engine. This candidate work can begin independently of
+PNG replacement; [#95](https://github.com/egohygiene/optiflow/issues/95) and
+PNG-first [#121](https://github.com/egohygiene/optiflow/issues/121) keep their
+scope. Current exact deduplication identifies identical video copies; current
+Optiflow does not yet recompress distinct videos. This is an implementation
+path, not a claim that video replacement is ready.
+
+Earlier dated handoffs and execution snapshots below are historical. The
+longer-horizon audio/video scope remains under the `v0.5.0` section.
 
 ## 2026-09-28 source-preserving PNG candidate review handoff
 
