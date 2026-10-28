@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-roadmap
 title: OptiFlow Roadmap
 kind: architecture-document
-version: 0.1.12
+version: 0.1.13
 status: draft
 owners:
   - egohygiene
@@ -23,6 +23,26 @@ supersedes: []
 ---
 
 # OptiFlow Roadmap
+
+## 2026-10-28 video candidate planning checkpoint
+
+The #136 source repair merged through
+[PR #147](https://github.com/egohygiene/optiflow/pull/147) at
+`e8c70b381a072dbcb55f0c2930d01c5c507d4aa7`; its execution acceptance remains
+open. [#146](https://github.com/egohygiene/optiflow/issues/146) now begins with
+a [typed video request and FFmpeg recipe](docs/video-candidate-planning.md),
+an explicitly selected remux/lossy policy, and a synthetic input recipe. This
+prepares supplied declarations for review only. It executes no provider,
+produces no optimized file and exposes no new product command.
+
+The next producer checkpoint needs richer host observations, enforceable
+resource limits, independent byte/timing validation and versioned video
+candidate publication. Folder traversal and qualified replacement/disposal
+follow. [Flow #70](https://github.com/egohygiene/flow/issues/70) tracks explicit
+before/after composition through compatible released artifacts. PNG
+#95/#121, native #111/#93 and corpus #65 retain their existing scope. All
+testing, builds, lint, corpus/schema checks, native/media execution and CI are
+deferred. The [handoff](docs/work/146/HANDOFF.md) records the source and limits.
 
 ## 2026-10-28 corpus repair and video-folder path
 

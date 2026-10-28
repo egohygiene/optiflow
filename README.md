@@ -70,6 +70,15 @@ and inspects or discards incomplete staging after an interruption. It neither
 replaces nor deletes the source. Peak provider memory and provider workdir
 usage are unmeasured; the signed v0.1.1 release contains none of this path.
 
+### Development addition: video candidate planning
+
+[#146](https://github.com/egohygiene/optiflow/issues/146) starts with a
+[pure FFmpeg recipe planner](docs/video-candidate-planning.md) for one declared
+video subset. It distinguishes stream-copy from explicitly configured lossy
+encoding and records what must still be validated. The synthetic request and
+input recipe are development aids; no video optimizer CLI, provider execution,
+candidate publication or replacement is implemented by this checkpoint.
+
 ### Media capability matrix
 
 **The published v0.1.1 release does not produce optimized media or apply

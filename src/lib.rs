@@ -27,6 +27,7 @@ pub mod reports;
 pub mod signals;
 pub mod state;
 pub mod subprocess;
+pub mod video_candidate;
 
 use crate::cli::Cli;
 use crate::signals::SignalState;
