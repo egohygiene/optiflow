@@ -27,6 +27,7 @@ pub mod reports;
 pub mod signals;
 pub mod state;
 pub mod subprocess;
+pub(crate) mod video_budget;
 pub mod video_candidate;
 pub(crate) mod video_io;
 pub mod video_observation;

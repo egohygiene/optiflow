@@ -85,6 +85,11 @@ an internal untrusted encoder-capture primitive. It is unqualified development
 source. Provider memory/scratch enforcement, complete candidate validation and
 video publication remain unavailable; no video optimizer CLI is exposed.
 
+The next [resource checkpoint](docs/video-resource-bounds.md) adds output-cap
+termination, nonblocking pipe cleanup and one shared observation deadline on
+Linux/macOS. It removes the runner's extra stdin copy. This code is unrun;
+provider memory and total scratch quotas remain outstanding.
+
 ### Media capability matrix
 
 **The published v0.1.1 release does not produce optimized media or apply
