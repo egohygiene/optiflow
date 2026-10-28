@@ -17,6 +17,8 @@ use crate::state::StateStore;
 pub(super) struct Journal {
     store: StateStore,
     _lock: File,
+    #[cfg(target_os = "macos")]
+    mutation_durability: Option<(File, File)>,
 }
 
 fn state_error(e: impl std::fmt::Display) -> Box<crate::outcome::Diagnostic> {
@@ -36,6 +38,17 @@ fn encode<T: serde::Serialize>(document: &T) -> Result<String> {
 impl Journal {
     #[cfg(unix)]
     pub fn open(plan: &ExecutionPlan) -> Result<Self> {
+        Self::open_with_durability(plan, false)
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub fn open_mutation(plan: &ExecutionPlan) -> Result<Self> {
+        fs::check_mutation_platform(plan)?;
+        Self::open_with_durability(plan, true)
+    }
+
+    #[cfg(unix)]
+    fn open_with_durability(plan: &ExecutionPlan, mutation: bool) -> Result<Self> {
         use rustix::fs::{FlockOperation, Mode, OFlags, flock, openat};
         use std::os::unix::fs::MetadataExt;
         let directory = fs::check_directory(&plan.body.state)?;
@@ -108,11 +121,89 @@ impl Journal {
             .connection
             .pragma_update(None, "synchronous", "FULL")
             .map_err(state_error)?;
-        directory.sync_all().map_err(state_error)?;
-        let mut journal = Self { store, _lock: lock };
+        #[cfg(target_os = "macos")]
+        if mutation {
+            let mode: String = store.connection
+                .pragma_query_value(None, "journal_mode", |row| row.get(0))
+                .map_err(state_error)?;
+            if mode != "delete" {
+                return Err(failure(
+                    Code::ExecutionUnsupported,
+                    "macOS mutation requires SQLite DELETE journal mode",
+                ));
+            }
+            store.connection.pragma_update(None, "synchronous", "EXTRA")
+                .map_err(state_error)?;
+            let synchronous: i64 = store.connection
+                .pragma_query_value(None, "synchronous", |row| row.get(0))
+                .map_err(state_error)?;
+            if synchronous != 3 {
+                return Err(failure(
+                    Code::ExecutionUnsupported,
+                    "SQLite did not enable the required macOS EXTRA sync policy",
+                ));
+            }
+            // Request Darwin's device flush for both transaction commits and
+            // WAL checkpoints; synchronous=FULL alone only requests fsync.
+            // This is isolated from the existing read-only dry-run path.
+            for name in ["fullfsync", "checkpoint_fullfsync"] {
+                store.connection.pragma_update(None, name, true).map_err(state_error)?;
+                let enabled: i64 = store.connection
+                    .pragma_query_value(None, name, |row| row.get(0))
+                    .map_err(state_error)?;
+                if enabled != 1 {
+                    return Err(failure(
+                        Code::ExecutionUnsupported,
+                        "SQLite did not enable the required macOS full-sync policy",
+                    ));
+                }
+            }
+            fs::sync_directory(&directory)?;
+        } else {
+            directory.sync_all().map_err(state_error)?;
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = mutation;
+            directory.sync_all().map_err(state_error)?;
+        }
+        #[cfg(target_os = "macos")]
+        let mutation_durability = if mutation {
+            let database = fs::open(&path.join("state.sqlite3"), false)?;
+            let metadata = fs::metadata(&database)?;
+            if !metadata.is_file() || metadata.nlink() != 1 {
+                return Err(failure(
+                    Code::ExecutionScopeInvalid,
+                    "mutation journal is not an unaliased regular file",
+                ));
+            }
+            Some((database, directory))
+        } else {
+            None
+        };
+        let mut journal = Self {
+            store,
+            _lock: lock,
+            #[cfg(target_os = "macos")]
+            mutation_durability,
+        };
+        journal.sync_mutation_evidence()?;
         journal.recover()?;
         journal.recover_mutations()?;
         Ok(journal)
+    }
+
+    /// SQLite can fall back from F_FULLFSYNC to fsync. Explicitly flush the
+    /// bound database and directory after each mutation transition, propagating
+    /// failures before the caller can perform the next filesystem action.
+    /// DELETE mode makes the database itself the committed-data owner.
+    fn sync_mutation_evidence(&self) -> Result<()> {
+        #[cfg(target_os = "macos")]
+        if let Some((database, directory)) = &self.mutation_durability {
+            fs::sync_file(database)?;
+            fs::sync_directory(directory)?;
+        }
+        Ok(())
     }
     #[cfg(not(unix))]
     pub fn open(_plan: &ExecutionPlan) -> Result<Self> {
@@ -183,7 +274,7 @@ impl Journal {
         Ok(())
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub fn begin_mutation(
         &mut self,
         plan: &ExecutionPlan,
@@ -247,7 +338,8 @@ impl Journal {
                 ],
             )
             .map_err(state_error)?;
-        transaction.commit().map_err(state_error)
+        transaction.commit().map_err(state_error)?;
+        self.sync_mutation_evidence()
     }
 
     pub fn save_mutation(&mut self, run: &MutationRun) -> Result<()> {
@@ -261,20 +353,20 @@ impl Journal {
                 "terminal mutation evidence is immutable",
             ));
         }
-        Ok(())
+        self.sync_mutation_evidence()
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub fn mutation(&self, run_id: &str) -> Result<Option<MutationRun>> {
         read_mutation(&self.store.connection, run_id)
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub fn recovery_events(&self, run_id: &str) -> Result<Vec<RecoveryEvent>> {
         read_recovery_events(&self.store.connection, run_id)
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub fn finalization_events(&self, run_id: &str) -> Result<Vec<FinalizationEvent>> {
         read_finalization_events(&self.store.connection, run_id)
     }
@@ -310,7 +402,7 @@ impl Journal {
         Ok(())
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub fn stored_authority(&self, plan: &ExecutionPlan, approval: &Approval) -> Result<()> {
         for (table, key_name, key, expected) in [
             (
@@ -352,7 +444,7 @@ impl Journal {
         Ok(())
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub fn append_recovery(
         &mut self,
         event: &RecoveryEvent,
@@ -379,7 +471,7 @@ impl Journal {
             "INSERT INTO execution_recovery_events (event_id, run_id, operation_id, action_id, operation, phase, document_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![event.event_id, event.run_id, event.operation_id, event.action_id, event.operation, event.phase, document],
         ).map_err(state_error)?;
-        Ok(())
+        self.sync_mutation_evidence()
     }
 
     pub fn begin(
@@ -445,7 +537,8 @@ impl Journal {
                 ],
             )
             .map_err(state_error)?;
-        transaction.commit().map_err(state_error)
+        transaction.commit().map_err(state_error)?;
+        self.sync_mutation_evidence()
     }
 
     pub fn save(&mut self, run: &ExecutionRun) -> Result<()> {
@@ -457,7 +550,7 @@ impl Journal {
                 "terminal execution records are immutable",
             ));
         }
-        Ok(())
+        self.sync_mutation_evidence()
     }
 }
 

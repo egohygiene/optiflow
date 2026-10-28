@@ -1,10 +1,13 @@
 # Quarantine recovery (development source)
 
-This #92 implementation adds operator-initiated recovery for the Linux-only
-quarantine transaction. It is absent from the immutable read-only `v0.1.1`
+This #92 implementation adds operator-initiated recovery for the Linux
+quarantine transaction. The [#111 first checkpoint](work/111/HANDOFF.md) adds
+unvalidated macOS/APFS same-volume resume, restore and empty-namespace cleanup,
+with the platform and durability refusals in the [quarantine protocol](execution-quarantine.md#macosapfs-checkpoint-boundary).
+It is absent from the immutable read-only `v0.1.1`
 release. Use disposable files when evaluating it. Recovery never permanently
 deletes a file or claims measured physical savings. Explicit [v4 finalization](execution-finalization.md)
-has a separate irreversible authority and report.
+has a separate irreversible authority and report and remains Linux-only.
 
 ## Inspect before an operation
 
@@ -60,11 +63,28 @@ Restore names one committed action; it verifies the keeper, complete content
 hash, direct bytes, original ownership/mode/modification time and the bounded
 extended-attribute fingerprint recorded at commit. It requires a vacant source
 path. On the same filesystem an exclusive no-replace rename returns the
-original object. Across filesystems it copies into an exclusive source-side
+original object. Across filesystems, the Linux implementation copies into an exclusive source-side
 temporary file, synchronizes and verifies it, then commits it with a no-replace
 rename. The verified quarantine copy remains; there is no automatic deletion
 of that copy. A repeated successful restore verifies the result and appends
 no events.
+
+New apply/resume commit events bind the observed quarantine inode using the
+existing optional v3 identity field. Cross-filesystem recovery and retained-copy
+rechecks compare that identity whenever it is present, even when replacement
+bytes and copied properties match. Historical apply events with no identity
+retain their existing content/property checks; they do not gain identity proof.
+Before publishing a reverse-copy temporary file, recovery also reopens its
+entry relative to the held source parent and compares it with the verified
+handle, then rechecks committed properties. A mismatch leaves the source path
+vacant and preserves temporary/quarantine evidence for inspection. These checks
+do not make the subsequent rename atomic with respect to a hostile writer.
+
+Mac recovery refuses any approved plan containing a cross-volume action before
+opening writable state. It binds BSD flags and birth time in addition to the
+existing property fields, without changing Linux v3 fingerprint bytes or the
+v1–v4 wire schemas. It does not make historical v2 runs recoverable or qualify
+moving journals between operating systems.
 
 Cleanup is narrowly defined: after **every** action has returned by
 same-filesystem rename, it checks the original sources and removes only the
@@ -92,3 +112,10 @@ remains `attention_required`, even if a path happens to look correct. Manual
 inspection is needed. Hostile concurrent writers, network disconnects, quotas,
 remote durability and physical allocation behavior are not guaranteed by the
 local protocol.
+
+A failed post-transition database flush may leave a completed event visible
+to read-only status. That state describes the recorded event, not independent
+proof of its durability. A synchronization error requires path/journal
+inspection; it must not be interpreted as a rollback. Any later mutating
+operation revalidates its objects and must successfully persist its next pending
+transition before changing them.

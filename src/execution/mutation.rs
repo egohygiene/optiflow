@@ -1,38 +1,39 @@
-//! Bounded Linux quarantine transactions. v1 preview evidence remains immutable.
-#[cfg(target_os = "linux")]
+//! Bounded Linux and same-volume macOS APFS quarantine transactions.
+//! v1 preview evidence remains immutable; macOS native qualification is pending.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::fs::File;
 #[cfg(target_os = "linux")]
 use std::io::{Read, Write};
 use std::path::Path;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use uuid::Uuid;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::digest;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::filesystem as fs;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::journal::Journal;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::model::ExactAction;
 use super::model::{Approval, CapacityEvidence, ExecutionPlan, SavingsEvidence, Topology};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::validation::{validate_environment_remaining, validate_pair, validate_plan};
 use super::{Result, failure};
 use crate::configuration::EffectivePolicyV1;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use crate::contracts::{self, Contract};
 use crate::domain::NativePath;
 use crate::outcome::{Diagnostic, DiagnosticCode as Code};
 use crate::signals::SignalState;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub const MUTATION_SCHEMA: &str = "optiflow.execution-mutation.v2";
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 const ATTEMPT_SCHEMA: &str = "optiflow.execution-mutation-attempt.v2";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,7 +97,7 @@ pub struct MutationRun {
 
 pub use super::journal::load_mutation;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn check_authority(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -129,10 +130,10 @@ pub(super) fn check_authority(
             "state directory differs from plan",
         ));
     }
-    Ok(())
+    fs::check_mutation_platform(plan)
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn apply_quarantine(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -143,11 +144,11 @@ pub fn apply_quarantine(
     let _ = (plan, approval, state, policy, signals);
     Err(failure(
         Code::ExecutionUnsupported,
-        "live quarantine requires the verified Linux filesystem implementation",
+        "live quarantine requires Linux or the bounded macOS APFS implementation",
     ))
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn apply_quarantine(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -155,11 +156,11 @@ pub fn apply_quarantine(
     policy: &EffectivePolicyV1,
     signals: &SignalState,
 ) -> Result<MutationRun> {
-    apply_linux(plan, approval, state, policy, signals)
+    apply_supported(plan, approval, state, policy, signals)
 }
 
-#[cfg(target_os = "linux")]
-fn apply_linux(
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn apply_supported(
     plan: &ExecutionPlan,
     approval: &Approval,
     state: &Path,
@@ -173,7 +174,7 @@ fn apply_linux(
     if signals.is_cancelled() {
         return Err(fs::interrupted(signals));
     }
-    let mut journal = Journal::open(plan)?;
+    let mut journal = Journal::open_mutation(plan)?;
     // Recovery may have recorded an older interrupted transaction under this
     // fingerprint. A namespace is never reused or cleaned up implicitly.
     let capacity = validate_environment_remaining(plan, &mut fs::capacity, false, 0)?;
@@ -215,7 +216,7 @@ fn apply_linux(
     Ok(run)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn execute(
     plan: &ExecutionPlan,
     approval: &Approval,
@@ -243,9 +244,9 @@ fn execute(
             format!("cannot create quarantine namespace: {e}"),
         )
     })?;
-    quarantine.sync_all().map_err(journal_error)?;
+    fs::sync_directory(&quarantine)?;
     let directory = fs::open(&namespace, true)?;
-    directory.sync_all().map_err(journal_error)?;
+    fs::sync_directory(&directory)?;
     let namespace_identity = fs::directory(&namespace)?.identity;
     phase(journal, run, Phase::NamespaceDurable)?;
     for (index, action) in plan.body.actions.iter().enumerate() {
@@ -277,8 +278,9 @@ fn execute(
 }
 
 /// Shared v2/v3 action engine. The caller must durably record each checkpoint;
-/// a failed checkpoint leaves its last pending phase ambiguous, never committed.
-#[cfg(target_os = "linux")]
+/// a failed checkpoint stops execution. SQLite may expose a row even when its
+/// later device flush failed; visible status alone is not durability proof.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn perform_one(
     plan: &ExecutionPlan,
     action: &ExactAction,
@@ -287,6 +289,7 @@ pub(super) fn perform_one(
     signals: &SignalState,
     checkpoint: &mut impl FnMut(Phase) -> Result<()>,
 ) -> Result<Vec<CapacityEvidence>> {
+    fs::check_mutation_platform(plan)?;
     let mut capacity = validate_environment_remaining(plan, &mut fs::capacity, true, index)?;
     validate_pair(action, signals)?;
     let candidate = fs::open_bound(&action.candidate)?;
@@ -296,10 +299,23 @@ pub(super) fn perform_one(
         .file_name()
         .ok_or_else(|| failure(Code::ExecutionScopeInvalid, "candidate has no filename"))?
         .to_owned();
+    #[cfg(target_os = "macos")]
+    let original_properties = properties(&candidate)?;
+    #[cfg(target_os = "macos")]
+    {
+        // Fail before the rename if this actual file/directory cannot provide
+        // the durable operation. There is no weaker fsync-only fallback.
+        fs::sync_file(&candidate)?;
+        fs::sync_directory(&parent)?;
+        fs::sync_directory(&directory)?;
+    }
     checkpoint(Phase::Preflighted)?;
     if action.topology == Topology::SameFilesystem {
+        fs::check_rename_platform(&candidate, &parent, &directory)?;
         checkpoint(Phase::RenamePending)?;
         fs::check_file(&candidate, &action.candidate)?;
+        #[cfg(target_os = "macos")]
+        check_preserved_properties(&original_properties, &properties(&candidate)?)?;
         rustix::fs::renameat_with(
             &parent,
             &name,
@@ -313,16 +329,18 @@ pub(super) fn perform_one(
                 format!("atomic no-replace quarantine move refused: {e}"),
             )
         })?;
-        parent
-            .sync_all()
-            .and_then(|_| directory.sync_all())
-            .map_err(journal_error)?;
+        fs::sync_directory(&parent)?;
+        fs::sync_directory(&directory)?;
+        #[cfg(target_os = "macos")]
+        fs::sync_file(&candidate)?;
         verify_moved(
             action,
             &candidate,
             &namespace.join(&action.action_id),
             signals,
         )?;
+        #[cfg(target_os = "macos")]
+        check_preserved_properties(&original_properties, &properties(&candidate)?)?;
         checkpoint(Phase::DestinationDurable)?;
     } else {
         capacity = copy_cross_filesystem(
@@ -332,7 +350,20 @@ pub(super) fn perform_one(
     Ok(capacity)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(target_os = "macos")]
+fn copy_cross_filesystem(
+    _plan: &ExecutionPlan,
+    _action: &ExactAction,
+    _source: &File,
+    _index: usize,
+    _namespace: &Path,
+    _signals: &SignalState,
+    _checkpoint: &mut impl FnMut(Phase) -> Result<()>,
+) -> Result<Vec<CapacityEvidence>> {
+    Err(failure(Code::ExecutionUnsupported, "macOS cross-volume quarantine copying is unsupported"))
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn attempt(action: &ExactAction, namespace: &Path) -> Result<MutationAttempt> {
     let destination = namespace.join(&action.action_id);
     Ok(MutationAttempt {
@@ -347,7 +378,7 @@ fn attempt(action: &ExactAction, namespace: &Path) -> Result<MutationAttempt> {
     })
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn phase(journal: &mut Journal, run: &mut MutationRun, next: Phase) -> Result<()> {
     run.attempts.last_mut().expect("durable attempt").phase = next;
     journal.save_mutation(run)
@@ -361,7 +392,7 @@ fn journal_error(error: std::io::Error) -> Box<Diagnostic> {
     )
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn verify_moved(
     action: &ExactAction,
     original: &File,
@@ -584,15 +615,89 @@ fn same_object(left: &File, right: &File) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[derive(PartialEq, Eq)]
 pub(super) struct Properties {
     pub(super) uid: u32,
     pub(super) gid: u32,
     pub(super) mode: u32,
+    #[cfg(target_os = "linux")]
     pub(super) atime: (i64, i64),
     pub(super) mtime: (i64, i64),
     pub(super) xattrs: Vec<(Vec<u8>, Vec<u8>)>,
+    #[cfg(target_os = "macos")]
+    pub(super) flags: u32,
+    #[cfg(target_os = "macos")]
+    pub(super) birthtime: (i64, i64),
+}
+
+/// macOS retains the inode through rename. Observe the bounded attributes and
+/// exact flags/birth time without reconstructing them. ACL content is separate
+/// from xattrs and is not independently attested by this checkpoint.
+#[cfg(target_os = "macos")]
+pub(super) fn properties(file: &File) -> Result<Properties> {
+    use rustix::fs::{fgetxattr, flistxattr, fstat};
+    use std::os::unix::ffi::OsStrExt;
+    let before = fstat(file).map_err(|error| failure(
+        Code::ExecutionSourceUnavailable, format!("cannot inspect macOS file properties: {error}"),
+    ))?;
+    if before.st_flags & 0x0006_0006 != 0 {
+        return Err(failure(Code::ExecutionReadOnly, "immutable or append-only macOS inode"));
+    }
+    let mut names_buffer = vec![0u8; 65_536];
+    let names = flistxattr(file, &mut names_buffer).map_err(|error| failure(
+        Code::ExecutionUnsupported, format!("cannot enumerate macOS extended attributes: {error}"),
+    ))?;
+    if names > 0 && names_buffer[names - 1] != 0 {
+        return Err(failure(Code::ExecutionUnsupported, "macOS extended-attribute names are not terminated"));
+    }
+    let mut xattrs = Vec::new();
+    let mut total = 0usize;
+    for name in names_buffer[..names].split(|byte| *byte == 0).filter(|name| !name.is_empty()) {
+        if name.len() > 255 || xattrs.len() >= 128 {
+            return Err(failure(Code::ExecutionBoundsExceeded, "macOS extended-attribute count or name bound exceeded"));
+        }
+        let mut value_buffer = vec![0u8; 65_536];
+        let length = fgetxattr(file, std::ffi::OsStr::from_bytes(name), &mut value_buffer)
+            .map_err(|error| failure(Code::ExecutionUnsupported, format!("cannot read macOS extended attribute: {error}")))?;
+        total = total.checked_add(length)
+            .ok_or_else(|| failure(Code::ExecutionBoundsExceeded, "macOS xattr size overflow"))?;
+        if total > 1_048_576 {
+            return Err(failure(Code::ExecutionBoundsExceeded, "macOS extended attributes exceed one MiB"));
+        }
+        xattrs.push((name.to_vec(), value_buffer[..length].to_vec()));
+    }
+    xattrs.sort();
+    if xattrs.windows(2).any(|pair| pair[0].0 == pair[1].0) {
+        return Err(failure(Code::ExecutionSourceStale, "macOS extended-attribute names are ambiguous"));
+    }
+    let after = fstat(file).map_err(|error| failure(Code::ExecutionSourceUnavailable, error.to_string()))?;
+    let signature = |stat: &rustix::fs::Stat| (
+        stat.st_dev, stat.st_ino, stat.st_size, stat.st_mode, stat.st_uid, stat.st_gid,
+        (stat.st_mtime, stat.st_mtime_nsec), (stat.st_ctime, stat.st_ctime_nsec),
+        (stat.st_birthtime, stat.st_birthtime_nsec), stat.st_flags, stat.st_nlink,
+    );
+    if signature(&before) != signature(&after) {
+        return Err(failure(Code::ExecutionSourceStale, "macOS properties changed during observation"));
+    }
+    Ok(Properties {
+        uid: before.st_uid, gid: before.st_gid, mode: u32::from(before.st_mode),
+        mtime: (before.st_mtime, before.st_mtime_nsec),
+        xattrs, flags: before.st_flags,
+        birthtime: (before.st_birthtime, before.st_birthtime_nsec),
+    })
+}
+
+#[cfg(target_os = "macos")]
+pub(super) fn check_preserved_properties(expected: &Properties, actual: &Properties) -> Result<()> {
+    // Content verification may advance atime; rename itself updates ctime.
+    if expected.uid != actual.uid || expected.gid != actual.gid || expected.mode != actual.mode
+        || expected.mtime != actual.mtime || expected.xattrs != actual.xattrs
+        || expected.flags != actual.flags || expected.birthtime != actual.birthtime
+    {
+        return Err(failure(Code::ExecutionSourceStale, "macOS inode properties differ before or after rename"));
+    }
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]

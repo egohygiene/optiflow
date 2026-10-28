@@ -119,3 +119,19 @@ plans are not migrated to execution authority. Future versions and unknown or
 duplicate keys fail closed. See [execution previews](execution-dry-run.md) for
 canonical fingerprints, examples and compatibility rules. Frozen examples live
 in `tests/fixtures/execution-v1/`.
+
+## Mac cross-copy property declarations (unvalidated development contract)
+
+`optiflow.execution-properties-macos-cross-copy.v1`, with explicit profile
+`macos-apfs-cross-copy/v1`, is a standalone structural review document under
+`schemas/execution-properties-macos-cross-copy-v1.schema.json`. The pure
+`execution::property_evidence` library validates required ACL state, bounded
+properties and compatibility before producing its separate fingerprint.
+Unlike historical forward-compatible report fields, this closed execution
+contract rejects unknown fields. Runtime rules additionally enforce aggregate
+and canonical-order constraints described in the
+[property protocol](execution-macos-copy-properties.md).
+
+It is not CLI output, journal evidence, native observation or mutation authority.
+Existing Linux and same-volume Mac hashes and execution v1–v4 shapes stay
+unchanged. Legacy/missing ACL evidence cannot satisfy this new profile.
