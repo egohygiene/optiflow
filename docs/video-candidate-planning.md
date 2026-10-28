@@ -6,6 +6,11 @@ review-only FFmpeg recipe from supplied declarations. It does not inspect
 media, invoke FFmpeg, produce an optimized file or grant replacement authority.
 The published Optiflow release and product CLI gain no video command here.
 
+The follow-on [provider observation checkpoint](video-provider-observation.md)
+adds host-acquired source/provider identities and richer reported video facts.
+Its coverage remains incomplete, and its internal encoder capture does not
+execute this planner's full resource policy or publish an accepted candidate.
+
 ## First declared subset
 
 Start with a bounded Matroska input containing one FFV1 video stream:
