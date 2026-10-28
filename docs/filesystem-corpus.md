@@ -33,12 +33,45 @@ generator and `Cargo.lock`. The recipe digest describes a logical fixture,
 not a portable serialized filesystem image. Sparse zero regions and integer
 payloads are specified by recipe instead of checking large blobs into Git.
 Optiflow continues to use BLAKE3 for content evidence. After reviewing an
-intentional recipe, assertion, generator, or dependency change, regenerate:
+intentional recipe, assertion, or generator change, regenerate:
 
 ```bash
 python3 scripts/filesystem-corpus.py --write-index
 git diff -- tests/fixtures/filesystem/
 ```
+
+### Dependency-only updates
+
+After reviewing a dependency change and choosing the resulting `Cargo.lock`,
+use the narrower authoring command below. It proposes the old and new lock
+digests without writing; `--write` explicitly updates only that binding:
+
+```bash
+python3 -B scripts/update-filesystem-corpus-lock.py
+python3 -B scripts/update-filesystem-corpus-lock.py --write
+git diff -- Cargo.toml Cargo.lock tests/fixtures/filesystem/index.json
+```
+
+The helper reuses the existing generator's source-reading index calculation,
+without calling its runner. It refuses missing, malformed, duplicate-key or
+noncanonical index JSON and any difference outside `cargo_lock_sha256`,
+including generator, catalog, recipe, expected-outcome, payload and proof
+source bindings. An already-current index is a no-op. If a non-lock binding
+also changed, review that change through the broader fixture update process;
+do not use dependency maintenance to accept unrelated proof changes.
+
+Use a stable local checkout while authoring. The helper compares the index
+again immediately before replacing it, but is not a concurrent-writer lock
+or a source-media transaction. It installs no dependencies, builds nothing
+and runs no corpus tests. Review and commit the lockfile and its index binding
+together; CI continues to check the committed index without rewriting it.
+Updating a digest is source bookkeeping, not evidence that the dependency or
+corpus passes. At the testing checkpoint, run the index check, the focused
+`tests/test_filesystem_corpus_lock.py` unit tests and the supported-host corpus
+tiers separately, recording their exact source and outcomes.
+
+The [#136 handoff](work/136/HANDOFF.md) records the selected lockfile and the
+checks still deferred for this source repair.
 
 The runner always checks drift before execution. It builds locked test
 binaries, resolves each exact selector, rejects zero/ignored tests, repeats
