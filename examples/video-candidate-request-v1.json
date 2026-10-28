@@ -1,0 +1,70 @@
+{
+  "schema": "optiflow.video-candidate-request.v1",
+  "profile": "optiflow.matroska-ffv1-sdr-candidate.v1",
+  "source": {
+    "observation_id": "synthetic-declarations-only-not-an-observed-file",
+    "observation_fingerprint": {"algorithm": "blake3-256", "value": "1111111111111111111111111111111111111111111111111111111111111111"},
+    "content_digest": {"algorithm": "blake3-256", "value": "2222222222222222222222222222222222222222222222222222222222222222"},
+    "logical_bytes": 1048576,
+    "probe_observation_fingerprint": {"algorithm": "blake3-256", "value": "3333333333333333333333333333333333333333333333333333333333333333"},
+    "media": {
+      "container": "matroska",
+      "codec": "ffv1",
+      "stream_index": 0,
+      "total_streams": 1,
+      "disposition": "default",
+      "width": 320,
+      "height": 180,
+      "pixel_format": "yuv420p",
+      "field_order": "progressive",
+      "color_range": "tv",
+      "color_space": "bt709",
+      "color_transfer": "bt709",
+      "color_primaries": "bt709",
+      "sample_aspect_ratio": {"numerator": 1, "denominator": 1},
+      "frame_rate": {"numerator": 25, "denominator": 1},
+      "time_base": {"numerator": 1, "denominator": 1000},
+      "frame_count": 50,
+      "start_pts": 0,
+      "duration_ticks": 2000,
+      "constant_frame_rate": true,
+      "rotation_degrees": 0,
+      "feature_observation_complete": true,
+      "chapters": 0,
+      "side_data_entries": 0,
+      "descriptive_metadata_entries": 0,
+      "unknown_metadata_entries": 0
+    }
+  },
+  "operation": {"kind": "stream_copy"},
+  "policy": {
+    "effective_policy_fingerprint": {"algorithm": "blake3-256", "value": "4444444444444444444444444444444444444444444444444444444444444444"},
+    "source_preserving": true,
+    "metadata": "regenerate_encoder_duration_only",
+    "require_strictly_smaller": true
+  },
+  "producer": {
+    "name": "ffmpeg",
+    "version": "8.0.1",
+    "executable": {"encoding": "utf8", "value": "/synthetic/not-installed/ffmpeg"},
+    "binary_digest": {"algorithm": "blake3-256", "value": "5555555555555555555555555555555555555555555555555555555555555555"},
+    "invocation_fingerprint": {"algorithm": "blake3-256", "value": "6666666666666666666666666666666666666666666666666666666666666666"}
+  },
+  "producer_build_fingerprint": {"algorithm": "blake3-256", "value": "7777777777777777777777777777777777777777777777777777777777777777"},
+  "probe": {
+    "name": "ffprobe",
+    "version": "8.0.1",
+    "executable": {"encoding": "utf8", "value": "/synthetic/not-installed/ffprobe"},
+    "binary_digest": {"algorithm": "blake3-256", "value": "8888888888888888888888888888888888888888888888888888888888888888"},
+    "invocation_fingerprint": {"algorithm": "blake3-256", "value": "9999999999999999999999999999999999999999999999999999999999999999"}
+  },
+  "probe_build_fingerprint": {"algorithm": "blake3-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+  "limits": {
+    "input_bytes": 16777216,
+    "candidate_bytes": 16777216,
+    "decoded_bytes": 67108864,
+    "temporary_bytes": 33554432,
+    "memory_bytes": 268435456,
+    "elapsed_ms": 30000
+  }
+}
