@@ -1,5 +1,5 @@
 {
-  "cargo_lock_sha256": "f2def6aed424d946981a3a8216d130163feaa3724486adb8c254c5877f3f3733",
+  "cargo_lock_sha256": "fc6655ba90b172dcb4ae925497978b6cbcd53b987a93b2f7753b20231207c901",
   "cases": [
     {
       "expected_sha256": "2438723acb698bdb17049d08a3aa2decc17e2032a29c0726d1a8b315b6487c76",
