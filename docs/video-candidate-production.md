@@ -5,6 +5,11 @@ description: Selected Linux resource guard, independent closed-container verific
 
 # Produce one source-preserving video candidate
 
+For a separately bounded serial folder batch using this same producer, see
+[folder candidates](video-folder-candidates.md). That source checkpoint adds
+read-only discovery, per-entry outcomes and conservative journal inspection;
+it grants no replacement/disposal or native qualification.
+
 The #146 development library now has `video_production::produce`, a
 [versioned request](../schemas/video-production-request-v1.schema.json), an
 explicit [trial example](../examples/video_candidate.rs), and a separate
@@ -121,7 +126,7 @@ there is no promised percentage reduction. Do not use private media for fixtures
 Ten synthetic/policy/protocol regressions are authored, uncompiled/unrun. All
 tests, builds/compiler, lint/format, schemas/corpus/drift/docs checks,
 dependency acquisition and native/provider/media/CI execution remain deferred.
-No measured savings, release, folder recursion, replacement or disposal is claimed.
+No measured savings, release, actual folder processing, replacement or disposal is claimed.
 
 Primary source references inspected while authoring: pinned
 [systemd-run v256 interface](https://github.com/systemd/systemd/blob/v256/man/systemd-run.xml)

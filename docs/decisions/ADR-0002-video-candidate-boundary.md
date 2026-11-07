@@ -29,3 +29,9 @@ Partial staging and failed/unconfirmed cleanup stay failures without adoption.
 
 All source/compiler/tests/lint/schema/native/provider/CI qualification remains
 deferred by maintainer; no native-supported-host acceptance or release is recorded.
+
+November 7 source extension: bounded serial folder discovery and per-entry
+start/result evidence compose this same producer. A single candidate runs at
+a time; failed/unresolved states stop and read-only recovery grants no replay.
+See [folder scope](../video-folder-candidates.md). Proposed status, native/host
+qualification and the separate future mutation/disposal boundary are unchanged.
