@@ -1,5 +1,15 @@
 # Video candidate source checkpoint — November 6, 2026
 
+November 7 additive source checkpoint: [bounded serial folders](../../video-folder-candidates.md)
+now compose the same producer through bounded discovery/content admission,
+single in-flight candidates, explicit outcomes, count/time/publication/reserve
+admission and immutable private start/result records. Uncertain attempts stop;
+recovery inspection is read-only and never replays/adopts. Eight additional
+cases are authored, uncompiled/unrun. No native collection, measured savings,
+replacement/disposal, qualified macOS/total RSS claim or ADR adoption occurred.
+Automated reconciled resume and full native/resource/platform qualification
+remain on #146/#65. The earlier checkpoint below is historical.
+
 Adds a selected Linux user-manager/cgroup/tmpfs guard, independent bounded closed
 Matroska/FFV1 packet/feature inspection, complete source/candidate raw-YUV decode
 comparison, strictly-smaller admission and separate durable private video

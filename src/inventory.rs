@@ -173,7 +173,7 @@ pub fn analyze_file(
     })
 }
 
-fn classify_content_type(content_type: &str) -> MediaKind {
+pub(crate) fn classify_content_type(content_type: &str) -> MediaKind {
     match content_type.split_once('/').map(|(prefix, _)| prefix) {
         Some("image") => MediaKind::Image,
         Some("video") => MediaKind::Video,

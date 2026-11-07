@@ -36,6 +36,7 @@ pub mod video_sandbox;
 pub mod video_container;
 pub mod video_production;
 pub mod video_artifact;
+pub mod video_folder;
 
 use crate::cli::Cli;
 use crate::signals::SignalState;
