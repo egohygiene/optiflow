@@ -1,0 +1,47 @@
+{
+  "schema": "optiflow.video-production-request.v1",
+  "source": "/absolute/demo/source.mkv",
+  "ffmpeg": "/absolute/bin/ffmpeg-8.0.1",
+  "ffprobe": "/absolute/bin/ffprobe-8.0.1",
+  "private_workdir": "/absolute/private-video-work",
+  "artifact_root": "/absolute/private-video-candidates",
+  "operation": {
+    "kind": "stream_copy"
+  },
+  "limits": {
+    "input_bytes": 16777216,
+    "candidate_bytes": 16777216,
+    "decoded_bytes": 16777216,
+    "temporary_bytes": 33554432,
+    "memory_bytes": 268435456,
+    "elapsed_ms": 30000
+  },
+  "sandbox": {
+    "schema": "optiflow.linux-video-sandbox.v1",
+    "systemd_run": {
+      "path": "/absolute/path/to/systemd-run",
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "systemctl": {
+      "path": "/absolute/path/to/systemctl",
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "helper": {
+      "path": "/absolute/path/to/optiflow",
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "user_bus": "/run/user/1000/bus",
+    "provider_subtree_memory_bytes": 134217728,
+    "provider_scratch_bytes": 8388608,
+    "minimum_free_bytes": 67108864
+  }
+}

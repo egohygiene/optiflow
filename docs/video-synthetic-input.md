@@ -5,6 +5,10 @@ description: Unexecuted FFmpeg recipe for the first video candidate planning che
 
 # Synthetic video input recipe
 
+The [production source checkpoint](video-candidate-production.md) adds an opt-in
+Linux stream-copy library/example path; qualification and these commands remain
+unrun. Its closed subset requires Matroska CRC disabled and independent frames.
+
 This recipe prepares a tiny fake input for
 [#146](https://github.com/egohygiene/optiflow/issues/146)'s later
 inspect → candidate → compare walkthrough. The current checkpoint only
@@ -27,12 +31,12 @@ of version. This repository does not install or download the provider.
     -f lavfi -i 'testsrc2=size=320x180:rate=25:duration=2' \
     -map 0:v:0 -an -sn -dn \
     -vf 'setsar=1,setfield=prog' \
-    -c:v ffv1 -level:v 3 -threads:v 1 -pix_fmt yuv420p \
+    -c:v ffv1 -level:v 3 -g:v 1 -threads:v 1 -pix_fmt yuv420p \
     -color_range tv -colorspace bt709 \
     -color_trc bt709 -color_primaries bt709 \
     -frames:v 50 -fps_mode passthrough \
     -map_metadata -1 -map_chapters -1 \
-    -f matroska "$optiflow_demo_dir/source.mkv" &&
+    -write_crc32 0 -f matroska "$optiflow_demo_dir/source.mkv" &&
     printf '%s\n' "$optiflow_demo_dir/source.mkv"
 )
 ```

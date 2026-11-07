@@ -1,0 +1,31 @@
+# ADR-0002 — Bound development video candidates without collection mutation
+
+- **Status:** Proposed; source implementation/merge does not ratify or qualify it.
+- **Date:** 2026-11-06
+- **Issue:** #146
+
+The first video producer remains a typed FFmpeg/ffprobe adapter with a closed
+Matroska/FFV1 stream-copy subset. It adds no codec engine, generic process/job
+framework or cross-suite orchestrator. Flow owns before/after placement through
+released contracts. The historical read-only review/observation APIs stay distinct.
+
+Selected Linux user-manager services and a safe internal exec guard provide
+observed cgroup provider-subtree memory limits and aggregate private tmpfs
+scratch. Other writable mounts, unavailable/degraded limits and unsupported
+hosts refuse. Total Rust host RSS, general escaped-process containment and hard
+preemption of host syscalls/parsing are not claimed; these scopes remain explicit.
+Resource numbers, exact launch/provider bytes and actual guard receipts bind
+candidate evidence. No privileged manager or installation is implicit.
+
+Host-owned independent EBML/payload/timestamp observation and complete source/
+candidate decode comparison precede strictly-smaller acceptance. Descriptive or
+unknown features refuse. Lossy execution and quality approval remain separate.
+Source bytes are read only and re-observed at precommit.
+
+Video uses its own versioned candidate protocol over the existing descriptor,
+private staging, no-follow, fsync and no-replace publication primitives. It does
+not expand PNG's closed member vocabulary or add replacement/disposal authority.
+Partial staging and failed/unconfirmed cleanup stay failures without adoption.
+
+All source/compiler/tests/lint/schema/native/provider/CI qualification remains
+deferred by maintainer; no native-supported-host acceptance or release is recorded.

@@ -25,6 +25,9 @@ pub enum Contract {
     PngCandidateContract,
     PngCandidateEvidence,
     VideoCandidateRequest,
+    VideoCandidateEvidence,
+    VideoProductionRequest,
+    VideoCandidateArtifactSet,
     ExtensionManifest,
     ExtensionLock,
     ExtensionInvocation,
@@ -43,7 +46,9 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
         | Contract::ExecutionFinalizationAuthorization
         | Contract::ExecutionFinalizationEvent
         | Contract::ExecutionFinalizationStatus
-        | Contract::PngCandidateEvidence => jsonschema::options()
+        | Contract::PngCandidateEvidence
+        | Contract::VideoCandidateEvidence
+        | Contract::VideoCandidateArtifactSet => jsonschema::options()
             .should_validate_formats(true)
             .build(&schema_document)
             .context("failed to compile strict-format schema")?,
@@ -119,6 +124,9 @@ pub fn schema(contract: Contract) -> Result<Value> {
         Contract::PngCandidateEvidence => {
             include_str!("../schemas/png-candidate-evidence-v1.schema.json")
         }
+        Contract::VideoProductionRequest => include_str!("../schemas/video-production-request-v1.schema.json"),
+        Contract::VideoCandidateEvidence => include_str!("../schemas/video-candidate-evidence-v1.schema.json"),
+        Contract::VideoCandidateArtifactSet => include_str!("../schemas/video-candidate-artifact-set-v1.schema.json"),
         Contract::VideoCandidateRequest => {
             include_str!("../schemas/video-candidate-request-v1.schema.json")
         }

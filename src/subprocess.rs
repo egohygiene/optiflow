@@ -59,6 +59,7 @@ pub struct SubprocessCommand {
     program: OsString,
     arguments: Vec<OsString>,
     clear_environment: bool,
+    environment: Vec<(OsString,OsString)>,
     current_directory: Option<PathBuf>,
 }
 
@@ -68,6 +69,7 @@ impl SubprocessCommand {
             program: program.into(),
             arguments: Vec::new(),
             clear_environment: false,
+            environment: Vec::new(),
             current_directory: None,
         }
     }
@@ -90,6 +92,11 @@ impl SubprocessCommand {
     pub fn clear_environment(mut self) -> Self {
         self.clear_environment = true;
         self
+    }
+
+    /// Supply an explicit environment allowlist after inherited values are cleared.
+    pub fn env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
+        self.environment.push((key.into(),value.into())); self
     }
 
     /// Select an explicit working directory for the command.
@@ -684,6 +691,7 @@ impl SubprocessRunner {
         if command.clear_environment {
             process.env_clear();
         }
+        process.envs(command.environment.iter().map(|(key,value)| (key,value)));
         if let Some(directory) = &command.current_directory {
             process.current_dir(directory);
         }

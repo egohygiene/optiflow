@@ -3,7 +3,9 @@
 //! This boundary does not consume video_candidate::RequestedLimits and cannot
 //! establish candidate acceptance. Pipe overflow aborts capture; one cooperative
 //! deadline covers a provider session. RSS, provider scratch and escaped-process
-//! containment remain unavailable.
+//! containment remain unavailable for legacy observation. The separate selected
+//! Linux production profile requires actual cgroup/tmpfs guard receipts; it does
+//! not claim a total host RSS quota or general escaped-process attestation.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -89,6 +91,8 @@ pub fn capture_capabilities() -> CaptureCapabilities {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct InvocationEvidence {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_guard: Option<crate::video_sandbox::SandboxReceipt>,
     pub provider: MediaProviderEvidence,
     pub build_fingerprint: EvidenceDigest,
     pub argv: Vec<String>,
@@ -133,6 +137,7 @@ pub struct VideoProviders {
     // Refuse concurrent captures through this instance rather than queueing
     // beyond a caller's cancellation/deadline expectations.
     invocation_gate: Mutex<()>,
+    sandbox: Option<crate::video_sandbox::SandboxSession>,
 }
 
 impl VideoProviders {
@@ -158,6 +163,19 @@ impl VideoProviders {
         budget: OperationBudget,
         cancel: &impl Fn() -> bool,
     ) -> Result<Self> {
+        Self::lock_selected(ffmpeg,ffprobe,workdir,limits,budget,None,cancel)
+    }
+
+    pub(crate) fn lock_enforced(ffmpeg: &Path,ffprobe: &Path,workdir: &Path,limits: CaptureLimits,
+        budget: OperationBudget,policy: crate::video_sandbox::LinuxVideoSandbox,cancel: &impl Fn()->bool) -> Result<Self> {
+        ensure!(limits.stderr_bytes >= 1024,"resource receipts require diagnostic capacity");
+        let sandbox = crate::video_sandbox::SandboxSession::bind(policy,&|| budget.check(cancel))?;
+        Self::lock_selected(ffmpeg,ffprobe,workdir,limits,budget,Some(sandbox),cancel)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn lock_selected(ffmpeg: &Path,ffprobe: &Path,workdir: &Path,limits: CaptureLimits,budget: OperationBudget,
+        sandbox: Option<crate::video_sandbox::SandboxSession>,cancel: &impl Fn()->bool) -> Result<Self> {
         limits.check()?;
         ensure!(budget.limit() == Duration::from_millis(limits.elapsed_ms),
             "operation budget differs from declared capture limits");
@@ -166,11 +184,11 @@ impl VideoProviders {
         let guard = || budget.check(cancel);
         guard()?;
         empty_workdir(workdir, &guard)?;
-        let producer = bind_tool("ffmpeg", ffmpeg, workdir, limits, budget, cancel)?;
-        let probe = bind_tool("ffprobe", ffprobe, workdir, limits, budget, cancel)?;
+        let producer = bind_tool("ffmpeg", ffmpeg, workdir, limits, budget, sandbox.as_ref(),cancel)?;
+        let probe = bind_tool("ffprobe", ffprobe, workdir, limits, budget, sandbox.as_ref(),cancel)?;
         let providers = Self {
             producer, probe, workdir: workdir.to_owned(), limits, budget,
-            invocation_gate: Mutex::new(()),
+            invocation_gate: Mutex::new(()), sandbox,
         };
         providers.verify_current_with_cancel(cancel)?;
         Ok(providers)
@@ -182,9 +200,31 @@ impl VideoProviders {
 
     pub(crate) fn verify_current_with_cancel(&self, cancel: &impl Fn() -> bool) -> Result<()> {
         let guard = || self.budget.check(cancel);
+        if let Some(sandbox) = &self.sandbox { sandbox.verify(&guard)?; }
         self.producer.observation.verify_current_guarded(&guard)?;
         self.probe.observation.verify_current_guarded(&guard)?;
         empty_workdir(&self.workdir, &guard)
+    }
+
+    pub(crate) fn guarded_copy_evidence(&self,disposition: &str) -> Result<MediaProviderEvidence> {
+        self.evidence_for(&self.producer,&guarded_copy_arguments(disposition)?,self.limits.candidate_bytes)
+    }
+    pub(crate) fn capture_guarded_copy(&self,bytes: &[u8],disposition: &str,cancel: &impl Fn()->bool) -> Result<UntrustedCapture> {
+        ensure!(self.sandbox.is_some(),"video production requires a resource-constrained session");
+        self.invoke(&self.producer,bytes,guarded_copy_arguments(disposition)?,self.limits.candidate_bytes,cancel)
+    }
+    pub(crate) fn resource_receipts(&self) -> Result<Vec<crate::video_sandbox::SandboxReceipt>> {
+        self.sandbox.as_ref().context("resource-constrained provider session is required")?.receipts()
+    }
+
+    pub(crate) fn resource_policy(&self) -> Result<&crate::video_sandbox::LinuxVideoSandbox> {
+        Ok(self.sandbox.as_ref().context("resource-constrained provider session is required")?.policy())
+    }
+
+    pub(crate) fn decode_untrusted(&self,bytes: &[u8],maximum: usize,cancel: &impl Fn()->bool) -> Result<UntrustedCapture> {
+        ensure!(maximum > 0 && maximum <= 67_108_864,"unsupported complete-decode byte bound");
+        let args = ["-hide_banner","-nostdin","-v","error","-xerror","-err_detect","explode","-protocol_whitelist","pipe","-threads","1","-f","matroska","-i","pipe:0","-map","0:0","-filter_threads","1","-c:v","rawvideo","-threads:v","1","-pix_fmt","+yuv420p","-fps_mode:v","passthrough","-f","rawvideo","pipe:1"].into_iter().map(str::to_owned).collect();
+        self.invoke(&self.producer,bytes,args,maximum,cancel)
     }
 
     pub fn producer_build_fingerprint(&self) -> &EvidenceDigest {
@@ -241,6 +281,9 @@ impl VideoProviders {
         let mut hasher = blake3::Hasher::new();
         hasher.update(b"optiflow.video-provider-invocation.v1\0");
         hasher.update(&serde_json::to_vec(&recipe)?);
+        if let Some(sandbox) = &self.sandbox {
+            hasher.update(b"\0linux-guarded-subtree-v1\0"); hasher.update(&serde_json::to_vec(sandbox.policy())?);
+        }
         Ok(MediaProviderEvidence {
             name: tool.name.to_owned(), version: PROVIDER_VERSION.to_owned(),
             executable: NativePath::from_path(&tool.path),
@@ -265,23 +308,29 @@ impl VideoProviders {
         let guard = || self.budget.check(cancel);
         guard()?;
         tool.observation.verify_current_guarded(&guard)?;
+        if let Some(sandbox) = &self.sandbox { sandbox.verify(&guard)?; }
         empty_workdir(&self.workdir, &guard)?;
         let command = SubprocessCommand::new(tool.path.as_os_str().to_owned())
             .args(arguments.iter().map(String::as_str))
             .clear_environment().current_directory(&self.workdir);
         let remaining = self.budget.remaining(cancel)?;
-        let result = self.limits.runner(stdout_bytes, remaining)?
-            .run_with_bounded_pipes_and_cancel(&command, bytes, cancel);
+        let runner = self.limits.runner(stdout_bytes,remaining)?;
+        let result = if let Some(sandbox) = &self.sandbox { sandbox.run(&tool.path,&arguments,bytes,&runner,&self.workdir,cancel) }
+            else { runner.run_with_bounded_pipes_and_cancel(&command,bytes,cancel).map_err(anyhow::Error::from) };
         // On a runner error, do not start another potentially blocking host read.
         // No capture can be accepted; unexpected workdir entries stay untouched.
         let output = result.context("video provider capture failed")?;
         tool.observation.verify_current_guarded(&guard)?;
+        if let Some(sandbox) = &self.sandbox { sandbox.verify(&guard)?; }
         empty_workdir(&self.workdir, &guard)?;
         guard()?;
         ensure!(output.stderr.is_empty(), "video provider emitted error diagnostics");
         ensure!(!output.stdout.is_empty(), "video provider returned empty output");
+        let resource_guard = if self.sandbox.is_some() { self.resource_receipts()?.last().cloned() } else { None };
+        let mut capabilities = capture_capabilities();
+        if resource_guard.is_some() { capabilities.provider_memory_enforced = true; capabilities.provider_scratch_enforced = true; }
         let evidence = InvocationEvidence {
-            provider: self.evidence_for(tool, &arguments, stdout_bytes)?,
+            resource_guard, provider: self.evidence_for(tool, &arguments, stdout_bytes)?,
             build_fingerprint: tool.build_fingerprint.clone(), argv: arguments,
             input_digest: digest(bytes), input_bytes: bytes.len() as u64,
             stdout_digest: digest(&output.stdout),
@@ -293,19 +342,27 @@ impl VideoProviders {
             child_elapsed_limit_ns: remaining.as_nanos().try_into().unwrap_or(u64::MAX),
             operation_elapsed_limit_ms: self.limits.elapsed_ms,
             operation_elapsed_ms: self.budget.elapsed().as_millis().try_into().unwrap_or(u64::MAX),
-            capture_capabilities: capture_capabilities(),
+            capture_capabilities: capabilities,
         };
         guard()?;
         Ok(UntrustedCapture { bytes: output.stdout, evidence })
     }
 }
 
+fn guarded_copy_arguments(disposition: &str) -> Result<Vec<String>> {
+    let (mut args,_) = invocation_recipe(VideoOperation::StreamCopy,disposition)?;
+    let tail = args.split_off(args.len()-4);
+    args.extend(["-write_crc32".to_owned(),"0".to_owned()]);args.extend(tail);Ok(args)
+}
+
+#[allow(clippy::too_many_arguments)]
 fn bind_tool(
     name: &'static str,
     path: &Path,
     workdir: &Path,
     limits: CaptureLimits,
     budget: OperationBudget,
+    sandbox: Option<&crate::video_sandbox::SandboxSession>,
     cancel: &impl Fn() -> bool,
 ) -> Result<LockedTool> {
     let guard = || budget.check(cancel);
@@ -316,10 +373,12 @@ fn bind_tool(
         "setuid/setgid video providers are unsupported");
     empty_workdir(workdir, &guard)?;
     observation.verify_current_guarded(&guard)?;
+    if let Some(sandbox) = sandbox { sandbox.verify(&guard)?; }
     let command = SubprocessCommand::new(path.as_os_str().to_owned())
         .arg("-version").clear_environment().current_directory(workdir);
-    let result = limits.runner(VERSION_BYTES, budget.remaining(cancel)?)?
-        .run_with_bounded_pipes_and_cancel(&command, &[], cancel);
+    let runner = limits.runner(VERSION_BYTES,budget.remaining(cancel)?)?;
+    let result = if let Some(sandbox) = sandbox { sandbox.run(path,&["-version".to_owned()],&[],&runner,workdir,cancel) }
+        else { runner.run_with_bounded_pipes_and_cancel(&command,&[],cancel).map_err(anyhow::Error::from) };
     let output = result.context("video provider version query failed")?;
     observation.verify_current_guarded(&guard)?;
     empty_workdir(workdir, &guard)?;

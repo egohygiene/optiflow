@@ -14,6 +14,7 @@ use optiflow::signals::SignalState;
 
 fn main() -> ExitCode {
     let arguments: Vec<OsString> = std::env::args_os().collect();
+    if let Some(result) = optiflow::video_sandbox::internal_exec_guard(&arguments) { return result; }
     let requested_format = requested_output_format(&arguments);
     let signals = match SignalState::install() {
         Ok(signals) => signals,
