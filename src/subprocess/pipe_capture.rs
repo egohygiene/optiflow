@@ -140,6 +140,7 @@ where
     if command.clear_environment {
         process.env_clear();
     }
+    process.envs(command.environment.iter().map(|(key,value)| (key,value)));
     if let Some(directory) = &command.current_directory {
         process.current_dir(directory);
     }

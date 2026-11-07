@@ -396,7 +396,7 @@ pub fn recover(root: &Path, set_id: Uuid) -> Inspection {
     }
 }
 
-fn member(kind: &str, file_name: &str, bytes: &[u8]) -> Member {
+pub(crate) fn member(kind: &str, file_name: &str, bytes: &[u8]) -> Member {
     Member {
         kind: kind.to_owned(),
         file_name: file_name.to_owned(),
@@ -587,7 +587,7 @@ fn staging_name(set_id: Uuid) -> String {
 }
 
 #[cfg(unix)]
-fn open_directory(path: &Path) -> Result<File> {
+pub(crate) fn open_directory(path: &Path) -> Result<File> {
     use rustix::fs::{Mode, OFlags, open, openat};
 
     ensure!(path.is_absolute(), "candidate paths must be absolute");
@@ -613,12 +613,12 @@ fn open_directory(path: &Path) -> Result<File> {
 }
 
 #[cfg(not(unix))]
-fn open_directory(_path: &Path) -> Result<File> {
+pub(crate) fn open_directory(_path: &Path) -> Result<File> {
     bail!("candidate publication needs Unix no-follow directory handles")
 }
 
 #[cfg(unix)]
-fn require_private_root(file: &File) -> Result<()> {
+pub(crate) fn require_private_root(file: &File) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     let metadata = file.metadata()?;
     ensure!(metadata.is_dir(), "candidate root is not a directory");
@@ -630,12 +630,12 @@ fn require_private_root(file: &File) -> Result<()> {
 }
 
 #[cfg(not(unix))]
-fn require_private_root(_file: &File) -> Result<()> {
+pub(crate) fn require_private_root(_file: &File) -> Result<()> {
     bail!("candidate publication needs a private Unix directory")
 }
 
 #[cfg(unix)]
-fn write_new(directory: &File, name: &str, bytes: &[u8]) -> Result<()> {
+pub(crate) fn write_new(directory: &File, name: &str, bytes: &[u8]) -> Result<()> {
     use rustix::fs::{Mode, OFlags, openat};
     let mut file = File::from(openat(
         directory,
@@ -649,7 +649,7 @@ fn write_new(directory: &File, name: &str, bytes: &[u8]) -> Result<()> {
 }
 
 #[cfg(unix)]
-fn read_member(directory: &File, name: &str, maximum: usize) -> Result<Vec<u8>> {
+pub(crate) fn read_member(directory: &File, name: &str, maximum: usize) -> Result<Vec<u8>> {
     use rustix::fs::{Mode, OFlags, openat};
     use std::os::unix::fs::MetadataExt;
 
@@ -712,7 +712,7 @@ fn read_member(directory: &File, name: &str, maximum: usize) -> Result<Vec<u8>> 
 }
 
 #[cfg(not(unix))]
-fn read_member(_directory: &File, _name: &str, _maximum: usize) -> Result<Vec<u8>> {
+pub(crate) fn read_member(_directory: &File, _name: &str, _maximum: usize) -> Result<Vec<u8>> {
     bail!("candidate reader needs Unix no-follow file handles")
 }
 

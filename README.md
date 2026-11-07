@@ -79,7 +79,17 @@ and inspects or discards incomplete staging after an interruption. It neither
 replaces nor deletes the source. Peak provider memory and provider workdir
 usage are unmeasured; the signed v0.1.1 release contains none of this path.
 
-### Development addition: video candidate planning
+### Development addition: source-preserving video candidates
+
+The [#146 production source checkpoint](docs/video-candidate-production.md) adds
+an opt-in Linux resource guard, independent closed FFV1/Matroska packet and full
+decode comparison, and private strictly-smaller stream-copy candidates. It is
+uncompiled/unrun, absent from v0.1.1 and grants no replacement/disposal authority.
+Host memory scope and native qualification remain explicit; unsupported hosts,
+lossy operations and unknown media features refuse. Ten regressions are authored;
+tests, builds, lint/schema and native/CI execution remain deferred.
+
+### Earlier video candidate planning and observation checkpoints (historical)
 
 [#146](https://github.com/egohygiene/optiflow/issues/146) starts with a
 [pure FFmpeg recipe planner](docs/video-candidate-planning.md) for one declared

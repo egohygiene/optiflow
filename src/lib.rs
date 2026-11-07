@@ -32,6 +32,10 @@ pub mod video_candidate;
 pub(crate) mod video_io;
 pub mod video_observation;
 pub mod video_probe;
+pub mod video_sandbox;
+pub mod video_container;
+pub mod video_production;
+pub mod video_artifact;
 
 use crate::cli::Cli;
 use crate::signals::SignalState;

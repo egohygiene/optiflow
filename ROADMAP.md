@@ -22,6 +22,13 @@ related:
 supersedes: []
 ---
 
+> November 6, 2026 #146 source continuation: selected Linux provider-resource
+> guard, independent closed-container/full-decode comparison and private
+> strictly-smaller stream-copy publication are authored. Native/host qualification,
+> full host memory scope, folders and video mutation remain open. No tests/CI/
+> provider/media execution occurred. [Handoff](docs/work/146/CANDIDATES.md).
+
+
 # OptiFlow Roadmap
 
 ## 2026-10-28 video pipe limits and operation budget checkpoint
