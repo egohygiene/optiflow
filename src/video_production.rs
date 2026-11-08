@@ -25,7 +25,7 @@ pub struct VideoProductionRequest {
     pub limits: RequestedLimits,
     pub sandbox: LinuxVideoSandbox,
 }
-#[derive(Debug,Serialize)]
+#[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
 #[serde(tag="status",rename_all="snake_case")]
 pub enum VideoProductionOutcome {
     Accepted {artifact_set_id:String,artifact_directory:PathBuf,source_bytes:u64,candidate_bytes:u64,encoded_bytes_saved:u64},
@@ -39,7 +39,7 @@ fn check_free(root: &Path,required: u64) -> Result<()> {
     #[cfg(not(unix))] {let _=(root,required);anyhow::bail!("video candidate capacity is unsupported")}
 }
 
-fn admission(request: &VideoProductionRequest) -> Result<u64> {
+pub(crate) fn admission(request: &VideoProductionRequest) -> Result<u64> {
     ensure!(request.schema == "optiflow.video-production-request.v1","unsupported video production schema");
     ensure!(matches!(request.operation,VideoOperation::StreamCopy),"lossy candidate execution/quality acceptance is not available in this checkpoint");
     crate::contracts::validate(crate::contracts::Contract::VideoProductionRequest,request)?;

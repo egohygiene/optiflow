@@ -11,14 +11,14 @@ use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
-use serde::Serialize;
+use serde::{Serialize,Deserialize};
 
 use crate::domain::EvidenceDigest;
 
 const MAX_OBSERVATION_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_RETAINED_BYTES: u64 = 16 * 1024 * 1024;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize,Deserialize)]
 pub struct FileSnapshot {
     pub device_id: u64,
     pub inode: u64,
