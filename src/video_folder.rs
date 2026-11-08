@@ -67,9 +67,15 @@ pub struct FolderEntry {
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FolderInventory {
+    /// New runs freeze local tool bytes; legacy inventories remain inspectable.
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub components:Option<FolderComponents>,
     pub schema:String,pub request_fingerprint:EvidenceDigest,pub entries_seen:u64,pub files_seen:u64,
     pub hashed_input_bytes:u64,pub entries:Vec<FolderEntry>,pub scope:String,
 }
+#[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FolderComponents {pub ffmpeg:SourceBinding,pub ffprobe:SourceBinding}
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FolderRecord {
@@ -92,11 +98,20 @@ fn counts(inventory:&FolderInventory,records:&[FolderRecord])->FolderCounts {
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FolderReport {
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub continuation:Option<FolderContinuation>,
     pub schema:String,pub request_fingerprint:EvidenceDigest,pub inventory_fingerprint:EvidenceDigest,
     pub state:String,pub stop_reason:Option<String>,pub actions_started:u64,pub records:Vec<FolderRecord>,
     pub counts:FolderCounts,
     pub publication_admission_bytes:u64,pub encoded_bytes_saved:u64,
     pub elapsed_ms:u64,pub physical_space_reclaimed:bool,pub replacement_authority:bool,pub qualification:String,
+}
+#[derive(Debug,Clone,Serialize,Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FolderContinuation {
+    pub sequence:u64,pub previous_report_fingerprint:Option<EvidenceDigest>,
+    pub prior_result_count:u64,pub prior_results_fingerprint:EvidenceDigest,
+    pub elapsed_policy:String,
 }
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -122,6 +137,13 @@ pub fn run(request:&VideoFolderRequest,cancel:impl Fn()->bool)->Result<FolderRep
     request.validate()?;let budget=BatchBudget::new(request.batch.elapsed_ms)?;
     #[cfg(target_os="linux")] {native::run(request,&budget,&cancel)}
     #[cfg(not(target_os="linux"))] {let _=(budget,cancel);anyhow::bail!("video folder lane currently requires Linux");}
+}
+/// Continue only never-started entries after exact source/tool/store/journal
+/// reconciliation. An uncertain start or failed publication is never replayed.
+pub fn resume(request:&VideoFolderRequest,cancel:impl Fn()->bool)->Result<FolderReport> {
+    request.validate()?;let budget=BatchBudget::new(request.batch.elapsed_ms)?;
+    #[cfg(target_os="linux")] {native::resume(request,&budget,&cancel)}
+    #[cfg(not(target_os="linux"))] {let _=(budget,cancel);anyhow::bail!("video folder continuation currently requires Linux");}
 }
 /// Read-only reconciliation. Incomplete starts are never replayed or adopted;
 /// candidate cleanup/native qualification stay with their existing owners.
@@ -206,7 +228,7 @@ mod native {
             retained=retained.checked_add(serde_json::to_vec(record)?.len()).context("inventory byte overflow")?;ensure!(retained<=INVENTORY_BYTES,"folder inventory retention exceeds 4 MiB; no candidate started");
         }
         budget.check(cancel)?;
-        Ok(FolderInventory {schema:"optiflow.video-folder-inventory.v1".into(),request_fingerprint:digest(request)?,entries_seen:seen,files_seen:files,hashed_input_bytes:hashed,entries:entries.into_iter().map(|(_,v,_)|v).collect(),
+        Ok(FolderInventory {components:None,schema:"optiflow.video-folder-inventory.v1".into(),request_fingerprint:digest(request)?,entries_seen:seen,files_seen:files,hashed_input_bytes:hashed,entries:entries.into_iter().map(|(_,v,_)|v).collect(),
             scope:"bounded observed directory walk; no symlink following; device boundaries skipped; same-device bind mounts are not attested".into()})
     }
     fn lock(directory:&File)->Result<()> {rustix::fs::flock(directory,rustix::fs::FlockOperation::NonBlockingLockExclusive).context("another folder owner holds this private directory")}
@@ -219,7 +241,7 @@ mod native {
     }
     fn journal_size(root:&Path)->Result<u64> {
         let mut count=0;let mut total=0u64;
-        for item in std::fs::read_dir(root)? {count+=1;ensure!(count<=67,"folder journal member count exceeds bounds");let item=item?;let meta=std::fs::symlink_metadata(item.path())?;
+        for item in std::fs::read_dir(root)? {count+=1;ensure!(count<=99,"folder journal member count exceeds bounds");let item=item?;let meta=std::fs::symlink_metadata(item.path())?;
             ensure!(meta.is_file()&&!meta.file_type().is_symlink()&&meta.nlink()==1,"folder journal contains an alias or special member");
             total=total.checked_add(meta.len()).context("journal size overflow")?;ensure!(total<=JOURNAL_BYTES as u64,"folder journal exceeds aggregate bound");
         }Ok(total)
@@ -235,6 +257,10 @@ mod native {
         ensure!(count==known.len(),"video store lost an accepted member");Ok(())
     }
     fn accepted(request:&VideoFolderRequest,entry:&FolderEntry,outcome:&VideoProductionOutcome)->Result<()> {
+        if let VideoProductionOutcome::Unchanged {source_bytes,candidate_bytes,..}=outcome {
+            ensure!(entry.source.as_ref().is_some_and(|s|s.snapshot.logical_bytes==*source_bytes)&&candidate_bytes>=source_bytes
+                &&*candidate_bytes<=request.limits.candidate_bytes,"unchanged folder result differs from its bounded original source");
+        }
         if let VideoProductionOutcome::Accepted {artifact_set_id,artifact_directory,source_bytes,candidate_bytes,encoded_bytes_saved}=outcome {
             ensure!(uuid::Uuid::parse_str(artifact_set_id)?.to_string()==*artifact_set_id&&artifact_directory==&request.artifact_root.join(artifact_set_id),"folder artifact locator escaped its store");
             crate::video_artifact::inspect(artifact_directory)?;
@@ -247,19 +273,44 @@ mod native {
                 &&evidence["candidate"]["content"]["logical_bytes"].as_u64()==Some(*candidate_bytes)&&evidence["encoded_bytes_saved"].as_u64()==Some(*encoded_bytes_saved),"folder candidate/source/outcome binding differs");
         }Ok(())
     }
+    fn components(request:&VideoFolderRequest,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<FolderComponents> {
+        let guard=||budget.check(cancel);
+        let observe=|path:&Path|->Result<SourceBinding> {
+            ensure!(path.canonicalize()?==path,"folder tool paths must be canonical without symlink ancestors");
+            let value=BoundedFileObservation::open_guarded(path,134_217_728,&guard)?;
+            value.verify_current_guarded(&guard)?;Ok(SourceBinding {snapshot:value.snapshot().clone(),digest:value.digest().clone()})
+        };
+        Ok(FolderComponents {ffmpeg:observe(&request.ffmpeg)?,ffprobe:observe(&request.ffprobe)?})
+    }
+    fn require_components(request:&VideoFolderRequest,inventory:&FolderInventory,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<()> {
+        ensure!(inventory.components.as_ref()==Some(&components(request,budget,cancel)?),"folder tools changed or legacy inventory lacks exact baseline; reconcile without replay");Ok(())
+    }
+    fn ledger(records:&[FolderRecord])->Result<(u64,u64,Vec<String>)> {
+        let mut publication=0u64;let mut saved=0u64;let mut known=Vec::new();
+        for record in records {if let Some(VideoProductionOutcome::Accepted {artifact_set_id,source_bytes,candidate_bytes,encoded_bytes_saved,..})=&record.production {
+            ensure!(candidate_bytes<source_bytes&&source_bytes-candidate_bytes==*encoded_bytes_saved&&!known.contains(artifact_set_id),"folder accepted savings or unique artifact identity differs");
+            publication=publication.checked_add(candidate_bytes.checked_add(PUBLICATION_OVERHEAD).context("publication accounting overflow")?).context("publication accounting overflow")?;
+            if record.status=="accepted" {saved=saved.checked_add(*encoded_bytes_saved).context("savings accounting overflow")?;}known.push(artifact_set_id.clone());
+        }}Ok((publication,saved,known))
+    }
     pub(super) fn run(request:&VideoFolderRequest,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<FolderReport> {
         budget.check(cancel)?;
         let journal=crate::candidate_artifact::open_directory(&request.run_directory)?;let store=crate::candidate_artifact::open_directory(&request.artifact_root)?;
         lock(&journal)?;lock(&store)?;
         ensure!(std::fs::read_dir(&request.run_directory)?.next().is_none(),"folder journal must be empty; inspect retained recovery state instead of replaying");store_members(request,&[])?;
         let source_root=crate::candidate_artifact::open_directory(&request.source_root)?;
-        let inventory=discover(request,budget,cancel)?;
+        let mut inventory=discover(request,budget,cancel)?;inventory.components=Some(components(request,budget,cancel)?);
+        ensure!(serde_json::to_vec(&inventory)?.len()<=INVENTORY_BYTES,"complete folder inventory including tool baseline exceeds 4 MiB");
         free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
         write(&request.run_directory,&journal,"request.json",&serde_json::to_vec(request)?)?;
         write(&request.run_directory,&journal,"inventory.json",&serde_json::to_vec(&inventory)?)?;
-        let mut report=FolderReport {schema:"optiflow.video-folder-report.v1".into(),request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,actions_started:0,records:Vec::new(),counts:FolderCounts::default(),publication_admission_bytes:0,encoded_bytes_saved:0,elapsed_ms:0,physical_space_reclaimed:false,replacement_authority:false,qualification:"source_only_native_host_unqualified".into()};
-        let mut known=Vec::<String>::new();
+        let report=FolderReport {continuation:None,schema:"optiflow.video-folder-report.v1".into(),request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,actions_started:0,records:Vec::new(),counts:FolderCounts::default(),publication_admission_bytes:0,encoded_bytes_saved:0,elapsed_ms:0,physical_space_reclaimed:false,replacement_authority:false,qualification:"source_only_native_host_unqualified".into()};
+        advance(request,&inventory,budget,cancel,&journal,&store,&source_root,report,Vec::new(),&[],"report.json")
+    }
+    fn advance(request:&VideoFolderRequest,inventory:&FolderInventory,budget:&BatchBudget,cancel:&impl Fn()->bool,journal:&File,store:&File,source_root:&File,
+        mut report:FolderReport,mut known:Vec<String>,prior:&[FolderRecord],report_name:&str)->Result<FolderReport> {
         for (index,entry) in inventory.entries.iter().enumerate() {
+            if let Some(record)=prior.iter().find(|r|r.index==index as u64){report.records.push(record.clone());continue;}
             let mut record=FolderRecord {index:index as u64,relative_path:entry.relative_path.clone(),status:"skipped".into(),reason:entry.reason.clone(),production:None,detail:None};
             if entry.disposition!=EntryDisposition::Eligible {
                 record.status=match entry.disposition {EntryDisposition::Unsupported=>"unsupported",EntryDisposition::Failed=>"failed",_=>"skipped"}.into();report.records.push(record);continue;
@@ -272,6 +323,7 @@ mod native {
             if let Some(reason)=&report.stop_reason {record.reason=reason.clone();report.records.push(record);continue;}
             // Namespace, capacity and source checks precede the immutable start.
             same(&request.source_root,&source_root)?;same(&request.artifact_root,&store)?;store_members(request,&known)?;
+            require_components(request,inventory,budget,cancel)?;
             let source=entry_path(&request.source_root,&entry.relative_path)?;
             let guard=||budget.check(cancel);
             let expected=entry.source.as_ref().context("eligible source binding missing")?;
@@ -302,6 +354,10 @@ mod native {
             }
             // Always retain the observed result even if cancellation arrived at
             // publication. A write failure leaves the start unresolved.
+            if report.stop_reason.is_none()&&!budget.cancelled_or_expired(cancel)&&require_components(request,inventory,budget,cancel).is_err(){
+                if record.status=="accepted" {if let Some(VideoProductionOutcome::Accepted {encoded_bytes_saved,..})=&record.production {report.encoded_bytes_saved-=encoded_bytes_saved;}}
+                record.status="failed".into();record.reason="tool_binding_changed_after_candidate".into();report.stop_reason=Some(record.reason.clone());
+            }
             write(&request.run_directory,&journal,&format!("{index:04}-result.json"),&serde_json::to_vec(&record)?)?;
             if report.stop_reason.is_none() {
                 if budget.cancelled_or_expired(cancel){report.stop_reason=Some("cancelled_or_cooperative_deadline".into());}
@@ -314,10 +370,13 @@ mod native {
         if report.stop_reason.is_some(){report.state="stopped".into();}
         report.counts=counts(&inventory,&report.records);
         report.elapsed_ms=budget.started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
-        write(&request.run_directory,&journal,"report.json",&serde_json::to_vec(&report)?)?;Ok(report)
+        write(&request.run_directory,&journal,report_name,&serde_json::to_vec(&report)?)?;Ok(report)
     }
     pub(super) fn inspect_recovery(root:&Path)->Result<FolderRecovery> {
         let bound=crate::candidate_artifact::open_directory(root)?;crate::candidate_artifact::require_private_root(&bound)?;lock(&bound)?;
+        inspect_locked(root,&bound)
+    }
+    fn inspect_locked(root:&Path,bound:&File)->Result<FolderRecovery> {
         journal_size(root)?;
         let request:VideoFolderRequest=read(&bound,"request.json")?;request.batch.validate()?;
         crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&request)?;
@@ -326,7 +385,7 @@ mod native {
         crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&inventory)?;
         ensure!(inventory.schema=="optiflow.video-folder-inventory.v1"&&inventory.request_fingerprint==digest(&request)?&&inventory.entries.len()<=request.batch.maximum_entries as usize,"folder inventory/request binding differs");
         let mut allowed=std::collections::BTreeSet::from([std::ffi::OsString::from("request.json"),"inventory.json".into(),"report.json".into()]);
-        let mut results=Vec::new();let mut unfinished=Vec::new();let mut pending=0;
+        let mut results=Vec::new();let mut unfinished=Vec::new();let mut pending=0;let mut gap=false;
         for (index,entry) in inventory.entries.iter().enumerate() {
             entry_path(&request.source_root,&entry.relative_path)?;
             let start_name=format!("{index:04}-start.json");let result_name=format!("{index:04}-result.json");
@@ -335,6 +394,7 @@ mod native {
             let has_result=match result {Ok(_)=>true,Err(e)if e.kind()==std::io::ErrorKind::NotFound=>false,Err(e)=>return Err(e.into())};
             ensure!(!has_result||has_start,"folder result has no immutable start");
             if has_start {
+                ensure!(!gap,"folder attempt order skipped a never-started eligible predecessor");
                 ensure!(entry.disposition==EntryDisposition::Eligible,"attempt names an ineligible entry");
                 let start:serde_json::Value=read(&bound,&start_name)?;
                 crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&start)?;
@@ -346,24 +406,71 @@ mod native {
                     &&start["source"]==serde_json::to_value(&entry.source)?,"folder start identity differs");
                 allowed.insert(start_name.into());
                 if has_result {let record:FolderRecord=read(&bound,&result_name)?;ensure!(record.index==index as u64&&record.relative_path==entry.relative_path,"folder result subject differs");
-                    ensure!(matches!((&*record.status,&record.production),("accepted",Some(VideoProductionOutcome::Accepted {..}))|("unchanged",Some(VideoProductionOutcome::Unchanged {..}))|("failed",None)|("failed",Some(VideoProductionOutcome::Accepted {..}))),"folder result status/production evidence disagree");
+                    ensure!(matches!((&*record.status,&record.production),("accepted",Some(VideoProductionOutcome::Accepted {..}))|("unchanged",Some(VideoProductionOutcome::Unchanged {..}))|("failed",None)|("failed",Some(_))),"folder result status/production evidence disagree");
                     if let Some(outcome)=&record.production {accepted(&request,entry,outcome)?;}
                     results.push(record);allowed.insert(result_name.into());
                 }else{unfinished.push(index as u64);}
-            }else if entry.disposition==EntryDisposition::Eligible {pending+=1;}
+            }else if entry.disposition==EntryDisposition::Eligible {pending+=1;gap=true;}
         }
-        let report=match root.join("report.json").symlink_metadata() {Ok(_)=>Some(read::<FolderReport>(&bound,"report.json")?),Err(e)if e.kind()==std::io::ErrorKind::NotFound=>None,Err(e)=>return Err(e.into())};
-        if let Some(report)=&report {ensure!(report.schema=="optiflow.video-folder-report.v1"&&report.request_fingerprint==digest(&request)?&&report.inventory_fingerprint==digest(&inventory)?&&unfinished.is_empty()
-            &&report.counts==counts(&inventory,&report.records)&&!report.replacement_authority&&!report.physical_space_reclaimed
-            &&report.actions_started==results.len() as u64&&report.actions_started<=request.batch.maximum_actions&&report.publication_admission_bytes<=request.batch.maximum_publication_bytes
-            &&report.records.len()==inventory.entries.len()&&report.records.iter().enumerate().all(|(i,r)|r.index==i as u64&&r.relative_path==inventory.entries[i].relative_path)
-            &&results.iter().all(|r|serde_json::to_value(r).ok()==report.records.get(r.index as usize).and_then(|v|serde_json::to_value(v).ok())),"folder completion/result binding differs");}
-        if let Some(report)=&report {crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,report)?;}
-        let mut count=0;let mut total=0u64;for item in std::fs::read_dir(root)? {count+=1;ensure!(count<=2*request.batch.maximum_actions+3,"folder journal member count exceeds bounds");let item=item?;
+        let mut report:Option<FolderReport>=None;let mut report_gap=false;
+        for sequence in 0..=32u64 {
+            let name=if sequence==0 {"report.json".into()}else{format!("report-{sequence:04}.json")};
+            match root.join(&name).symlink_metadata() {Ok(_)=>{},Err(e)if e.kind()==std::io::ErrorKind::NotFound=>{if sequence>0 {report_gap=true;}continue;},Err(e)=>return Err(e.into())}
+            ensure!(!report_gap,"folder continuation report sequence has a gap");let current:FolderReport=read(bound,&name)?;
+            let prefix=results.get(..usize::try_from(current.actions_started)?).context("folder report claims unrecorded results")?;
+            let (publication,saved,_)=ledger(prefix)?;
+            ensure!(current.schema=="optiflow.video-folder-report.v1"&&current.request_fingerprint==digest(&request)?&&current.inventory_fingerprint==digest(&inventory)?
+                &&current.counts==counts(&inventory,&current.records)&&!current.replacement_authority&&!current.physical_space_reclaimed
+                &&current.actions_started<=request.batch.maximum_actions&&current.publication_admission_bytes==publication&&current.encoded_bytes_saved==saved&&publication<=request.batch.maximum_publication_bytes
+                &&current.records.len()==inventory.entries.len()&&current.records.iter().enumerate().all(|(i,r)|r.index==i as u64&&r.relative_path==inventory.entries[i].relative_path)
+                &&prefix.iter().all(|r|serde_json::to_value(r).ok()==current.records.get(r.index as usize).and_then(|v|serde_json::to_value(v).ok()))
+                &&current.records.iter().filter(|r|r.production.is_some()).all(|r|prefix.iter().any(|old|old.index==r.index))
+                &&(current.state=="complete")==current.stop_reason.is_none(),"folder completion/result/accounting binding differs");
+            if current.state=="complete" {ensure!(current.actions_started==inventory.entries.iter().filter(|e|e.disposition==EntryDisposition::Eligible).count() as u64,"complete folder report skipped eligible work");}
+            if sequence==0 {ensure!(current.continuation.is_none(),"initial report cannot claim continuation");}
+            else {
+                let c=current.continuation.as_ref().context("continuation report lacks its binding")?;
+                let earlier=prefix.get(..usize::try_from(c.prior_result_count)?).context("continuation prior result count is widened")?;
+                ensure!(c.sequence==sequence&&c.previous_report_fingerprint==report.as_ref().map(digest).transpose()?
+                    &&c.prior_results_fingerprint==digest(&earlier)?&&c.elapsed_policy=="fresh_invocation; cumulative_actions_and_publication"
+                    &&report.as_ref().is_none_or(|old|c.prior_result_count>=old.actions_started),"continuation report history differs");
+            }
+            crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&current)?;allowed.insert(name.into());report=Some(current);
+        }
+        let mut count=0;let mut total=0u64;for item in std::fs::read_dir(root)? {count+=1;ensure!(count<=2*request.batch.maximum_actions+35,"folder journal member count exceeds bounds");let item=item?;
             ensure!(allowed.contains(&item.file_name())&&item.file_type()?.is_file(),"folder journal contains an unowned member");total=total.checked_add(item.metadata()?.len()).context("journal size overflow")?;ensure!(total<=JOURNAL_BYTES as u64,"folder journal exceeds aggregate bound");}
         same(root,&bound)?;
         Ok(FolderRecovery {schema:"optiflow.video-folder-recovery.v1".into(),request_fingerprint:digest(&request)?,recorded_results:results,unfinished_attempts:unfinished,unstarted_eligible:pending,completed_report:report,replay_authority:false,
             source_freshness:"historical source binding only; current source is not revalidated by journal inspection".into()})
+    }
+    pub(super) fn resume(request:&VideoFolderRequest,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<FolderReport> {
+        budget.check(cancel)?;
+        let journal=crate::candidate_artifact::open_directory(&request.run_directory)?;let store=crate::candidate_artifact::open_directory(&request.artifact_root)?;
+        lock(&journal)?;lock(&store)?;let source_root=crate::candidate_artifact::open_directory(&request.source_root)?;
+        let recovery=inspect_locked(&request.run_directory,&journal)?;
+        let original:VideoFolderRequest=read(&journal,"request.json")?;
+        ensure!(digest(&original)?==digest(request)?&&recovery.request_fingerprint==digest(request)?,"folder continuation requires the exact original request and limits");
+        ensure!(recovery.unfinished_attempts.is_empty()&&!recovery.recorded_results.iter().any(|r|r.status=="failed")
+            &&recovery.completed_report.as_ref().is_none_or(|r|!r.records.iter().any(|row|row.status=="failed")),"unresolved start or failed/uncertain result blocks continuation; no replay/adoption is permitted");
+        let inventory:FolderInventory=read(&journal,"inventory.json")?;require_components(request,&inventory,budget,cancel)?;
+        let mut current=discover(request,budget,cancel)?;current.components=Some(components(request,budget,cancel)?);
+        ensure!(digest(&current)?==digest(&inventory)?,"folder source inventory or tool bytes changed; preserve prior state and reconcile");
+        let (publication,saved,known)=ledger(&recovery.recorded_results)?;
+        ensure!(recovery.recorded_results.len() as u64<=request.batch.maximum_actions&&publication<=request.batch.maximum_publication_bytes,"folder cumulative admission already exceeded");
+        same(&request.source_root,&source_root)?;same(&request.artifact_root,&store)?;store_members(request,&known)?;
+        if let Some(report)=&recovery.completed_report {
+            if report.actions_started==recovery.recorded_results.len() as u64&&(recovery.unstarted_eligible==0||report.actions_started>=request.batch.maximum_actions
+                ||publication.checked_add(request.limits.candidate_bytes+PUBLICATION_OVERHEAD).is_none_or(|n|n>request.batch.maximum_publication_bytes)){return Ok(report.clone());}
+        }
+        let sequence=recovery.completed_report.as_ref().and_then(|r|r.continuation.as_ref()).map(|c|c.sequence).unwrap_or(0)+1;
+        ensure!(sequence<=32,"folder continuation report limit exhausted; reconcile before another run");
+        let report=FolderReport {continuation:Some(FolderContinuation {sequence,previous_report_fingerprint:recovery.completed_report.as_ref().map(digest).transpose()?,
+            prior_result_count:recovery.recorded_results.len() as u64,prior_results_fingerprint:digest(&recovery.recorded_results)?,elapsed_policy:"fresh_invocation; cumulative_actions_and_publication".into()}),
+            schema:"optiflow.video-folder-report.v1".into(),request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,
+            actions_started:recovery.recorded_results.len() as u64,records:Vec::new(),counts:FolderCounts::default(),publication_admission_bytes:publication,encoded_bytes_saved:saved,
+            elapsed_ms:0,physical_space_reclaimed:false,replacement_authority:false,qualification:"source_only_native_host_unqualified".into()};
+        free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
+        advance(request,&inventory,budget,cancel,&journal,&store,&source_root,report,known,&recovery.recorded_results,&format!("report-{sequence:04}.json"))
     }
 }
 
@@ -376,7 +483,8 @@ mod tests {
         let temp=tempfile::tempdir().unwrap();let root=temp.path().canonicalize().unwrap();
         for name in ["source","work","store","journal"] {let path=root.join(name);std::fs::create_dir(&path).unwrap();std::fs::set_permissions(&path,std::fs::Permissions::from_mode(0o700)).unwrap();}
         let old:VideoProductionRequest=serde_json::from_str(include_str!("../examples/video-production-request-v1.json")).unwrap();
-        Fixture {_temp:temp,request:VideoFolderRequest {schema:"optiflow.video-folder-request.v1".into(),source_root:root.join("source"),ffmpeg:old.ffmpeg,ffprobe:old.ffprobe,
+        for name in ["ffmpeg","ffprobe"] {let path=root.join(name);std::fs::write(&path,format!("synthetic inert {name}; no launch")).unwrap();std::fs::set_permissions(path,std::fs::Permissions::from_mode(0o700)).unwrap();}
+        Fixture {_temp:temp,request:VideoFolderRequest {schema:"optiflow.video-folder-request.v1".into(),source_root:root.join("source"),ffmpeg:root.join("ffmpeg"),ffprobe:root.join("ffprobe"),
             private_workdir:root.join("work"),artifact_root:root.join("store"),run_directory:root.join("journal"),limits:old.limits,sandbox:old.sandbox,
             batch:FolderLimits {maximum_entries:64,maximum_files:32,maximum_actions:8,maximum_depth:8,maximum_total_input_bytes:67_108_864,maximum_publication_bytes:67_108_864,elapsed_ms:600_000},recursive:true}}
     }
@@ -445,5 +553,45 @@ mod tests {
     fn native_non_utf8_path_is_retained_losslessly_and_not_misrouted_to_utf8_production() {
         use std::os::unix::ffi::OsStringExt;let f=fixture();let name=std::ffi::OsString::from_vec(b"clip-\xff.mkv".to_vec());std::fs::write(f.request.source_root.join(&name),b"data").unwrap();
         let inventory=discover(&f.request,||false).unwrap();assert_eq!(inventory.entries[0].relative_path.to_path_buf(),PathBuf::from(name));assert_eq!(inventory.entries[0].reason,"production_source_requires_utf8_locator");assert!(inventory.entries[0].source.is_none());
+    }
+    #[test]
+    fn completed_folder_resume_is_freshly_checked_and_idempotent() {
+        let f=fixture();std::fs::write(f.request.source_root.join("text"),b"ordinary text").unwrap();let original=run(&f.request,||false).unwrap();
+        let bytes=std::fs::read(f.request.run_directory.join("report.json")).unwrap();
+        let resumed=resume(&f.request,||false).unwrap();assert_eq!(serde_json::to_value(original).unwrap(),serde_json::to_value(resumed).unwrap());
+        assert_eq!(std::fs::read(f.request.run_directory.join("report.json")).unwrap(),bytes);assert!(!f.request.run_directory.join("report-0001.json").exists());
+    }
+    #[test]
+    fn missing_final_report_can_be_reconciled_without_replaying_any_attempt() {
+        let f=fixture();std::fs::write(f.request.source_root.join("text"),b"ordinary text").unwrap();run(&f.request,||false).unwrap();
+        std::fs::remove_file(f.request.run_directory.join("report.json")).unwrap();let report=resume(&f.request,||false).unwrap();
+        assert_eq!(report.actions_started,0);assert_eq!(report.continuation.unwrap().sequence,1);
+        let recovery=inspect_recovery(&f.request.run_directory).unwrap();assert!(recovery.completed_report.is_some());assert!(recovery.recorded_results.is_empty());assert!(!recovery.replay_authority);
+        assert!(std::fs::read_dir(&f.request.artifact_root).unwrap().next().is_none());
+    }
+    #[test]
+    fn resume_keeps_incomplete_starts_and_failed_results_blocked() {
+        let f=interrupted_fixture();let start=std::fs::read(f.request.run_directory.join("0000-start.json")).unwrap();assert!(resume(&f.request,||false).is_err());
+        assert_eq!(std::fs::read(f.request.run_directory.join("0000-start.json")).unwrap(),start);assert!(!f.request.run_directory.join("0000-result.json").exists());
+        let record=FolderRecord {index:0,relative_path:NativePath::from_path(Path::new("source.mkv")),status:"failed".into(),reason:"uncertain_native_attempt".into(),production:None,detail:None};
+        let bound=crate::candidate_artifact::open_directory(&f.request.run_directory).unwrap();crate::candidate_artifact::write_new(&bound,"0000-result.json",&serde_json::to_vec(&record).unwrap()).unwrap();
+        assert!(resume(&f.request,||false).is_err());assert!(!f.request.run_directory.join("report-0001.json").exists());
+    }
+    #[test]
+    fn changed_sources_tools_or_request_cannot_resume_a_previous_inventory() {
+        let f=fixture();let path=f.request.source_root.join("text");std::fs::write(&path,b"original").unwrap();run(&f.request,||false).unwrap();std::fs::write(path,b"changed").unwrap();assert!(resume(&f.request,||false).is_err());
+        let f=fixture();run(&f.request,||false).unwrap();std::fs::write(&f.request.ffmpeg,b"changed tool").unwrap();assert!(resume(&f.request,||false).is_err());
+        let mut f=fixture();run(&f.request,||false).unwrap();f.request.batch.maximum_actions-=1;assert!(resume(&f.request,||false).is_err());
+    }
+    #[test]
+    fn orphan_store_members_block_continuation_and_are_preserved() {
+        let f=fixture();run(&f.request,||false).unwrap();let orphan=f.request.artifact_root.join("unresolved");std::fs::create_dir(&orphan).unwrap();
+        assert!(resume(&f.request,||false).is_err());assert!(orphan.is_dir());assert!(!f.request.run_directory.join("report-0001.json").exists());
+    }
+    #[test]
+    fn continuation_history_and_cumulative_accounting_cannot_be_widened() {
+        let f=fixture();run(&f.request,||false).unwrap();std::fs::remove_file(f.request.run_directory.join("report.json")).unwrap();resume(&f.request,||false).unwrap();
+        let path=f.request.run_directory.join("report-0001.json");let mut report:serde_json::Value=serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();report["publication_admission_bytes"]=serde_json::json!(1);
+        std::fs::write(&path,serde_json::to_vec(&report).unwrap()).unwrap();assert!(inspect_recovery(&f.request.run_directory).is_err());assert!(resume(&f.request,||false).is_err());
     }
 }

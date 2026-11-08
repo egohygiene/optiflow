@@ -1,6 +1,6 @@
 # Produce serial source-preserving folder candidates
 
-The #146 development library adds `video_folder::{discover,run,inspect_recovery}`
+The #146 development library adds `video_folder::{discover,run,resume,inspect_recovery}`
 and [an explicit trial example](../examples/video_folder.rs) over the existing
 [guarded video producer](video-candidate-production.md). This is uncompiled/unrun
 source, absent from published v0.1.1. No private collection or native trial was
@@ -80,8 +80,8 @@ rechecks bounded journal joins and recorded accepted candidate/source/artifact
 bindings, returns unfinished/unstarted entries and preserves everything. It is
 read-only, grants no replay authority and explicitly does not freshly validate
 the original source. Repeated inspection cannot adopt scratch or launch work.
-Reusing a nonempty journal/store for `run` refuses. Automated reconciled folder
-resumption and reviewed cleanup remain follow-up on #146; inspect unresolved
+Reusing a nonempty journal/store for `run` refuses. [Reconciled continuation](video-folder-continuation.md) now handles exact resolved
+starts and never-started work; uncertain recovery and reviewed cleanup remain #146 work. Inspect unresolved
 producer/store state with its existing owner before a new explicitly scoped run.
 
 After the current execution deferral ends and supported-host qualification,
@@ -103,5 +103,5 @@ uncompiled/unrun. All tests/compiler/build/dependency acquisition, lint/format,
 schema/corpus/drift/docs validators, native/provider/media/CLI/SDK and hosted CI
 execution remain deferred. ADR-0002 remains proposed. #146/#65 retain native/
 platform/adversarial/resource qualification, wider formats/lossy policies,
-automated reconciled resume and later video replacement/disposal under #93/#111.
+broader recovery qualification and later video replacement/disposal under #93/#111.
 #95/#121 remain PNG-first. Full original issue/history stays open.
