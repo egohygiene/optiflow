@@ -300,6 +300,7 @@ mod native {
         ensure!(std::fs::read_dir(&request.run_directory)?.next().is_none(),"folder journal must be empty; inspect retained recovery state instead of replaying");store_members(request,&[])?;
         let source_root=crate::candidate_artifact::open_directory(&request.source_root)?;
         let mut inventory=discover(request,budget,cancel)?;inventory.components=Some(components(request,budget,cancel)?);
+        ensure!(serde_json::to_vec(&inventory)?.len()<=INVENTORY_BYTES,"complete folder inventory including tool baseline exceeds 4 MiB");
         free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
         write(&request.run_directory,&journal,"request.json",&serde_json::to_vec(request)?)?;
         write(&request.run_directory,&journal,"inventory.json",&serde_json::to_vec(&inventory)?)?;
