@@ -70,7 +70,7 @@
       "properties": {
         "device_id": {"type": "integer", "minimum": 0}, "inode": {"type": "integer", "minimum": 0}, "mode": {"type": "integer", "minimum": 0},
         "owner_uid": {"type": "integer", "minimum": 0}, "group_gid": {"type": "integer", "minimum": 0}, "link_count": {"const": 1},
-        "logical_bytes": {"type": "integer", "minimum": 1, "maximum": 16777216}, "modified_unix_ns": {"type": "integer"}, "changed_unix_ns": {"type": "integer"}
+        "logical_bytes": {"type": "integer", "minimum": 1, "maximum": 134217728}, "modified_unix_ns": {"type": "integer"}, "changed_unix_ns": {"type": "integer"}
       }
     },
     "binding": {"type": "object", "additionalProperties": false, "required": ["snapshot", "digest"], "properties": {"snapshot": {"$ref": "#/$defs/snapshot"}, "digest": {"$ref": "#/$defs/digest"}}},
@@ -86,6 +86,7 @@
       "required": ["schema", "request_fingerprint", "entries_seen", "files_seen", "hashed_input_bytes", "entries", "scope"],
       "properties": {
         "schema": {"const": "optiflow.video-folder-inventory.v1"}, "request_fingerprint": {"$ref": "#/$defs/digest"},
+        "components":{"type":"object","additionalProperties":false,"required":["ffmpeg","ffprobe"],"properties":{"ffmpeg":{"$ref":"#/$defs/binding"},"ffprobe":{"$ref":"#/$defs/binding"}},"description":"Optional exact local tool baseline for safe continuation; legacy source-only inventories remain inspectable. Source per-file bounds remain enforced by Rust."},
         "entries_seen": {"type": "integer", "minimum": 0, "maximum": 4096}, "files_seen": {"type": "integer", "minimum": 0, "maximum": 256},
         "hashed_input_bytes": {"type": "integer", "minimum": 0, "maximum": 268435456}, "entries": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/entry"}},
         "scope": {"type": "string", "minLength": 1, "maxLength": 512}
@@ -115,6 +116,7 @@
       "required": ["schema", "request_fingerprint", "inventory_fingerprint", "state", "stop_reason", "actions_started", "records", "counts", "publication_admission_bytes", "encoded_bytes_saved", "elapsed_ms", "physical_space_reclaimed", "replacement_authority", "qualification"],
       "properties": {
         "schema": {"const": "optiflow.video-folder-report.v1"}, "request_fingerprint": {"$ref": "#/$defs/digest"}, "inventory_fingerprint": {"$ref": "#/$defs/digest"},
+        "continuation":{"type":"object","additionalProperties":false,"required":["sequence","previous_report_fingerprint","prior_result_count","prior_results_fingerprint","elapsed_policy"],"properties":{"sequence":{"type":"integer","minimum":1,"maximum":32},"previous_report_fingerprint":{"anyOf":[{"$ref":"#/$defs/digest"},{"type":"null"}]},"prior_result_count":{"type":"integer","minimum":0,"maximum":32},"prior_results_fingerprint":{"$ref":"#/$defs/digest"},"elapsed_policy":{"const":"fresh_invocation; cumulative_actions_and_publication"}}},
         "state": {"enum": ["complete", "stopped"]}, "stop_reason": {"type": ["string", "null"], "maxLength": 256}, "actions_started": {"type": "integer", "minimum": 0, "maximum": 32},
         "records": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/record"}}, "counts": {"$ref": "#/$defs/counts"},
         "publication_admission_bytes": {"type": "integer", "minimum": 0, "maximum": 268435456}, "encoded_bytes_saved": {"type": "integer", "minimum": 0, "maximum": 268435456},
