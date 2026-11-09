@@ -75,25 +75,29 @@ exercise the published contract; every Pages build requires the complete
 
 ### Repository Intelligence generator candidate
 
-The Pages workflow selects the immutable portable Relay candidate
-`9358083e6dd8b15a0f2a3bb23c0b1e2b3ea3b2ff`. Its shared repository route shell
-and navigation graph belong under OptiFlow's own `/intelligence/` subtree;
-the organization Intelligence site remains a fleet overview linking here.
+The Pages workflow selects the same immutable reviewed Relay revision for its
+public source producer and native generator:
+`981ddf4367c67fcd625e54321d95bab027f6c0f2`. The preceding Journey/Search selection remains recorded
+in the [pin-upgrade handoff](repository-intelligence-pin-upgrade.md).
+
+The shared route shell and graph belong under OptiFlow's own `/intelligence/`
+subtree; the organization Intelligence site is the fleet overview linking here.
 The existing composer copies the complete producer bundle into that mount.
+Native Git Journey and owner-attributed Search remain enabled. Push/manual
+builds also admit bounded public Work, exact-head check and published release
+captures through one immutable same-run artifact. PRs keep the existing no-capture
+path. Source pagination/failure and producer applicability remain explicit;
+deployment and install verification stay uncollected.
 
-The native continuation enables bounded immutable Git Journey collection and
-owner-attributed Search in this existing producer. Generic commit titles keep
-subjects, identities and paths out of public evidence. Git ancestry may remain
-partial at the 256-commit bound; semantic history and unsupported topology or
-reference resolution are never presented as complete.
-
-Native ADR/Roadmap collection, provider captures, external snapshots and
-comparison baselines remain disabled. Missing source-backed evidence remains
-explicitly unavailable. Compare retention is only a later opt-in with two real
-compatible captures and an explicit lease. The candidate is source review only: its OptiFlow artifact,
-deployment, public routes, and rollback acceptance have not been verified.
-See the [pin-upgrade handoff](repository-intelligence-pin-upgrade.md) for exact
-source boundaries, deferred checks, and historical recovery constraints.
+Captured push/manual builds also select the pinned public declared Dependencies
+source at the producer's actual evaluation boundary. It adds no inventory
+coverage domain and asserts no runtime/package adoption; PR no-capture builds
+leave it disabled. Canonical ADR/Roadmap collection, external snapshots and
+comparison baselines remain disabled. Compare still needs two real compatible
+captures and an explicit lease. The current source adoption is implementation
+only; its OptiFlow artifact, deployment, public routes and recovery acceptance
+have not been verified. See the [public-source handoff](repository-intelligence-source-feeds.md)
+for exact boundaries, original report identities and deferred qualification.
 
 ## Delivery modes
 
