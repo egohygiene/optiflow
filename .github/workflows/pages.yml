@@ -33,9 +33,11 @@ jobs:
           persist-credentials: false
 
       - name: Generate public repository intelligence
-        # Relay portable Repository Intelligence review candidate (unreleased)
-        uses: egohygiene/relay/actions/repository-intelligence@49046d88ef6fe2e31e9a9f443a61157b598efb78
+        # Relay native Journey and attributed Search source candidate (unreleased)
+        uses: egohygiene/relay/actions/repository-intelligence@9358083e6dd8b15a0f2a3bb23c0b1e2b3ea3b2ff
         with:
+          collect-journey: "true"
+          search-attribution: "true"
           output-directory: ".site/producers/intelligence"
           work-directory: ".cache/repository-intelligence"
           reports-directory: ".reports"

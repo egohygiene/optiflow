@@ -76,14 +76,21 @@ exercise the published contract; every Pages build requires the complete
 ### Repository Intelligence generator candidate
 
 The Pages workflow selects the immutable portable Relay candidate
-`49046d88ef6fe2e31e9a9f443a61157b598efb78`. Its shared repository route shell
+`9358083e6dd8b15a0f2a3bb23c0b1e2b3ea3b2ff`. Its shared repository route shell
 and navigation graph belong under OptiFlow's own `/intelligence/` subtree;
 the organization Intelligence site remains a fleet overview linking here.
 The existing composer copies the complete producer bundle into that mount.
 
-This pin does not enable native ADR/Roadmap collection, provider captures, or an
-Observatory snapshot. Missing source-backed evidence remains explicitly
-unavailable. The candidate is source review only: its OptiFlow artifact,
+The native continuation enables bounded immutable Git Journey collection and
+owner-attributed Search in this existing producer. Generic commit titles keep
+subjects, identities and paths out of public evidence. Git ancestry may remain
+partial at the 256-commit bound; semantic history and unsupported topology or
+reference resolution are never presented as complete.
+
+Native ADR/Roadmap collection, provider captures, external snapshots and
+comparison baselines remain disabled. Missing source-backed evidence remains
+explicitly unavailable. Compare retention is only a later opt-in with two real
+compatible captures and an explicit lease. The candidate is source review only: its OptiFlow artifact,
 deployment, public routes, and rollback acceptance have not been verified.
 See the [pin-upgrade handoff](repository-intelligence-pin-upgrade.md) for exact
 source boundaries, deferred checks, and historical recovery constraints.

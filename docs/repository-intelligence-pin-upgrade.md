@@ -17,24 +17,42 @@ the existing publication ownership comes from
 
 | Input | Immutable revision |
 | --- | --- |
-| OptiFlow starting `main` | `25b74f36c914fa9f20da5bd2939c8d751f4d1f57` |
-| Previous Pages Intelligence generator | `1eada5142f7fc7da7862f335589e3b8f5884ffaf` |
-| Candidate Pages Intelligence generator | `49046d88ef6fe2e31e9a9f443a61157b598efb78` |
+| OptiFlow starting `main` | `733e7b08e9a80e0b23f3d30c401e75d1272fa5db` |
+| Previous Pages Intelligence generator | `49046d88ef6fe2e31e9a9f443a61157b598efb78` |
+| Candidate Pages Intelligence generator | `9358083e6dd8b15a0f2a3bb23c0b1e2b3ea3b2ff` |
 
-The candidate is the unreleased immutable Relay source selection in
-[Relay draft #167](https://github.com/egohygiene/relay/pull/167). It brings the
-shared repository route shell and portable navigation/evidence graph into the
+The candidate retains the portable shell adopted in [OptiFlow #161](https://github.com/egohygiene/optiflow/pull/161) and adds the existing Journey collector through production source composition plus versioned owner-attributed Search. [Relay #169](https://github.com/egohygiene/relay/pull/169) and [#170](https://github.com/egohygiene/relay/pull/170) record the source slices; the exact candidate also includes their shared action wiring. It keeps the shared route shell and navigation/evidence graph in the
 existing `.site/producers/intelligence` output. OptiFlow's composer recursively
 copies that complete bundle under `/intelligence/`; the organization site owns
 only the fleet overview and links into repository-owned views.
 
 The action keeps its existing output/work/report paths, exclusions, activity
-window, depth limit, and complete-history requirement. No native collector,
-provider capture, Observatory snapshot, comparison input, consumer alias, or
-deployment-provenance integration is enabled. Source-backed views must retain
-explicit unavailable states where evidence is absent. The ADR migration and
+window, depth limit, and complete-history requirement. The source continuation
+selects `collect-journey: "true"` and `search-attribution: "true"` inside that
+same producer. Journey privately inspects at most 256 immutable commits at the
+represented revision, publishes generic commit titles, and retains partial
+scope when ancestry is shallow, truncated or filtered. Semantic history stays
+partial, provider lifecycle events are uncollected, and parent topology and
+reference resolution remain unavailable. Search match attribution is supplied by the versioned
+Observatory owner representation, without interpreting opaque search text.
+
+No canonical ADR or Roadmap collector, provider capture, external snapshot,
+comparison selection, consumer alias, or deployment-provenance integration is
+enabled. Absent source-backed views keep their explicit unavailable states.
+The ADR migration and
 human-authority prerequisites documented in the
 [migration map](decisions/MIGRATION-MAP.md) remain independent.
+
+The actual event checkout and full immutable Relay selection continue to bind
+the represented source and generator. Fresh Journey and final Search
+normalization receipts travel in the existing public provenance; the composer
+copies the complete bundle without deriving new owner fields or duplicating
+Relay code. No product media, media-provider execution, source mutation or release
+authority is added. The unrelated release-workflow Relay pin is unchanged.
+
+Compare retention stays an optional later artifact handoff. It requires two
+actual compatible projection/snapshot pairs and an explicit baseline lease;
+this adoption creates no fabricated history or baseline selection.
 
 ## Publication and recovery boundary
 
@@ -59,7 +77,14 @@ required by the current composer: `index.html`, `styles.css`, `explorer.js`, and
 `egohygiene.repository-intelligence-dashboard/v3`, `schema_version: 1`.
 This is contract inspection, not an executed OptiFlow composition.
 
-Tests, dependency installation, builds, validators, CI, browser checks, provider
+The complete-history checkout still runs before the native action, and the
+action still runs before the consumer installs Python 3.13 through `uv`.
+This preserves the Ubuntu 24.04/CPython 3.12 native acquisition boundary.
+Native Git trailer admission, source normalization, deterministic output and
+the existing 15-minute build budget remain unqualified; a real finding must
+fail closed through the current build rather than change canonical history.
+
+Tests, dependency installation, builds, native validators, CI, browser checks, provider
 runs, deployment, live-route verification, and rollback rehearsal were deferred
 at the maintainer's request. No Actions were dispatched or polled. A later
 acceptance pass must bind the exact consumer/generator revisions to the composed
