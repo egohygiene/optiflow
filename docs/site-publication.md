@@ -90,7 +90,10 @@ captures through one immutable same-run artifact. PRs keep the existing no-captu
 path. Source pagination/failure and producer applicability remain explicit;
 deployment and install verification stay uncollected.
 
-Canonical ADR/Roadmap collection, dependency admission, external snapshots and
+Captured push/manual builds also select the pinned public declared Dependencies
+source at the producer's actual evaluation boundary. It adds no inventory
+coverage domain and asserts no runtime/package adoption; PR no-capture builds
+leave it disabled. Canonical ADR/Roadmap collection, external snapshots and
 comparison baselines remain disabled. Compare still needs two real compatible
 captures and an explicit lease. The current source adoption is implementation
 only; its OptiFlow artifact, deployment, public routes and recovery acceptance

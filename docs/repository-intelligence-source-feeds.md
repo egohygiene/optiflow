@@ -65,8 +65,14 @@ cannot invent an exact consumer run attempt or deployment receipt. Existing
 normalized report summaries keep their original scanner commits, execution,
 findings and freshness; this adoption does not relabel them current.
 
-Native Journey and attributed Search remain enabled. No canonical ADR/Roadmap
-collector, dependency admission, external snapshot/comparison or retained Compare
+Native Journey and attributed Search remain enabled. Captured push/manual paths
+also select `collect-dependencies` using the actual capture evaluation boundary.
+The exact pinned Hygiene public roster admits only declared public consumption
+and permitted boundary evidence; it proves no runtime/package adoption. The
+existing nine-domain coverage vocabulary stays unchanged, and missing inventory
+domains remain uncollected. PRs select no dependency source; their no-capture evaluation uses a
+commit-time clock that may predate the owner-catalog observation. No
+canonical ADR/Roadmap collector, external snapshot/comparison or retained Compare
 baseline is selected. Actual provider observations and later owner normalization
 determine useful source evidence; this commit does not assert completed checks,
 release delivery, publication, lifecycle ratification or issue acceptance.

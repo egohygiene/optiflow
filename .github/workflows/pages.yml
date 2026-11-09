@@ -74,6 +74,7 @@ jobs:
           source-capture-artifact-id: "${{ steps.source_capture_upload.outputs.artifact-id }}"
           source-capture-artifact-digest: "${{ steps.source_capture_upload.outputs.artifact-digest }}"
           as-of: "${{ steps.public_sources.outputs.as-of }}"
+          collect-dependencies: "${{ steps.source_capture_upload.outputs.artifact-id != '' }}"
           output-directory: ".site/producers/intelligence"
           work-directory: ".cache/repository-intelligence"
           reports-directory: ".reports"
