@@ -23,6 +23,10 @@ jobs:
     permissions:
       contents: read
       pages: read
+      actions: read
+      issues: read
+      pull-requests: read
+      checks: read
 
     steps:
       - name: Check out complete repository history
@@ -32,12 +36,44 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Capture public Work, Health and Releases sources
+        id: public_sources
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        # Replace the staging marker with the final reviewed immutable Relay SHA.
+        uses: egohygiene/relay/actions/repository-intelligence-github-sources@REVIEWED_INTELLIGENCE_RELAY_SHA
+        with:
+          github-token: "${{ github.token }}"
+          include-titles: "true"
+
+      - name: Retain exact same-run source captures
+        id: source_capture_upload
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        # Ordinary immutable capture artifact, separate from the Pages artifact.
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: "${{ steps.public_sources.outputs.artifact-name }}"
+          path: "${{ steps.public_sources.outputs.artifact-directory }}"
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Retain bounded public source producer receipt
+        if: ${{ !cancelled() && steps.public_sources.outputs.producer-receipt != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: "optiflow-intelligence-source-proof-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          path: "${{ steps.public_sources.outputs.producer-receipt }}"
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Generate public repository intelligence
-        # Relay native Journey and attributed Search source candidate (unreleased)
-        uses: egohygiene/relay/actions/repository-intelligence@9358083e6dd8b15a0f2a3bb23c0b1e2b3ea3b2ff
+        # Reviewed Relay source candidate; native/consumer qualification remains deferred.
+        uses: egohygiene/relay/actions/repository-intelligence@REVIEWED_INTELLIGENCE_RELAY_SHA
         with:
           collect-journey: "true"
           search-attribution: "true"
+          source-capture-artifact-id: "${{ steps.source_capture_upload.outputs.artifact-id }}"
+          source-capture-artifact-digest: "${{ steps.source_capture_upload.outputs.artifact-digest }}"
+          as-of: "${{ steps.public_sources.outputs.as-of }}"
           output-directory: ".site/producers/intelligence"
           work-directory: ".cache/repository-intelligence"
           reports-directory: ".reports"

@@ -5,6 +5,10 @@ description: Exact source boundary and deferred acceptance for the portable Rela
 
 # Repository Intelligence pin-upgrade handoff
 
+This preceding native Journey/Search source checkpoint is retained as history
+from #162. The [public-source continuation](repository-intelligence-source-feeds.md)
+records the current bounded push/manual Work, Health and Releases handoff.
+
 This is a source-review candidate for OptiFlow's existing Pages publisher,
 prepared on November 9, 2026. It does not establish deployment or production
 acceptance. The parent work is
