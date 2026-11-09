@@ -73,6 +73,21 @@ and passes the verifier's explicit `--allow-missing-intelligence` waiver. Set
 exercise the published contract; every Pages build requires the complete
 `/intelligence/` mount.
 
+### Repository Intelligence generator candidate
+
+The Pages workflow selects the immutable portable Relay candidate
+`49046d88ef6fe2e31e9a9f443a61157b598efb78`. Its shared repository route shell
+and navigation graph belong under OptiFlow's own `/intelligence/` subtree;
+the organization Intelligence site remains a fleet overview linking here.
+The existing composer copies the complete producer bundle into that mount.
+
+This pin does not enable native ADR/Roadmap collection, provider captures, or an
+Observatory snapshot. Missing source-backed evidence remains explicitly
+unavailable. The candidate is source review only: its OptiFlow artifact,
+deployment, public routes, and rollback acceptance have not been verified.
+See the [pin-upgrade handoff](repository-intelligence-pin-upgrade.md) for exact
+source boundaries, deferred checks, and historical recovery constraints.
+
 ## Delivery modes
 
 The pinned `Publish site` workflow uses one build path for review and
