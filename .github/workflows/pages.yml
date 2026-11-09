@@ -33,8 +33,8 @@ jobs:
           persist-credentials: false
 
       - name: Generate public repository intelligence
-        # relay v1.0.0
-        uses: egohygiene/relay/actions/repository-intelligence@1eada5142f7fc7da7862f335589e3b8f5884ffaf
+        # Relay portable Repository Intelligence review candidate (unreleased)
+        uses: egohygiene/relay/actions/repository-intelligence@49046d88ef6fe2e31e9a9f443a61157b598efb78
         with:
           output-directory: ".site/producers/intelligence"
           work-directory: ".cache/repository-intelligence"
