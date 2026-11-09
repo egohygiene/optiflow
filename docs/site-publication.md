@@ -76,9 +76,8 @@ exercise the published contract; every Pages build requires the complete
 ### Repository Intelligence generator candidate
 
 The Pages workflow selects the same immutable reviewed Relay revision for its
-public source producer and native generator. The review staging marker
-`REVIEWED_INTELLIGENCE_RELAY_SHA` must be replaced by the full exact source SHA
-before PR publication. The preceding Journey/Search selection remains recorded
+public source producer and native generator:
+`981ddf4367c67fcd625e54321d95bab027f6c0f2`. The preceding Journey/Search selection remains recorded
 in the [pin-upgrade handoff](repository-intelligence-pin-upgrade.md).
 
 The shared route shell and graph belong under OptiFlow's own `/intelligence/`

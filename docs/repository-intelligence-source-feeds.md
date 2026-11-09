@@ -9,9 +9,8 @@ This implementation checkpoint starts from OptiFlow main
 `fa4347e0a660412b82cd31c07e46d571a52d1749`, which merged native Journey and
 attributed Search in [#162](https://github.com/egohygiene/optiflow/pull/162).
 The new producer and current generator select the same final reviewed immutable
-Relay revision, staged here as `REVIEWED_INTELLIGENCE_RELAY_SHA` until the
-cross-repository implementation review finishes. That marker must be replaced
-with the full exact SHA before PR publication; it is not an available release.
+Relay revision `981ddf4367c67fcd625e54321d95bab027f6c0f2`. This exact source
+selection does not claim an available release or consumer qualification.
 Refs [organization #41](https://github.com/egohygiene/.github/issues/41),
 [Relay #146](https://github.com/egohygiene/relay/issues/146),
 [#149](https://github.com/egohygiene/relay/issues/149), and
