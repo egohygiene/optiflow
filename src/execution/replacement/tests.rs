@@ -16,5 +16,15 @@ fn plan()->ReplacementPlan {let body=PlanBody {operation:"replace_validated_png.
 #[test] fn replacement_cli_keeps_review_and_mutation_authority_separate(){use clap::Parser;let c=crate::cli::Cli::try_parse_from(["optiflow","replacement","review","--source","/media/a.png","--candidate-set","/state/set","--retention","/retained","--output","/records/plan.json"]).unwrap();assert_eq!(c.command_name(),"replacement review");assert!(crate::cli::Cli::try_parse_from(["optiflow","replacement","apply","--plan","/records/p.json","--approval","/records/a.json","--allow-unqualified"]).is_err());}
 #[test] fn replacement_restore_requires_explicit_approval_locator(){use clap::Parser;assert!(crate::cli::Cli::try_parse_from(["optiflow","replacement","restore","--plan","/records/p.json"]).is_err());}
 
+#[test] fn saved_png_approval_rejects_unknown_duplicate_and_disposal_authority(){
+    let p=plan();let approval=approve(&p,"explicit operator".into()).unwrap();let bytes=serde_json::to_vec(&approval).unwrap();assert!(Approval::from_json_slice(&bytes,&p).is_ok());
+    let mut value=serde_json::to_value(&approval).unwrap();value["discard_originals"]=serde_json::json!(true);assert!(Approval::from_json_slice(&serde_json::to_vec(&value).unwrap(),&p).is_err());
+    let duplicated=serde_json::to_string(&approval).unwrap().replacen("\"schema\":","\"schema\":\"optiflow.replacement-approval.v1\",\"schema\":",1);assert!(Approval::from_json_slice(duplicated.as_bytes(),&p).is_err());
+    let mut changed=approval;changed.authority="restorable_video_replacement_only".into();changed.authorization_id.clear();changed.authorization_id=hash(&changed).unwrap();assert!(Approval::from_json_slice(&serde_json::to_vec(&changed).unwrap(),&p).is_err());
+}
+#[test] fn valid_saved_png_declaration_still_cannot_bypass_native_qualification(){
+    let p=plan();let a=approve(&p,"operator".into()).unwrap();let loaded=Approval::from_json_slice(&serde_json::to_vec(&a).unwrap(),&p).unwrap();let signals=SignalState::default();assert!(transaction::apply(&p,&loaded,&signals).is_err());assert!(transaction::restore(&p,&loaded,&signals).is_err());
+}
+
 #[cfg(unix)]
 #[test] fn read_only_status_on_an_unused_private_state_directory_creates_nothing(){use std::os::unix::fs::PermissionsExt;let temp=tempfile::tempdir().unwrap();std::fs::set_permissions(temp.path(),std::fs::Permissions::from_mode(0o700)).unwrap();let mut p=plan();p.body.state=diag(fs::directory(temp.path())).unwrap();p.fingerprint=hash(&p.body).unwrap();assert!(transaction::status(&p).unwrap().is_empty());assert!(std::fs::read_dir(temp.path()).unwrap().next().is_none());}

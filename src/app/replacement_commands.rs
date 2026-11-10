@@ -35,10 +35,17 @@ pub(super) fn run(command:ReplacementCommand,state:&Path,policy:&EffectivePolicy
             }
             ReplacementCommand::Approve(a)=>{let p=read_plan(&a.plan)?;let approval=replacement::approve(&p,a.approved_by)?;crate::record_io::write_new(&a.output,&approval,16_384)?;Ok(serde_json::to_value(approval)?)},
             ReplacementCommand::Status(a)=>Ok(serde_json::to_value(transaction::status(&read_plan(&a.plan)?)?)?),
-            ReplacementCommand::Apply(a)|ReplacementCommand::Restore(a)=>{
-                let _p=read_plan(&a.plan)?;let _approval:Approval=serde_json::from_slice(&crate::record_io::read(&a.approval,16_384,signals)?)?;
-                anyhow::bail!("replacement mutation qualification pending")
-            }
+            ReplacementCommand::Apply(a)=>{
+                let p=read_plan(&a.plan)?;
+                let approval=Approval::from_json_slice(&crate::record_io::read(&a.approval,16_384,signals)?,&p)?;
+                Ok(serde_json::to_value(transaction::apply(&p,&approval,signals)?)?)
+            },
+            ReplacementCommand::Restore(a)=>{
+                let p=read_plan(&a.plan)?;
+                let approval=Approval::from_json_slice(&crate::record_io::read(&a.approval,16_384,signals)?,&p)?;
+                transaction::restore(&p,&approval,signals)?;
+                Ok(serde_json::json!({"status":"restored","plan_fingerprint":p.fingerprint}))
+            },
         }
     })();
     match outcome {Ok(v)=>Execution::success(&v),Err(e)=>Execution::failure(Diagnostic::new(DiagnosticCode::ExecutionPlanInvalid,DiagnosticSeverity::Error,DiagnosticClassification::Input,DiagnosticImpact::BlocksCommand,e.to_string()))}

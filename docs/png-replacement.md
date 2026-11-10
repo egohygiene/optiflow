@@ -51,3 +51,25 @@ Read-only replacement status now treats an unused state directory or a legacy
 pre-migration-10 journal as having no replacement events. It creates no database
 or migration and refuses newer journal versions and hard-link aliases. One
 additional read-only refusal/side-effect boundary case is authored and unrun.
+
+## PNG command wiring — November 10, 2026 source checkpoint
+
+`replacement apply --plan ABS --approval ABS` and `replacement restore --plan
+ABS --approval ABS` now have distinct typed delivery to the existing transaction
+APIs, matching the video command pattern. The former shared placeholder is
+removed. The closed bounded saved approval parser checks exact reviewed PNG
+plan, authorization fingerprint and restorable-PNG-only scope. Video, disposal,
+unknown fields, duplicate declarations and changed plans cannot substitute.
+
+The unchanged application qualification gate still refuses before plan/approval
+file reads, source observations or writable journal access. The transaction SDK
+retains its independent gate before native state work. No flag/document can
+qualify or bypass either boundary. Consequently this wiring does not enable
+real replacements, qualify PNG properties/rollback, broaden the16MiB profile or
+publish v0.3.0. Originals remain restorable under the selected future qualified
+transaction semantics; irreversible disposal remains a separately owned action.
+
+Two useful saved-declaration/scope/gate regressions are authored, uncompiled and
+unrun. No test/compiler/build, dependency/lint/format/schema/native/media/CLI/SDK
+or hosted CI operation ran. Feature #95 and #93's native/platform/release gates
+remain open; Flow #88 stays last. No actual user-media mutation or approval.
