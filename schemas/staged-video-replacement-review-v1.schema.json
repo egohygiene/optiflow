@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/staged-video-replacement-review-v1.schema.json",
+  "$defs": {
+    "serialized_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "value"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "utf8"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "base64"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "unix_bytes"
+            },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "filesystem_id",
+        "file_id",
+        "link_count"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "linux",
+            "macos"
+          ]
+        },
+        "filesystem_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "directory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "identity",
+        "mode",
+        "uid",
+        "gid"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "path",
+        "identity",
+        "size_bytes",
+        "modified_unix_ns",
+        "changed_unix_ns",
+        "mode",
+        "uid",
+        "gid",
+        "blake3"
+      ],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/directory"
+        },
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "modified_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "changed_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "fingerprint",
+    "operation",
+    "artifact_schema",
+    "source",
+    "candidate",
+    "candidate_set",
+    "marker_blake3",
+    "evidence_blake3",
+    "policy_fingerprint",
+    "state",
+    "retention",
+    "encoded_logical_reduction_bytes",
+    "current_source_content_bound",
+    "independent_container_comparison",
+    "live_decode_observed",
+    "native_properties_preserved",
+    "replacement_qualified",
+    "apply_authority",
+    "original_disposal_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.staged-video-replacement-review.v1"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "operation": {
+      "const": "stage_video_replacement.v1"
+    },
+    "artifact_schema": {
+      "enum": [
+        "optiflow.video-candidate-artifact-set.v1",
+        "optiflow.video-candidate-artifact-set.v2"
+      ]
+    },
+    "source": {
+      "$ref": "#/$defs/file"
+    },
+    "candidate": {
+      "$ref": "#/$defs/file"
+    },
+    "candidate_set": {
+      "$ref": "#/$defs/serialized_path"
+    },
+    "marker_blake3": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evidence_blake3": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "policy_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "state": {
+      "$ref": "#/$defs/directory"
+    },
+    "retention": {
+      "$ref": "#/$defs/directory"
+    },
+    "encoded_logical_reduction_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 134217727
+    },
+    "current_source_content_bound": {
+      "const": true
+    },
+    "independent_container_comparison": {
+      "const": true
+    },
+    "live_decode_observed": {
+      "const": false
+    },
+    "native_properties_preserved": {
+      "const": false
+    },
+    "replacement_qualified": {
+      "const": false
+    },
+    "apply_authority": {
+      "const": false
+    },
+    "original_disposal_authority": {
+      "const": false
+    }
+  }
+}

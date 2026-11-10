@@ -20,3 +20,22 @@ exact original request and tool baseline and refuses uncertain attempts. This is
 source-preserving candidate work; strict encoded reduction does not prove
 physical reclaim, native usefulness, arbitrary codec/HDR/audio support or
 replacement eligibility. Four new boundary/CLI cases are authored and unrun.
+
+## Read-only replacement handoff
+
+`replacement review-video --source ABS --candidate-set ABS --artifact-schema
+optiflow.video-candidate-artifact-set.v2 --video-policy PIN --retention ABS
+--output ABS` creates a separately versioned staged review. `--video-policy`
+means the candidate request's exact video policy pin, including its sandbox and
+limits, rather than the unrelated global scan policy. The host rebinds source,
+marker/evidence, candidate, current closed container structure and complete
+stream-copy packet payloads. It records existing private state/retention and
+strict encoded reduction. No native provider is called by review.
+
+Historical saved decode receipts do not become a live decoder observation.
+Flags explicitly deny live decode, preserved native properties, replacement
+qualification, apply and disposal authority. `admit_to_transaction` refuses
+before writable state. The existing PNG transaction parser rejects this type;
+video evidence never bypasses PNG limits or reuses its approval. A future live
+validator/property adapter and native qualification must explicitly complete the
+shared transaction seam. Four further refusal cases are authored and unrun.

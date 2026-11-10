@@ -64,6 +64,7 @@ impl Cli {
             },
             Command::Replacement(arguments) => match &arguments.command {
                 ReplacementCommand::Review(_) => "replacement review",
+                ReplacementCommand::ReviewVideo(_) => "replacement review-video",
                 ReplacementCommand::Approve(_) => "replacement approve",
                 ReplacementCommand::Apply(_) => "replacement apply",
                 ReplacementCommand::Status(_) => "replacement status",
@@ -495,7 +496,7 @@ pub struct ExtensionInspectArgs {
 pub struct ReplacementArgs {#[command(subcommand)] pub command:ReplacementCommand}
 #[derive(Debug,Subcommand)]
 pub enum ReplacementCommand {
-    Review(ReplacementReviewArgs),Approve(ReplacementApproveArgs),
+    Review(ReplacementReviewArgs),ReviewVideo(VideoReplacementReviewArgs),Approve(ReplacementApproveArgs),
     Apply(ReplacementMutationArgs),Status(ReplacementPlanArgs),Restore(ReplacementMutationArgs),
 }
 #[derive(Debug,Args)]
@@ -540,3 +541,13 @@ pub struct VideoFolderArgs {#[command(subcommand)] pub command:VideoFolderComman
 pub enum VideoFolderCommand {Discover(VideoRequestArgs),Run(VideoRequestArgs),Resume(VideoRequestArgs),Status(VideoFolderStatusArgs)}
 #[derive(Debug,Args)]
 pub struct VideoFolderStatusArgs {#[arg(long)] pub run_directory:PathBuf}
+
+#[derive(Debug,Args)]
+pub struct VideoReplacementReviewArgs {
+    #[arg(long)] pub source:PathBuf,
+    #[arg(long)] pub candidate_set:PathBuf,
+    #[arg(long)] pub artifact_schema:String,
+    #[arg(long)] pub video_policy:String,
+    #[arg(long)] pub retention:PathBuf,
+    #[arg(long)] pub output:PathBuf,
+}
