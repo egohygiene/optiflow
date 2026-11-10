@@ -12,6 +12,8 @@ pub struct ReplacementEvent {
     pub authorization_id: String,
     pub sequence: u64,
     pub phase: String,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub original_disposal_authorization: Option<String>,
     pub staged: Option<FileBinding>,
     pub retained: Option<FileBinding>,
     pub published: Option<FileBinding>,
@@ -27,6 +29,9 @@ impl ReplacementEvent {
         ensure!(prior.len()<32 && self.schema=="optiflow.replacement-event.v1"
             && pin(&self.plan_fingerprint)&&pin(&self.authorization_id)
             && self.sequence==prior.len() as u64,"replacement event identity/sequence differs");
+        let disposal=matches!(self.phase.as_str(),"discard_pending"|"discarded"|"cleanup_pending"|"cleaned");
+        ensure!(if disposal {self.original_disposal_authorization.as_deref().is_some_and(pin)}else{self.original_disposal_authorization.is_none()},"separate original-disposal authority required");
+        if let Some(old)=prior.last().and_then(|p|p.original_disposal_authorization.as_ref()){ensure!(self.original_disposal_authorization.as_ref()==Some(old),"disposal authority changed");}
         let previous=prior.last().map(|e|e.phase.as_str());
         ensure!(matches!((previous,self.phase.as_str()),
             (None,"planned")|(Some("planned"),"staged")|(Some("staged"),"retain_pending")
@@ -58,7 +63,7 @@ pub fn apply(plan:&ReplacementPlan,approval:&Approval,signals:&SignalState)->Res
     #[cfg(not(target_os="linux"))] {let _=signals;anyhow::bail!("replacement property backend is not qualified on this platform")}
 }
 fn event(plan:&ReplacementPlan,approval:&Approval,sequence:u64,phase:&str,staged:Option<FileBinding>,retained:Option<FileBinding>,published:Option<FileBinding>)->ReplacementEvent {
-    ReplacementEvent {schema:"optiflow.replacement-event.v1".into(),plan_fingerprint:plan.fingerprint.clone(),authorization_id:approval.authorization_id.clone(),sequence,phase:phase.into(),staged,retained,published}
+    ReplacementEvent {schema:"optiflow.replacement-event.v1".into(),plan_fingerprint:plan.fingerprint.clone(),authorization_id:approval.authorization_id.clone(),sequence,phase:phase.into(),original_disposal_authorization:None,staged,retained,published}
 }
 fn append(journal:&mut Journal,plan:&ReplacementPlan,record:&ReplacementEvent)->Result<()> {diag(journal.append_replacement(record,plan.body.limits.journal_budget_bytes))}
 fn moved_matches(actual:&FileBinding,expected:&FileBinding)->Result<()> {

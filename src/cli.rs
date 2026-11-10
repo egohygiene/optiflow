@@ -57,6 +57,10 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::Doctor => "doctor",
+            Command::Optimize(arguments) => match &arguments.command {
+                OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
+                OptimizeCommand::Run(_) => "optimize run",OptimizeCommand::Resume(_) => "optimize resume",OptimizeCommand::Status(_) => "optimize status",
+            },
             Command::Replacement(arguments) => match &arguments.command {
                 ReplacementCommand::Review(_) => "replacement review",
                 ReplacementCommand::Approve(_) => "replacement approve",
@@ -98,6 +102,8 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Plan and inspect explicit serial PNG folders; source mutation requires qualification.
+    Optimize(OptimizeArgs),
     /// Review and inspect restorable PNG replacement; mutation requires native qualification.
     Replacement(ReplacementArgs),
     /// Inspect optiflow's runtime and optional media tools.
@@ -508,3 +514,14 @@ pub struct ReplacementMutationArgs {
     #[arg(long)] pub plan:PathBuf,
     #[arg(long)] pub approval:PathBuf,
 }
+
+#[derive(Debug,Args)]
+pub struct OptimizeArgs {#[command(subcommand)] pub command:OptimizeCommand}
+#[derive(Debug,Subcommand)]
+pub enum OptimizeCommand {Discover(OptimizeDiscoverArgs),Approve(OptimizeApproveArgs),Run(OptimizeRunArgs),Resume(OptimizeRunArgs),Status(OptimizeRunArgs)}
+#[derive(Debug,Args)]
+pub struct OptimizeDiscoverArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf}
+#[derive(Debug,Args)]
+pub struct OptimizeApproveArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub inventory:PathBuf,#[arg(long)] pub approved_by:String,#[arg(long)] pub output:PathBuf}
+#[derive(Debug,Args)]
+pub struct OptimizeRunArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub inventory:PathBuf,#[arg(long)] pub approval:PathBuf}

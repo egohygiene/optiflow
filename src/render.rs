@@ -44,7 +44,8 @@ fn render_human(result: &CommandResult) -> Result<()> {
             artifact.path.display()
         )?;
     }
-    if result.command.starts_with("replacement ")
+    if result.command.starts_with("optimize ")
+        || result.command.starts_with("replacement ")
         || result.command.starts_with("config ")
         || result.command.starts_with("extensions ")
         || result.command == "apply"
