@@ -115,6 +115,9 @@ pub fn review_png(source:&Path,set:&Path,state:&Path,retention:&Path,policy:&str
     let bound_source=diag(fs::snapshot(source,signals,limits.maximum_file_bytes))?;
     ensure!(bound_source.identity.link_count==Some(1),"replacement source must be singly linked");
     let state=diag(fs::directory(state))?;let retained=diag(fs::directory(retention))?;
+    let source_parent=diag(fs::native_path(&bound_source.directory.path))?;
+    diag(fs::outside_directories(&source_parent,&[&state,&retained]))?;
+    ensure!(state.identity.identity_key()!=retained.identity.identity_key(),"state and retained originals require distinct directories");
     let directory=artifact::open_directory(set)?;
     let observed=artifact::inspect(set);ensure!(observed.status==artifact::Status::Committed,"candidate set is not committed");
     let manifest=observed.manifest.context("candidate marker absent")?;
@@ -153,3 +156,5 @@ pub fn recheck_png(plan:&ReplacementPlan,approval:&Approval,signals:&SignalState
 }
 
 #[cfg(test)] mod tests;
+
+pub mod transaction;

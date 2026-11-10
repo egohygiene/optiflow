@@ -7,6 +7,7 @@ use rusqlite::{OptionalExtension, params};
 use super::filesystem as fs;
 use super::finalization::FinalizationEvent;
 use super::model::*;
+use super::replacement::transaction::ReplacementEvent;
 use super::mutation::{MutationRun, MutationStatus};
 use super::recovery::RecoveryEvent;
 use super::{Result, failure};
@@ -49,11 +50,21 @@ impl Journal {
 
     #[cfg(unix)]
     fn open_with_durability(plan: &ExecutionPlan, mutation: bool) -> Result<Self> {
+        Self::open_state(&plan.body.state, mutation, true)
+    }
+
+    #[cfg(unix)]
+    pub(super) fn open_replacement(state: &DirectoryBinding) -> Result<Self> {
+        Self::open_state(state, true, false)
+    }
+
+    #[cfg(unix)]
+    fn open_state(state: &DirectoryBinding, mutation: bool, recover_legacy: bool) -> Result<Self> {
         use rustix::fs::{FlockOperation, Mode, OFlags, flock, openat};
         use std::os::unix::fs::MetadataExt;
-        let directory = fs::check_directory(&plan.body.state)?;
+        let directory = fs::check_directory(state)?;
         fs::writable_directory(&directory)?;
-        let path = fs::native_path(&plan.body.state.path)?;
+        let path = fs::native_path(&state.path)?;
         // Reject redirected SQLite files, journals and lock files before any
         // writable open. Evidence may never alias an approved source object.
         for name in [
@@ -88,7 +99,7 @@ impl Journal {
                     |r| r.get(0),
                 )
                 .map_err(state_error)?;
-            if newest > 9 {
+            if newest > 10 {
                 return Err(failure(
                     Code::StoredStateIncompatible,
                     "state was migrated by a newer execution implementation",
@@ -115,7 +126,7 @@ impl Journal {
                 format!("another execution owns the journal: {e}"),
             )
         })?;
-        fs::check_directory(&plan.body.state)?;
+        fs::check_directory(state)?;
         let store = StateStore::open_execution(&path).map_err(state_error)?;
         store
             .connection
@@ -188,9 +199,45 @@ impl Journal {
             mutation_durability,
         };
         journal.sync_mutation_evidence()?;
-        journal.recover()?;
-        journal.recover_mutations()?;
+        if recover_legacy {
+            journal.recover()?;
+            journal.recover_mutations()?;
+        }
         Ok(journal)
+    }
+
+    pub(super) fn replacement_events(&self, fingerprint: &str) -> Result<Vec<ReplacementEvent>> {
+        let (count,total):(u64,u64)=self.store.connection.query_row(
+            "SELECT COUNT(*),COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
+            [fingerprint],|r|Ok((r.get(0)?,r.get(1)?))).map_err(state_error)?;
+        if count>32||total>16_777_216 {return Err(state_error("replacement journal exceeds bounds"));}
+        let documents: Vec<String> = self.store.connection.prepare(
+            "SELECT document_json FROM execution_replacement_events WHERE plan_fingerprint=?1 ORDER BY sequence"
+        ).map_err(state_error)?.query_map([fingerprint], |r|r.get(0)).map_err(state_error)?
+            .collect::<std::result::Result<_,_>>().map_err(state_error)?;
+        let mut out=Vec::new();
+        for s in documents {
+            let event=ReplacementEvent::from_json_slice(s.as_bytes()).map_err(state_error)?;
+            event.validate_after(&out).map_err(state_error)?;
+            if event.plan_fingerprint!=fingerprint {return Err(state_error("replacement journal plan differs"));}
+            out.push(event);
+        }
+        Ok(out)
+    }
+    pub(super) fn append_replacement(&mut self, event: &ReplacementEvent, budget: u64) -> Result<()> {
+        let prior=self.replacement_events(&event.plan_fingerprint)?;
+        event.validate_after(&prior).map_err(state_error)?;
+        let encoded=serde_json::to_string(event).map_err(state_error)?;
+        let used:u64=self.store.connection.query_row(
+            "SELECT COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
+            [&event.plan_fingerprint],|r|r.get(0)).map_err(state_error)?;
+        if used.checked_add(encoded.len() as u64).is_none_or(|v|v>budget) {
+            return Err(state_error("replacement journal budget exceeded"));
+        }
+        self.store.connection.execute(
+            "INSERT INTO execution_replacement_events(plan_fingerprint,sequence,phase,document_json) VALUES (?1,?2,?3,?4)",
+            params![event.plan_fingerprint,event.sequence,event.phase,encoded]).map_err(state_error)?;
+        self.sync_mutation_evidence()
     }
 
     /// SQLite can fall back from F_FULLFSYNC to fsync. Explicitly flush the
@@ -619,7 +666,7 @@ pub(super) fn read_recovery_events(
     if version < 8 {
         return Ok(Vec::new());
     }
-    if version > 9 {
+    if version > 10 {
         return Err(failure(
             Code::StoredStateIncompatible,
             "state was migrated by a newer recovery implementation",
@@ -684,7 +731,7 @@ pub(super) fn read_finalization_events(
     if version < 9 {
         return Ok(Vec::new());
     }
-    if version > 9 {
+    if version > 10 {
         return Err(failure(
             Code::StoredStateIncompatible,
             "future finalization state version",

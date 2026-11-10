@@ -14,6 +14,7 @@ use crate::signals::{Interruption, SignalState};
 use crate::state::StateStore;
 
 mod candidate_commands;
+mod replacement_commands;
 mod execution_commands;
 mod extension_commands;
 mod reporting;
@@ -77,6 +78,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
     }
     let execution = match cli.command {
         Command::Doctor => run_doctor(&state_directory),
+        Command::Replacement(arguments) => replacement_commands::run(arguments.command,&state_directory,&effective_policy,signals),
         Command::Scan(arguments) => scan::run(
             &state_directory,
             &arguments,
