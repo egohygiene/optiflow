@@ -56,3 +56,24 @@ mutation permission. Provider subtree quotas and conservative host payload
 admission retain existing limits; total host RSS and blocked syscalls are not
 preempted. Native qualification and macOS property backend gates remain open.
 Five cases are authored, uncompiled/unrun; no native command or check ran here.
+
+## Restorable video action source
+
+`replacement plan-video --request ABS --output ABS` records a distinct video
+plan; `approve-video --plan ABS --approved-by NAME --output ABS` grants only its
+restorable action. `status-video --plan ABS` reads current journal records.
+`apply-video` and `restore-video` retain the existing native qualification refusal
+before provider or writable journal access. There is no unqualified bypass.
+
+The source adapter obtains fresh current validation and passes its opaque token
+to the same private namespace engine used by PNG. The original is retained on
+its own volume; staged metadata is installed/read back, data and intents/results
+are synchronized, and publication/restore use no-replace renames. An interrupted
+transition is inspectable and never replayed. The first v2 video event persists
+current validation bytes plus exact action pins; later events preserve those
+pins. Saved receipts cannot create a token or upgrade a legacy PNG run. Restore
+retains the optimized file. No video original disposal API is added.
+
+Six more boundary cases are authored, uncompiled/unrun. Native decoder/property,
+crash, filesystem, resource and media qualification remain deferred under the
+existing owners. This sprint performed no mutation, native invocation or CI.

@@ -1,0 +1,760 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/video-replacement-validation-record-v1.schema.json",
+  "$defs": {
+    "request": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://github.com/egohygiene/optiflow/schemas/video-candidate-request-v2.schema.json",
+      "title": "Explicit broader bounded FFV1 stream-copy candidate request v2",
+      "description": "Pure review preparation. Supplied identities, media facts and limits are not runtime observations, enforced bounds, accepted media or execution authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "profile",
+        "source",
+        "operation",
+        "policy",
+        "producer",
+        "producer_build_fingerprint",
+        "probe",
+        "probe_build_fingerprint",
+        "limits"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.video-candidate-request.v2"
+        },
+        "profile": {
+          "const": "optiflow.matroska-ffv1-sdr-candidate.v2"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "operation": {
+          "$ref": "#/$defs/operation"
+        },
+        "policy": {
+          "$ref": "#/$defs/policy"
+        },
+        "producer": {
+          "$ref": "#/$defs/provider"
+        },
+        "producer_build_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "probe": {
+          "$ref": "#/$defs/provider"
+        },
+        "probe_build_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        }
+      },
+      "$defs": {
+        "digest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "path": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "encoding",
+                "value"
+              ],
+              "properties": {
+                "encoding": {
+                  "const": "utf8"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "encoding",
+                "base64"
+              ],
+              "properties": {
+                "encoding": {
+                  "const": "unix_bytes"
+                },
+                "base64": {
+                  "type": "string",
+                  "minLength": 4,
+                  "maxLength": 5464,
+                  "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+                }
+              }
+            }
+          ]
+        },
+        "provider": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version",
+            "executable",
+            "binary_digest",
+            "invocation_fingerprint"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "executable": {
+              "$ref": "#/$defs/path"
+            },
+            "binary_digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "invocation_fingerprint": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "rational": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "properties": {
+            "numerator": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            },
+            "denominator": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "observation_id",
+            "observation_fingerprint",
+            "content_digest",
+            "logical_bytes",
+            "probe_observation_fingerprint",
+            "media"
+          ],
+          "properties": {
+            "observation_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "observation_fingerprint": {
+              "$ref": "#/$defs/digest"
+            },
+            "content_digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "logical_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 134217728
+            },
+            "probe_observation_fingerprint": {
+              "$ref": "#/$defs/digest"
+            },
+            "media": {
+              "$ref": "#/$defs/media"
+            }
+          }
+        },
+        "media": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "container",
+            "codec",
+            "stream_index",
+            "total_streams",
+            "disposition",
+            "width",
+            "height",
+            "pixel_format",
+            "field_order",
+            "color_range",
+            "color_space",
+            "color_transfer",
+            "color_primaries",
+            "sample_aspect_ratio",
+            "frame_rate",
+            "time_base",
+            "frame_count",
+            "start_pts",
+            "duration_ticks",
+            "constant_frame_rate",
+            "rotation_degrees",
+            "feature_observation_complete",
+            "chapters",
+            "side_data_entries",
+            "descriptive_metadata_entries",
+            "unknown_metadata_entries"
+          ],
+          "properties": {
+            "container": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "codec": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "stream_index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1024
+            },
+            "total_streams": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1024
+            },
+            "disposition": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 1280
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 720
+            },
+            "pixel_format": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "field_order": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "color_range": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "color_space": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "color_transfer": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "color_primaries": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "sample_aspect_ratio": {
+              "$ref": "#/$defs/rational"
+            },
+            "frame_rate": {
+              "$ref": "#/$defs/rational"
+            },
+            "time_base": {
+              "$ref": "#/$defs/rational"
+            },
+            "frame_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3000
+            },
+            "start_pts": {
+              "type": "integer",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "duration_ticks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 120000
+            },
+            "constant_frame_rate": {
+              "type": "boolean"
+            },
+            "rotation_degrees": {
+              "type": "integer",
+              "minimum": -360,
+              "maximum": 360
+            },
+            "feature_observation_complete": {
+              "type": "boolean"
+            },
+            "chapters": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "side_data_entries": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "descriptive_metadata_entries": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "unknown_metadata_entries": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          }
+        },
+        "operation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "stream_copy"
+            }
+          }
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "effective_policy_fingerprint",
+            "source_preserving",
+            "metadata",
+            "require_strictly_smaller"
+          ],
+          "properties": {
+            "effective_policy_fingerprint": {
+              "$ref": "#/$defs/digest"
+            },
+            "source_preserving": {
+              "const": true
+            },
+            "metadata": {
+              "const": "regenerate_encoder_duration_only"
+            },
+            "require_strictly_smaller": {
+              "const": true
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input_bytes",
+            "candidate_bytes",
+            "decoded_bytes",
+            "temporary_bytes",
+            "memory_bytes",
+            "elapsed_ms"
+          ],
+          "properties": {
+            "input_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 134217728
+            },
+            "candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 134217728
+            },
+            "decoded_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912,
+              "description": "Requested cumulative decoded sample bytes per video, independently applied to source and candidate later; excludes allocator/provider overhead."
+            },
+            "temporary_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912
+            },
+            "memory_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483648
+            },
+            "elapsed_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30000
+            }
+          }
+        }
+      },
+      "$comment": "Authored/unvalidated. Explicit 720p/3000-frame/128MiB input and candidate/512MiB decoded maximums intersect selected budgets. V1 retains old semantics; no lossy execution or native qualification."
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "review_fingerprint",
+    "request_fingerprint",
+    "source_blake3",
+    "candidate_blake3",
+    "decoded",
+    "decoded_bytes_per_subject",
+    "invocations",
+    "resource_receipts",
+    "current_decode_observed",
+    "exact_decoded_samples",
+    "native_qualified",
+    "source_removal_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.video-replacement-validation-record.v1"
+    },
+    "review_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "request_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_blake3": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "candidate_blake3": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "decoded": {
+      "$ref": "#/$defs/request/$defs/digest"
+    },
+    "decoded_bytes_per_subject": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 536870912
+    },
+    "invocations": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_guard",
+          "provider",
+          "build_fingerprint",
+          "argv",
+          "input_digest",
+          "input_bytes",
+          "stdout_digest",
+          "captured_stdout_bytes",
+          "captured_stderr_bytes",
+          "elapsed_ms",
+          "child_elapsed_limit_ms",
+          "operation_elapsed_limit_ms",
+          "operation_elapsed_ms",
+          "stdout_limit_bytes",
+          "stderr_limit_bytes",
+          "child_elapsed_limit_ns",
+          "capture_capabilities"
+        ],
+        "properties": {
+          "resource_guard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema",
+              "memory_max",
+              "memory_swap_max",
+              "pids_max",
+              "scratch_capacity_bytes",
+              "writable_filesystems_confined_to_tmp",
+              "no_new_privileges",
+              "seccomp_filter_active",
+              "capabilities_empty"
+            ],
+            "properties": {
+              "schema": {
+                "const": "optiflow.video-resource-observation.v1"
+              },
+              "memory_max": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483648
+              },
+              "memory_swap_max": {
+                "const": 0
+              },
+              "pids_max": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              },
+              "scratch_capacity_bytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 134217728
+              },
+              "writable_filesystems_confined_to_tmp": {
+                "const": true
+              },
+              "no_new_privileges": {
+                "const": true
+              },
+              "seccomp_filter_active": {
+                "const": true
+              },
+              "capabilities_empty": {
+                "const": true
+              }
+            }
+          },
+          "provider": {
+            "$ref": "#/$defs/request/$defs/provider"
+          },
+          "build_fingerprint": {
+            "$ref": "#/$defs/request/$defs/digest"
+          },
+          "argv": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "items": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          "input_digest": {
+            "$ref": "#/$defs/request/$defs/digest"
+          },
+          "input_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 134217728
+          },
+          "stdout_digest": {
+            "$ref": "#/$defs/request/$defs/digest"
+          },
+          "captured_stdout_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 536870912
+          },
+          "captured_stderr_bytes": {
+            "const": 0
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60000
+          },
+          "child_elapsed_limit_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60000
+          },
+          "operation_elapsed_limit_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60000
+          },
+          "operation_elapsed_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60000
+          },
+          "stdout_limit_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 536870912
+          },
+          "stderr_limit_bytes": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 262144
+          },
+          "child_elapsed_limit_ns": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30000000000
+          },
+          "capture_capabilities": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "retained_stdout_and_stderr_bounded",
+              "direct_child_elapsed_bounded",
+              "output_cap_terminates_child_immediately",
+              "output_cap_aborts_capture_on_detection",
+              "stdin_requires_full_copy",
+              "process_group_cleanup_before_reap",
+              "shared_operation_deadline_checked",
+              "host_file_io_preemptible",
+              "provider_memory_enforced",
+              "provider_scratch_enforced",
+              "process_tree_contained",
+              "source_or_candidate_validation"
+            ],
+            "properties": {
+              "retained_stdout_and_stderr_bounded": {
+                "const": true
+              },
+              "direct_child_elapsed_bounded": {
+                "const": true
+              },
+              "output_cap_terminates_child_immediately": {
+                "const": false
+              },
+              "output_cap_aborts_capture_on_detection": {
+                "const": true
+              },
+              "stdin_requires_full_copy": {
+                "const": false
+              },
+              "process_group_cleanup_before_reap": {
+                "const": true
+              },
+              "shared_operation_deadline_checked": {
+                "const": true
+              },
+              "host_file_io_preemptible": {
+                "const": false
+              },
+              "provider_memory_enforced": {
+                "const": true
+              },
+              "provider_scratch_enforced": {
+                "const": true
+              },
+              "process_tree_contained": {
+                "const": false
+              },
+              "source_or_candidate_validation": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "resource_receipts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "memory_max",
+          "memory_swap_max",
+          "pids_max",
+          "scratch_capacity_bytes",
+          "writable_filesystems_confined_to_tmp",
+          "no_new_privileges",
+          "seccomp_filter_active",
+          "capabilities_empty"
+        ],
+        "properties": {
+          "schema": {
+            "const": "optiflow.video-resource-observation.v1"
+          },
+          "memory_max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483648
+          },
+          "memory_swap_max": {
+            "const": 0
+          },
+          "pids_max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "scratch_capacity_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 134217728
+          },
+          "writable_filesystems_confined_to_tmp": {
+            "const": true
+          },
+          "no_new_privileges": {
+            "const": true
+          },
+          "seccomp_filter_active": {
+            "const": true
+          },
+          "capabilities_empty": {
+            "const": true
+          }
+        }
+      }
+    },
+    "current_decode_observed": {
+      "const": true
+    },
+    "exact_decoded_samples": {
+      "const": true
+    },
+    "native_qualified": {
+      "const": false
+    },
+    "source_removal_authority": {
+      "const": false
+    }
+  }
+}

@@ -228,6 +228,7 @@ impl Journal {
         let prior=self.replacement_events(&event.plan_fingerprint)?;
         event.validate_after(&prior).map_err(state_error)?;
         let encoded=serde_json::to_string(event).map_err(state_error)?;
+        ReplacementEvent::from_json_slice(encoded.as_bytes()).map_err(state_error)?;
         let used:u64=self.store.connection.query_row(
             "SELECT COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
             [&event.plan_fingerprint],|r|r.get(0)).map_err(state_error)?;

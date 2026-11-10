@@ -67,6 +67,11 @@ impl Cli {
                 ReplacementCommand::Review(_) => "replacement review",
                 ReplacementCommand::ReviewVideo(_) => "replacement review-video",
                 ReplacementCommand::ValidateVideo(_) => "replacement validate-video",
+                ReplacementCommand::PlanVideo(_) => "replacement plan-video",
+                ReplacementCommand::ApproveVideo(_) => "replacement approve-video",
+                ReplacementCommand::ApplyVideo(_) => "replacement apply-video",
+                ReplacementCommand::RestoreVideo(_) => "replacement restore-video",
+                ReplacementCommand::StatusVideo(_) => "replacement status-video",
                 ReplacementCommand::Approve(_) => "replacement approve",
                 ReplacementCommand::Apply(_) => "replacement apply",
                 ReplacementCommand::Status(_) => "replacement status",
@@ -500,7 +505,7 @@ pub struct ExtensionInspectArgs {
 pub struct ReplacementArgs {#[command(subcommand)] pub command:ReplacementCommand}
 #[derive(Debug,Subcommand)]
 pub enum ReplacementCommand {
-    Review(ReplacementReviewArgs),ReviewVideo(VideoReplacementReviewArgs),ValidateVideo(VideoValidationArgs),Approve(ReplacementApproveArgs),
+    Review(ReplacementReviewArgs),ReviewVideo(VideoReplacementReviewArgs),ValidateVideo(VideoValidationArgs),PlanVideo(VideoPlanArgs),ApproveVideo(ReplacementApproveArgs),ApplyVideo(ReplacementMutationArgs),RestoreVideo(ReplacementMutationArgs),StatusVideo(ReplacementPlanArgs),Approve(ReplacementApproveArgs),
     Apply(ReplacementMutationArgs),Status(ReplacementPlanArgs),Restore(ReplacementMutationArgs),
 }
 #[derive(Debug,Args)]
@@ -586,3 +591,6 @@ pub struct ExplanationInvokeArgs {
 
 #[derive(Debug,Args)]
 pub struct VideoValidationArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf}
+
+#[derive(Debug,Args)]
+pub struct VideoPlanArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf,#[arg(long,default_value_t=134_217_728)] pub reserve_bytes:u64}
