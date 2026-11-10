@@ -5,6 +5,8 @@ use serde_json::Value;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Contract {
+    ExplanationOllamaConfig,
+    ExplanationLocalNotes,
     VideoReplacementValidationRecord,
     VideoReplacementPlan,
     VideoReplacementApproval,
@@ -111,6 +113,8 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
 
 pub fn schema(contract: Contract) -> Result<Value> {
     let source = match contract {
+        Contract::ExplanationOllamaConfig => include_str!("../schemas/evidence-explanation-runtime-config-v2.schema.json"),
+        Contract::ExplanationLocalNotes => include_str!("../schemas/explanation-local-notes-v1.schema.json"),
         Contract::VideoReplacementValidationRecord => include_str!("../schemas/video-replacement-validation-record-v1.schema.json"),
         Contract::VideoReplacementPlan => include_str!("../schemas/video-replacement-plan-v1.schema.json"),
         Contract::VideoReplacementApproval => include_str!("../schemas/video-replacement-approval-v1.schema.json"),

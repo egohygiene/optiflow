@@ -74,3 +74,35 @@ Manual source review follow-up: runtime output destinations are checked as
 absent private records before invoking the locked process. Final publication
 still uses exclusive creation, and separate result/candidate writes remain
 non-atomic. No process or model was launched during this review.
+
+## Concrete Ollama SDK wrapper (#133)
+
+The fixed internal process entry `__optiflow-explanation-ollama-v1` speaks the
+existing SDK invocation/result protocol. Explicit configuration v2 contains the
+portable profile and private deployment (literal loopback socket, selected model
+name/full SHA-256, runtime version, service-egress declaration, context/output
+bounds). V1 remains subprocess-only; v2 explicitly grants subprocess plus network
+and declares exactly that socket. It supports no credential, URL, proxy,
+installer, service-start, model-pull, tool-call, retry or remote-fallback input.
+
+An already running local service and installed selected model are required.
+The wrapper checks `/api/version` and `/api/tags` before and after one bounded
+nonstreaming `/api/chat` call. Changed/missing model or runtime, unsupported or
+truncated output, unknown citations and deadline/cancellation refuse. The model
+returns only a closed notes object; host code binds packet/profile identity and
+validates the resulting existing candidate. It never receives filenames, media,
+source locators, metadata text or credentials from the normalized packet.
+
+The profile model ID includes the selected registry-reported full model digest,
+so changing that digest changes profile/candidate identity. Runtime/model
+observations are local API reports, not independently observed loaded weights.
+Context admission conservatively uses UTF-8 byte counts; runtime tokenization,
+host memory, local model usefulness and service egress are not independently
+qualified. The loopback transport is not proof that the service itself is offline.
+Reported token usage is labeled as such and cost remains unknown.
+
+The bounded HTTP client uses a literal socket without DNS/proxy environment,
+accepts explicit-length or bounded chunked JSON, and rejects ambiguous framing,
+compression, trailers and redirects. All calls share one deadline and one chat
+attempt. Seven pure/fake-loopback cases are authored, uncompiled/unrun; no socket,
+model, native provider, test/build/format/schema command or CI was run here.

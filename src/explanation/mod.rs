@@ -68,3 +68,5 @@ pub fn validate_candidate(packet:&Packet,c:&Candidate,cancel:&impl Fn()->bool)->
 pub fn validate_current(report:SourceRecord<'_>,plan:Option<SourceRecord<'_>>,packet:&Packet,candidate:&Candidate,cancel:&impl Fn()->bool)->Result<Sidecar>{ensure!(prepare(true,report,plan,cancel)?.as_ref()==Some(packet),"explanation packet differs from current pinned record bytes");validate_candidate(packet,candidate,cancel)}
 
 pub mod runtime;
+
+pub mod ollama;

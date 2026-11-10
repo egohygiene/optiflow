@@ -26,3 +26,9 @@ accepts only a normalized candidate report and grants no source authority.
 Inherited environment/secret input and remote fallback are absent. Trusted
 process locality/model identity remain declarations rather than sandbox proof.
 This addition does not ratify this ADR or establish runtime qualification.
+
+Additive source: configuration v2 explicitly narrows network authority to one
+literal loopback socket for the concrete Ollama SDK wrapper. V1 grants stay
+subprocess-only. Registry-reported model SHA-256 enters profile identity;
+API-reported identity/locality remains distinct from native qualification.
+No acceptance or ratification is inferred from this source checkpoint.
