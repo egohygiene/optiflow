@@ -397,3 +397,7 @@ The maintainer selected four-digit numbering in [Hygiene #73](https://github.com
 | `OFD-014` | `OFD-0014` | [DECISIONS.md](DECISIONS.md#ofd-0014--require-pre-mutation-authority-and-append-only-recovery-evidence) |
 | `OFD-015` | `OFD-0015` | [DECISIONS.md](DECISIONS.md#ofd-0015--independently-authorize-irreversible-retained-copy-finalization) |
 | `OFD-016` | `OFD-0016` | [DECISIONS.md](DECISIONS.md#ofd-0016--publish-source-preserving-png-candidates-under-an-independent-artifact-protocol) |
+
+## Proposed evidence explanation boundary (#133)
+
+[ADR-0003](docs/decisions/ADR-0003-evidence-explanations.md) proposes optional SDK v1 report sidecars over pinned normalized facts. It grants no current source, physical savings or apply authority. Source inclusion and merge do not ratify it.

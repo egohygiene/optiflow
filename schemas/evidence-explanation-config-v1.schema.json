@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/evidence-explanation-config-v1.schema.json",
+  "$comment": "Authored/unvalidated. Exact recorded facts and citation membership are distinct from semantic grounding, source freshness, physical savings and mutation authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "enabled",
+    "candidate_fingerprint"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    },
+    "candidate_fingerprint": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

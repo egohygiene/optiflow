@@ -270,3 +270,7 @@ task extensions:examples
 `task contracts` validates every checked-in schema, regenerates the capability
 reference in check mode, and compares the reference manifest byte-for-byte with
 the Rust example's output.
+
+## Optional evidence explanation (#133)
+
+The [supplied explanation provider](evidence-explanations.md) reuses SDK v1 ReportProvider and its existing manifest/lock/invocation/result acceptance. It accepts a normalized packet only, with no effects, secrets or raw source paths. It is a source checkpoint, not a bundled model provider or new authority.

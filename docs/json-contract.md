@@ -135,3 +135,7 @@ and canonical-order constraints described in the
 It is not CLI output, journal evidence, native observation or mutation authority.
 Existing Linux and same-volume Mac hashes and execution v1–v4 shapes stay
 unchanged. Legacy/missing ACL evidence cannot satisfy this new profile.
+
+## Optional evidence explanation sidecars (#133)
+
+[Packet](../schemas/explanation-packet-v1.schema.json), [supplied candidate](../schemas/explanation-candidate-v1.schema.json), [sidecar](../schemas/explanation-sidecar-v1.schema.json) and [locked configuration](../schemas/evidence-explanation-config-v1.schema.json) are additive. Existing report/plan/SDK and command-result shapes stay unchanged. Exact recorded facts and citation membership do not establish source freshness, semantic truth, physical savings or apply authority. See [scope](evidence-explanations.md); all cases/contracts authored only, execution deferred.

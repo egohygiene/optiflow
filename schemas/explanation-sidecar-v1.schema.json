@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/explanation-sidecar-v1.schema.json",
+  "$comment": "Authored/unvalidated. Exact recorded facts and citation membership are distinct from semantic grounding, source freshness, physical savings and mutation authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "sidecar_fingerprint",
+    "packet_fingerprint",
+    "candidate_fingerprint",
+    "declared_identity",
+    "observed_record_facts",
+    "suggestions",
+    "questions",
+    "omissions",
+    "semantic_grounding",
+    "provider_execution_observed",
+    "current_source_eligibility_established",
+    "physical_space_reclaimed",
+    "apply_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.explanation-sidecar.v1"
+    },
+    "sidecar_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "packet_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "candidate_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "declared_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "model_id",
+        "runtime_revision",
+        "profile_fingerprint",
+        "template_fingerprint",
+        "output_schema_digest"
+      ],
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runtime_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profile_fingerprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "template_fingerprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "output_schema_digest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "observed_record_facts": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fact_id",
+          "record_id",
+          "recorded_value"
+        ],
+        "properties": {
+          "fact_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          },
+          "record_id": {
+            "enum": [
+              "report",
+              "plan"
+            ]
+          },
+          "recorded_value": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "fact_ids"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "fact_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[A-Za-z0-9._-]+$"
+            }
+          }
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "fact_ids"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "fact_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[A-Za-z0-9._-]+$"
+            }
+          }
+        }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "string"
+      }
+    },
+    "semantic_grounding": {
+      "const": "exact_record_facts_and_citation_membership_only; suggestion_meaning_unverified"
+    },
+    "provider_execution_observed": {
+      "const": false
+    },
+    "current_source_eligibility_established": {
+      "const": false
+    },
+    "physical_space_reclaimed": {
+      "const": false
+    },
+    "apply_authority": {
+      "const": false
+    }
+  }
+}
