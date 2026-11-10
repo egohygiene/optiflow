@@ -50,11 +50,11 @@ pub struct Approval {
     pub plan_fingerprint: String, pub approved_by: String,
     pub authority: String, pub approved_at: String,
 }
-fn pin(s: &str) -> bool {s.len()==64 && s.bytes().all(|b|b.is_ascii_digit()||(b'a'..=b'f').contains(&b))}
-fn hash<T: Serialize>(value: &T) -> Result<String> {
+pub(super) fn pin(s: &str) -> bool {s.len()==64 && s.bytes().all(|b|b.is_ascii_digit()||(b'a'..=b'f').contains(&b))}
+pub(super) fn hash<T: Serialize>(value: &T) -> Result<String> {
     Ok(blake3::hash(&serde_json::to_vec(&serde_json::to_value(value)?)?).to_hex().to_string())
 }
-fn diag<T>(value: super::Result<T>) -> Result<T> { value.map_err(|e|anyhow::anyhow!("{e:?}")) }
+pub(super) fn diag<T>(value: super::Result<T>) -> Result<T> { value.map_err(|e|anyhow::anyhow!("{e:?}")) }
 impl ReplacementPlan {
     /// Self-consistency only. Applying always needs a fresh review and authority.
     pub fn validate(&self) -> Result<()> {

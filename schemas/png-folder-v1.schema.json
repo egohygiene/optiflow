@@ -1,0 +1,480 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/png-folder-v1.schema.json",
+  "$defs": {
+    "serialized_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "value"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "utf8"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "base64"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "unix_bytes"
+            },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "filesystem_id",
+        "file_id",
+        "link_count"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "linux",
+            "macos"
+          ]
+        },
+        "filesystem_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "directory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "identity",
+        "mode",
+        "uid",
+        "gid"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "path",
+        "identity",
+        "size_bytes",
+        "modified_unix_ns",
+        "changed_unix_ns",
+        "mode",
+        "uid",
+        "gid",
+        "blake3"
+      ],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/directory"
+        },
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "modified_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "changed_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "png_folder_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_entries",
+        "maximum_files",
+        "maximum_actions",
+        "maximum_depth",
+        "maximum_total_input_bytes",
+        "elapsed_ms"
+      ],
+      "properties": {
+        "maximum_entries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "maximum_files": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "maximum_actions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maximum_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maximum_total_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 268435456
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600000
+        }
+      }
+    },
+    "png_folder_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "source_root",
+        "oxipng",
+        "state_directory",
+        "retention_directory",
+        "artifact_root",
+        "run_directory",
+        "policy_fingerprint",
+        "original_disposition",
+        "recursive",
+        "include_hidden",
+        "per_file",
+        "batch"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.png-folder-request.v1"
+        },
+        "source_root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "oxipng": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "state_directory": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "retention_directory": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "artifact_root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "run_directory": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/"
+        },
+        "policy_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "original_disposition": {
+          "enum": [
+            "retain_for_restore",
+            "discard_after_durable_replacement"
+          ]
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "include_hidden": {
+          "type": "boolean"
+        },
+        "per_file": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_file_bytes",
+            "free_space_reserve_bytes",
+            "journal_budget_bytes"
+          ],
+          "properties": {
+            "maximum_file_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "free_space_reserve_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1099511627776
+            },
+            "journal_budget_bytes": {
+              "type": "integer",
+              "minimum": 65536,
+              "maximum": 16777216
+            }
+          }
+        },
+        "batch": {
+          "$ref": "#/$defs/png_folder_bounds"
+        }
+      }
+    },
+    "png_folder_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "disposition",
+        "reason",
+        "source"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "disposition": {
+          "enum": [
+            "eligible",
+            "skipped",
+            "unsupported"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "source": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/file"
+            }
+          ]
+        }
+      }
+    },
+    "png_folder_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "request_fingerprint",
+        "fingerprint",
+        "source_root",
+        "entries_seen",
+        "files_seen",
+        "observed_input_bytes",
+        "entries",
+        "one_file_in_flight",
+        "physical_space_reclaimed"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.png-folder-inventory.v1"
+        },
+        "request_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_root": {
+          "$ref": "#/$defs/directory"
+        },
+        "entries_seen": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "files_seen": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "observed_input_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 268435456
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/png_folder_entry"
+          }
+        },
+        "one_file_in_flight": {
+          "const": true
+        },
+        "physical_space_reclaimed": {
+          "const": false
+        }
+      }
+    },
+    "png_folder_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "authorization_id",
+        "request_fingerprint",
+        "inventory_fingerprint",
+        "disposition",
+        "approved_by",
+        "approved_at",
+        "maximum_actions"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.png-folder-approval.v1"
+        },
+        "authorization_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "inventory_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "disposition": {
+          "enum": [
+            "retain_for_restore",
+            "discard_after_durable_replacement"
+          ]
+        },
+        "approved_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "maximum_actions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/png_folder_request"
+    },
+    {
+      "$ref": "#/$defs/png_folder_inventory"
+    },
+    {
+      "$ref": "#/$defs/png_folder_approval"
+    }
+  ]
+}
