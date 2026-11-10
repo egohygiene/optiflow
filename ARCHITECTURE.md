@@ -399,3 +399,9 @@ retains source/candidate/provider bindings and the original cooperative deadline
 Saved validation records are evidence only and cannot reconstruct that token.
 Transaction authority, property preservation and native qualification remain
 separate concerns; validation itself never accesses writable mutation state.
+
+The distinct video plan/approval and v2 action evidence use the same private
+replacement namespace engine, execution lock and append-only SQLite table.
+Video starts bind the current validation record; every later event preserves
+its action identity. The PNG plan/approval/v1 event parser and 16 MiB ceiling
+retain their meanings. A video action has no original-disposal phase.

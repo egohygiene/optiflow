@@ -71,3 +71,5 @@ pub fn admit_to_transaction(review:&StagedVideoReview)->Result<()> {review.valid
 #[cfg(test)] mod tests;
 
 pub mod live;
+
+pub mod transaction;

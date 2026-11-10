@@ -89,5 +89,6 @@ pub fn validate(request:&Request,signals:&SignalState)->Result<ValidatedPair>{
     source.verify_current_guarded(&guard)?;candidate.verify_current_guarded(&guard)?;providers.verify_current_with_cancel(&cancel)?;
     current_review(request,signals)?;guard()?;
     let record=Record {schema:"optiflow.video-replacement-validation-record.v1".into(),review_fingerprint:request.review.fingerprint.clone(),request_fingerprint:hash(request)?,source_blake3:source.digest().value.clone(),candidate_blake3:candidate.digest().value.clone(),decoded,decoded_bytes_per_subject:source_probe.decoded_sample_bytes,invocations,resource_receipts:providers.resource_receipts()?,current_decode_observed:true,exact_decoded_samples:true,native_qualified:false,source_removal_authority:false};
+    crate::contracts::validate(crate::contracts::Contract::VideoReplacementValidationRecord,&record)?;
     Ok(ValidatedPair {request:request.clone(),record,source,candidate,providers,budget})
 }
