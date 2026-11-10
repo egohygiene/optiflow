@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.6
+version: 0.1.7
 status: draft
 owners:
   - egohygiene
@@ -37,6 +37,18 @@ replacement, validation, quarantine, and recovery are future structural units
 and must not be simulated inside the read-only pipeline.
 
 ## Structural Units or Layers
+
+### Descriptor-bound cross-copy property integration (#111)
+
+A safe borrowed-file backend port binds the existing stronger Mac property
+declarations to host-observed object/content windows. Its observations carry
+backend identity and explicit unqualified status; declared properties alone
+cannot become native evidence. Copy-property installation rechecks both held
+subjects and independently rereads the destination. It never removes a source.
+The default backend remains unavailable until a reviewed safe descriptor ACL
+dependency and native qualification are supplied. Historical Linux and
+same-volume Mac encodings and production dispatch remain unchanged. Proposed
+ADR-0004 records this integration and its remaining dependency gate.
 
 ### Explicit broader lossless video profile (#146)
 

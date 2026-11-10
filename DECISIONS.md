@@ -79,6 +79,7 @@ without changing IDs or history. This document will retain the index.
 | OFD-0014 | Proposed | Require pre-mutation authority and append-only recovery evidence |
 | OFD-0015 | Proposed | Independently authorize irreversible retained-copy finalization |
 | OFD-0016 | Proposed | Publish source-preserving PNG candidates under an independent artifact protocol |
+| OFD-0017 | Proposed | Bind stronger cross-copy properties to held descriptor observations (ADR-0004) |
 
 ## Active Decisions
 

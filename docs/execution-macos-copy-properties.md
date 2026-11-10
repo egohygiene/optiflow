@@ -110,3 +110,17 @@ native-volume qualification. Deferred inheritance initially refuses because
 rename can change an ACL after an earlier successful copy/read-back. The
 [parent handoff](work/111/HANDOFF.md) retains the complete sequence and #93's
 separate release gate.
+
+## Descriptor-bound integration checkpoint (2026-11-10)
+
+`execution::descriptor_properties` adds a safe integration port with bounded
+positional reads, a pinned backend identity, descriptor identity/content windows,
+and independent destination readback after one installer call. The separately
+versioned observation schema has no removal authority. Saved JSON cannot create
+a live observation token. Source cursor positions are preserved.
+
+The default backend remains unavailable and production cross-volume mutation
+still refuses. This source does not adopt or qualify the exacl patch. Native
+backend selection, namespace-transition observation and recovery integration
+remain required. Nine Linux synthetic cases were authored and not run; no
+compiler, formatter, schema validation, native execution or CI was invoked.
