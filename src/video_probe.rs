@@ -12,8 +12,7 @@ use crate::domain::EvidenceDigest;
 use crate::video_candidate::{Rational, VideoDeclaration};
 
 pub const MAX_REPORT_BYTES: usize = 4 * 1024 * 1024;
-const MAX_FRAMES: usize = 250;
-const MAX_DECODED_BYTES: u64 = 64 * 1024 * 1024;
+use crate::video_profile::Profile;
 
 /// Full display is material: without it, omitted tags/side-data cannot mean
 /// the pinned provider reported none. Never add selection or read intervals.
@@ -70,7 +69,10 @@ type Result<T> = std::result::Result<T, ProbeRefusal>;
 
 /// Parse only the FFmpeg 8.0.1 reported view of the first FFV1 subset.
 /// Unknown source features are not inferred absent outside that view.
-pub fn parse_ffv1_observation(bytes: &[u8]) -> Result<VideoProbeObservation> {
+pub fn parse_ffv1_observation(bytes: &[u8]) -> Result<VideoProbeObservation> {parse_profile(bytes,Profile::TinyV1)}
+/// Explicit bounded v2 parser; reported facts still are not authenticated media.
+pub fn parse_ffv1_observation_v2(bytes:&[u8])->Result<VideoProbeObservation>{parse_profile(bytes,Profile::BoundedV2)}
+pub(crate) fn parse_profile(bytes:&[u8],profile:Profile)->Result<VideoProbeObservation> {
     if bytes.len() > MAX_REPORT_BYTES {
         return Err(ProbeRefusal::ReportTooLarge);
     }
@@ -90,7 +92,7 @@ pub fn parse_ffv1_observation(bytes: &[u8]) -> Result<VideoProbeObservation> {
     if streams.len() != 1 || frames.is_empty() {
         return Err(ProbeRefusal::UnsupportedSource);
     }
-    if frames.len() > MAX_FRAMES {
+    if frames.len() > profile.frames() {
         return Err(ProbeRefusal::LimitExceeded);
     }
     let format = object(required(root, "format")?)?;
@@ -124,8 +126,8 @@ pub fn parse_ffv1_observation(bytes: &[u8]) -> Result<VideoProbeObservation> {
     {
         return Err(ProbeRefusal::UnsupportedSource);
     }
-    let width = dimension(stream, "width", 640)?;
-    let height = dimension(stream, "height", 360)?;
+    let width = dimension(stream, "width", u64::from(profile.width()))?;
+    let height = dimension(stream, "height", u64::from(profile.height()))?;
     if unsigned(stream, "coded_width")? != u64::from(width)
         || unsigned(stream, "coded_height")? != u64::from(height)
         || rational(stream, "sample_aspect_ratio", ':')? != (Rational { numerator: 1, denominator: 1 })
@@ -203,7 +205,7 @@ pub fn parse_ffv1_observation(bytes: &[u8]) -> Result<VideoProbeObservation> {
         timings.push(FrameTiming { pts, best_effort_timestamp, duration_ticks });
     }
     let decoded_sample_bytes = u64::from(width) * u64::from(height) * 3 / 2 * frames.len() as u64;
-    if decoded_sample_bytes > MAX_DECODED_BYTES {
+    if decoded_sample_bytes > profile.decoded_bytes() {
         return Err(ProbeRefusal::LimitExceeded);
     }
     Ok(VideoProbeObservation {

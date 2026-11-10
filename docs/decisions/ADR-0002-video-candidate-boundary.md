@@ -35,3 +35,13 @@ start/result evidence compose this same producer. A single candidate runs at
 a time; failed/unresolved states stop and read-only recovery grants no replay.
 See [folder scope](../video-folder-candidates.md). Proposed status, native/host
 qualification and the separate future mutation/disposal boundary are unchanged.
+
+November10 proposed source extension: an explicitly selected v2 profile raises
+geometry/frame/encoded/decoded and artifact bounds within the same FFV1 stream
+copy lane. One internal profile owns admission, source/provider capture,
+independent parser/decode and publication/readback limits. V1 wire/fingerprint
+meaning and folder defaults remain unchanged; there is no failed-v1 fallback.
+The same existing Linux guard owns provider-subtree/scratch evidence. Larger
+payload estimates are not full host RSS or native qualification. Distinct v2
+request/evidence/marker identities prevent cross-profile relabeling; source
+replacement/disposal and broader media remain separate. See [v2 scope](../video-candidate-profile-v2.md). Proposed status is unchanged.

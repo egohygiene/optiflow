@@ -5,6 +5,8 @@ description: Selected Linux resource guard, independent closed-container verific
 
 # Produce one source-preserving video candidate
 
+The following describes the tiny v1 lane. A separately selected [broader v2 profile](video-candidate-profile-v2.md) adds bounded720p/count/byte limits with distinct request/evidence/marker identities; it does not change v1 or folder defaults.
+
 For a separately bounded serial folder batch using this same producer, see
 [folder candidates](video-folder-candidates.md). That source checkpoint adds
 read-only discovery, per-entry outcomes and conservative journal inspection;

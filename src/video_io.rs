@@ -94,15 +94,19 @@ impl BoundedFileObservation {
         self.read_bytes_guarded(&|| Ok(()))
     }
 
-    pub(crate) fn read_bytes_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<Vec<u8>> {
+    pub(crate) fn read_bytes_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<Vec<u8>> {self.read_bytes_bounded(MAX_RETAINED_BYTES,guard)}
+
+    pub(crate) fn read_bytes_profile(&self,profile:crate::video_profile::Profile,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{self.read_bytes_bounded(profile.input_bytes(),guard)}
+
+    fn read_bytes_bounded(&self,retained_maximum:u64,guard:&impl Fn()->Result<()>)->Result<Vec<u8>> {
         guard()?;
         ensure!(
-            self.snapshot.logical_bytes <= MAX_RETAINED_BYTES,
+            self.snapshot.logical_bytes <= retained_maximum,
             "file exceeds retained-byte ceiling"
         );
         ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
         let (_, current, digest, bytes) =
-            observe(&self.path, self.maximum.min(MAX_RETAINED_BYTES), true, guard)?;
+            observe_bounded(&self.path, self.maximum.min(retained_maximum), true,retained_maximum, guard)?;
         ensure!(
             current == self.snapshot && digest == self.digest,
             "file identity, metadata or complete content changed"
@@ -118,14 +122,16 @@ fn observe(
     maximum: u64,
     retain: bool,
     guard: &impl Fn() -> Result<()>,
-) -> Result<(File, FileSnapshot, EvidenceDigest, Vec<u8>)> {
+) -> Result<(File, FileSnapshot, EvidenceDigest, Vec<u8>)> {observe_bounded(path,maximum,retain,MAX_RETAINED_BYTES,guard)}
+
+fn observe_bounded(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,guard:&impl Fn()->Result<()>)->Result<(File,FileSnapshot,EvidenceDigest,Vec<u8>)>{
     guard()?;
     ensure!(
         maximum > 0 && maximum <= MAX_OBSERVATION_BYTES,
         "invalid observation byte ceiling"
     );
     ensure!(
-        !retain || maximum <= MAX_RETAINED_BYTES,
+        !retain || (retained_maximum<=MAX_OBSERVATION_BYTES&&maximum<=retained_maximum),
         "invalid retained-byte ceiling"
     );
     let mut file = open_regular_guarded(path, guard)?;
@@ -455,3 +461,5 @@ mod tests {
         assert_eq!(fs::read(&path).unwrap(), content);
     }
 }
+#[cfg(all(test,unix))] mod broader_retained_tests {use super::*;
+#[test] fn retained_read_above_legacy_cap_is_explicit_and_source_stays_unchanged(){let root=tempfile::tempdir().unwrap();let path=root.path().join("synthetic bytes");let bytes=vec![0x5a;16_777_217];std::fs::write(&path,&bytes).unwrap();let observed=BoundedFileObservation::open(&path,134_217_728).unwrap();assert!(observed.read_bytes().is_err());assert_eq!(observed.read_bytes_profile(crate::video_profile::Profile::BoundedV2,&||Ok(())).unwrap(),bytes);observed.verify_current().unwrap();assert!(observed.read_bytes_profile(crate::video_profile::Profile::BoundedV2,&||anyhow::bail!("cancelled")).is_err());}}

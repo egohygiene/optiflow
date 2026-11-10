@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.5
+version: 0.1.6
 status: draft
 owners:
   - egohygiene
@@ -37,6 +37,18 @@ replacement, validation, quarantine, and recovery are future structural units
 and must not be simulated inside the read-only pipeline.
 
 ## Structural Units or Layers
+
+### Explicit broader lossless video profile (#146)
+
+The separate v2 production/candidate/evidence/marker contract selects a bounded
+720p, longer-count FFV1/Matroska stream-copy profile. One internal profile value
+owns admission, provider pipe bounds, independent container/probe parsing,
+complete decode and durable publication/readback limits. V1 entry points and
+fingerprint domains retain their tiny subset. The same explicitly selected
+Linux resource guard owns provider-subtree/scratch enforcement; payload estimates
+do not become full host RSS guarantees. No new codec engine, lossy execution,
+folder-default upgrade, replacement or physical-reclamation authority follows.
+See proposed ADR-0002 and the v2 profile guide; native qualification remains open.
 
 ### Optional evidence explanation (#133)
 

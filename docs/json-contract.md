@@ -139,3 +139,7 @@ unchanged. Legacy/missing ACL evidence cannot satisfy this new profile.
 ## Optional evidence explanation sidecars (#133)
 
 [Packet](../schemas/explanation-packet-v1.schema.json), [supplied candidate](../schemas/explanation-candidate-v1.schema.json), [sidecar](../schemas/explanation-sidecar-v1.schema.json) and [locked configuration](../schemas/evidence-explanation-config-v1.schema.json) are additive. Existing report/plan/SDK and command-result shapes stay unchanged. Exact recorded facts and citation membership do not establish source freshness, semantic truth, physical savings or apply authority. See [scope](evidence-explanations.md); all cases/contracts authored only, execution deferred.
+
+## Explicit broader lossless video profile (#146)
+
+[Production request v2](../schemas/video-production-request-v2.schema.json), [candidate declaration v2](../schemas/video-candidate-request-v2.schema.json), [evidence v2](../schemas/video-candidate-evidence-v2.schema.json) and [marker v2](../schemas/video-candidate-artifact-set-v2.schema.json) select one broader bounded stream-copy profile. V1 schema bytes/domains/defaults remain unchanged. Exact profile joins and current bytes are required at readback; originals, replacement authority and physical-reclamation flags remain unchanged. See [profile scope](video-candidate-profile-v2.md). Authored/unvalidated.
