@@ -50,3 +50,5 @@ pub fn run(
 ) -> (crate::outcome::CommandResult, crate::cli::OutputFormat) {
     app::run(cli, signals)
 }
+
+pub(crate) mod record_io;

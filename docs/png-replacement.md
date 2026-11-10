@@ -18,3 +18,27 @@ copies initially use more space. Native runtime and #93/#95 proof remain deferre
 
 Seven refusal/authority boundary cases are authored, uncompiled and unrun. No
 compiler, formatter, schema validation, provider/media execution or CI ran.
+
+## Transaction and CLI source
+
+`replacement review --source ABS --candidate-set ABS --retention ABS --output ABS`
+creates a new immutable review document in an existing private output directory.
+`replacement approve --plan ABS --approved-by NAME --output ABS` records exact
+restorable authority. `replacement status --plan ABS` only reads recorded phases.
+Human/JSON results use the existing command-result envelope.
+
+`replacement apply` and `replacement restore` explicitly refuse before writable
+journal access while #93/#95 qualification is pending. No JSON or bypass flag
+can enable them. macOS replacement property preservation remains unavailable.
+
+The Linux transaction source reuses the existing execution lock and SQLite
+journal (additive migration 10). It stages a separately copied candidate, checks
+properties, synchronizes it and journals each intent/result. Original retention
+and publication use separate no-replace renames on the source volume. An
+interruption may leave the source path temporarily absent; the retained original
+and phase evidence must be inspected. Uncertain phases are never replayed.
+Restore source retains the optimized object, refuses collisions and deletes
+nothing. Original disposal is separately owned by #121 explicit batch authority.
+
+This source is uncompiled/unrun and cannot establish native durability or crash
+recovery qualification. Four further transition/gate/CLI cases are authored.

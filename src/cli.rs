@@ -57,6 +57,13 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::Doctor => "doctor",
+            Command::Replacement(arguments) => match &arguments.command {
+                ReplacementCommand::Review(_) => "replacement review",
+                ReplacementCommand::Approve(_) => "replacement approve",
+                ReplacementCommand::Apply(_) => "replacement apply",
+                ReplacementCommand::Status(_) => "replacement status",
+                ReplacementCommand::Restore(_) => "replacement restore",
+            },
             Command::Scan(_) => "scan",
             Command::Report(_) => "report",
             Command::Plan(_) => "plan",
@@ -91,6 +98,8 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Review and inspect restorable PNG replacement; mutation requires native qualification.
+    Replacement(ReplacementArgs),
     /// Inspect optiflow's runtime and optional media tools.
     Doctor,
 
@@ -468,4 +477,34 @@ pub struct ExtensionInspectArgs {
 
     #[command(flatten)]
     pub sources: ExtensionSourcesArgs,
+}
+
+#[derive(Debug,Args)]
+pub struct ReplacementArgs {#[command(subcommand)] pub command:ReplacementCommand}
+#[derive(Debug,Subcommand)]
+pub enum ReplacementCommand {
+    Review(ReplacementReviewArgs),Approve(ReplacementApproveArgs),
+    Apply(ReplacementMutationArgs),Status(ReplacementPlanArgs),Restore(ReplacementMutationArgs),
+}
+#[derive(Debug,Args)]
+pub struct ReplacementReviewArgs {
+    #[arg(long)] pub source:PathBuf,
+    #[arg(long)] pub candidate_set:PathBuf,
+    #[arg(long)] pub retention:PathBuf,
+    #[arg(long)] pub output:PathBuf,
+    #[arg(long,default_value_t=16_777_216)] pub maximum_file_bytes:u64,
+    #[arg(long,default_value_t=67_108_864)] pub reserve_bytes:u64,
+}
+#[derive(Debug,Args)]
+pub struct ReplacementPlanArgs {#[arg(long)] pub plan:PathBuf}
+#[derive(Debug,Args)]
+pub struct ReplacementApproveArgs {
+    #[arg(long)] pub plan:PathBuf,
+    #[arg(long)] pub approved_by:String,
+    #[arg(long)] pub output:PathBuf,
+}
+#[derive(Debug,Args)]
+pub struct ReplacementMutationArgs {
+    #[arg(long)] pub plan:PathBuf,
+    #[arg(long)] pub approval:PathBuf,
 }
