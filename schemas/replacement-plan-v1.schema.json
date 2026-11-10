@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/replacement-plan-v1.schema.json",
+  "$defs": {
+    "serialized_path": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "value"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "utf8"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "encoding",
+            "base64"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "unix_bytes"
+            },
+            "base64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "filesystem_id",
+        "file_id",
+        "link_count"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "linux",
+            "macos"
+          ]
+        },
+        "filesystem_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "file_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "link_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "directory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "identity",
+        "mode",
+        "uid",
+        "gid"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "path",
+        "identity",
+        "size_bytes",
+        "modified_unix_ns",
+        "changed_unix_ns",
+        "mode",
+        "uid",
+        "gid",
+        "blake3"
+      ],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/directory"
+        },
+        "path": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "modified_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "changed_unix_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "gid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "fingerprint",
+    "body"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.replacement-plan.v1"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "source",
+        "candidate",
+        "candidate_set",
+        "marker_blake3",
+        "evidence_blake3",
+        "state",
+        "retention",
+        "limits",
+        "evidence_policy_fingerprint",
+        "encoded_logical_reduction_bytes",
+        "original_disposition",
+        "qualification"
+      ],
+      "properties": {
+        "operation": {
+          "const": "replace_validated_png.v1"
+        },
+        "source": {
+          "$ref": "#/$defs/file"
+        },
+        "candidate": {
+          "$ref": "#/$defs/file"
+        },
+        "candidate_set": {
+          "$ref": "#/$defs/serialized_path"
+        },
+        "marker_blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "evidence_blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "state": {
+          "$ref": "#/$defs/directory"
+        },
+        "retention": {
+          "$ref": "#/$defs/directory"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_file_bytes",
+            "free_space_reserve_bytes",
+            "journal_budget_bytes"
+          ],
+          "properties": {
+            "maximum_file_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "free_space_reserve_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1099511627776
+            },
+            "journal_budget_bytes": {
+              "type": "integer",
+              "minimum": 65536,
+              "maximum": 16777216
+            }
+          }
+        },
+        "evidence_policy_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "encoded_logical_reduction_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "original_disposition": {
+          "const": "retain_for_restore"
+        },
+        "qualification": {
+          "const": "unqualified_source_checkpoint"
+        }
+      }
+    }
+  }
+}
