@@ -18,3 +18,11 @@ Existing schema/artifact-set/SDK/lock/result owners remain authoritative. Future
 real runtime/profile adoption, narrow credential handoff and native usefulness
 need explicit follow-up; disabled/missing candidate is ordinary optional behavior.
 Qualification is deferred to flow #88 last. Prior ADR dispositions are unchanged.
+
+2026-11-10 additive source checkpoint: explicit pinned-record CLI and an optional
+local-process profile handoff reuse SDK v1 ProcessExtensionClient/ReportProvider.
+The operator lock owns exact executable/configuration/effect identity. The host
+accepts only a normalized candidate report and grants no source authority.
+Inherited environment/secret input and remote fallback are absent. Trusted
+process locality/model identity remain declarations rather than sandbox proof.
+This addition does not ratify this ADR or establish runtime qualification.

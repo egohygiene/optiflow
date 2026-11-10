@@ -57,7 +57,7 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::Doctor => "doctor",
-            Command::Explain(a) => match &a.command {ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
+            Command::Explain(a) => match &a.command {ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
             Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
             Command::Optimize(arguments) => match &arguments.command {
                 OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
@@ -558,7 +558,7 @@ pub struct VideoReplacementReviewArgs {
 #[derive(Debug,Args)]
 pub struct ExplainArgs {#[command(subcommand)] pub command:ExplainCommand}
 #[derive(Debug,Subcommand)]
-pub enum ExplainCommand {Prepare(ExplanationPrepareArgs),Accept(ExplanationAcceptArgs),Inspect(ExplanationInspectArgs)}
+pub enum ExplainCommand {Invoke(ExplanationInvokeArgs),Prepare(ExplanationPrepareArgs),Accept(ExplanationAcceptArgs),Inspect(ExplanationInspectArgs)}
 #[derive(Debug,Args)]
 pub struct ExplanationInputs {
     #[arg(long)] pub report:PathBuf,
@@ -572,3 +572,13 @@ pub struct ExplanationPrepareArgs {#[command(flatten)] pub inputs:ExplanationInp
 pub struct ExplanationAcceptArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub packet:PathBuf,#[arg(long)] pub candidate:PathBuf,#[arg(long)] pub output:PathBuf}
 #[derive(Debug,Args)]
 pub struct ExplanationInspectArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub packet:PathBuf,#[arg(long)] pub candidate:PathBuf,#[arg(long)] pub sidecar:PathBuf}
+
+#[derive(Debug,Args)]
+pub struct ExplanationInvokeArgs {
+    #[arg(long)] pub manifest:PathBuf,
+    #[arg(long)] pub lock:PathBuf,
+    #[arg(long)] pub profile:PathBuf,
+    #[arg(long)] pub packet:PathBuf,
+    #[arg(long)] pub output:PathBuf,
+    #[arg(long)] pub sdk_result_output:PathBuf,
+}

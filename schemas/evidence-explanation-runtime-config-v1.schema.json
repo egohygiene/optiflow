@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/evidence-explanation-runtime-config-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "enabled",
+    "profile"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "fingerprint",
+        "provider_id",
+        "model_id",
+        "runtime_revision",
+        "template",
+        "template_fingerprint",
+        "output_schema_digest",
+        "backend",
+        "local_only"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.evidence-explanation-runtime-profile.v1"
+        },
+        "fingerprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "provider_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runtime_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "template": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "template_fingerprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "output_schema_digest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "const": "blake3-256"
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "backend": {
+          "const": "local_process_sdk_v1"
+        },
+        "local_only": {
+          "const": true
+        }
+      }
+    }
+  }
+}
