@@ -32,3 +32,10 @@ literal loopback socket for the concrete Ollama SDK wrapper. V1 grants stay
 subprocess-only. Registry-reported model SHA-256 enters profile identity;
 API-reported identity/locality remains distinct from native qualification.
 No acceptance or ratification is inferred from this source checkpoint.
+
+The proposed local-wrapper extension includes requested context/output-token
+limits in its closed profile revision, separately from the service-reported
+version pin. Generation settings changes cannot retain old candidate/profile
+identity. Reported usage beyond those requested limits refuses, without claiming
+independently measured token enforcement, model weight proof or offline isolation.
+This source-review extension remains proposed and unqualified.
