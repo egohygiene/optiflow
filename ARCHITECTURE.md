@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.7
+version: 0.1.8
 status: draft
 owners:
   - egohygiene
@@ -390,3 +390,12 @@ selects the existing bounded profile and preserves v1/PNG ceilings. Its staged
 replacement review cannot enter the PNG transaction lane. Optional explanation
 CLI/runtime handoff reuse normalized record contracts and SDK v1 reporting;
 operator locks and declared model profiles never confer source authority.
+
+### Current video validation before replacement
+
+The video replacement owner composes existing guarded FFmpeg/ffprobe calls,
+closed container inspection and byte-bound observations. A private live token
+retains source/candidate/provider bindings and the original cooperative deadline.
+Saved validation records are evidence only and cannot reconstruct that token.
+Transaction authority, property preservation and native qualification remain
+separate concerns; validation itself never accesses writable mutation state.

@@ -69,3 +69,5 @@ pub fn review(source:&Path,set:&Path,expected_artifact_schema:&str,state:&Path,r
 pub fn admit_to_transaction(review:&StagedVideoReview)->Result<()> {review.validate()?;anyhow::bail!("staged video needs live decode/property validation and native replacement qualification; PNG approval/discard authority cannot be reused")}
 
 #[cfg(test)] mod tests;
+
+pub mod live;

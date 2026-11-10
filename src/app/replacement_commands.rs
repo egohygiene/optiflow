@@ -10,6 +10,12 @@ pub(super) fn run(command:ReplacementCommand,state:&Path,policy:&EffectivePolicy
     let outcome=(||->Result<serde_json::Value>{
         let read_plan=|path:&Path|ReplacementPlan::from_json_slice(&crate::record_io::read(path,4_194_304,signals)?);
         match command {
+            ReplacementCommand::ValidateVideo(a)=>{
+                crate::record_io::preflight_new(&a.output)?;
+                let request=crate::execution::video_replacement::live::Request::from_json_slice(&crate::record_io::read(&a.request,4_194_304,signals)?)?;
+                let validated=crate::execution::video_replacement::live::validate(&request,signals)?;
+                validated.recheck(signals)?;crate::record_io::write_new(&a.output,validated.record(),4_194_304)?;Ok(serde_json::to_value(validated.record())?)
+            }
             ReplacementCommand::ReviewVideo(a)=>{
                 let review=crate::execution::video_replacement::review(&a.source,&a.candidate_set,&a.artifact_schema,state,&a.retention,&a.video_policy,signals)?;
                 crate::record_io::write_new(&a.output,&review,4_194_304)?;Ok(serde_json::to_value(review)?)

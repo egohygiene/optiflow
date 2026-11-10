@@ -66,6 +66,7 @@ impl Cli {
             Command::Replacement(arguments) => match &arguments.command {
                 ReplacementCommand::Review(_) => "replacement review",
                 ReplacementCommand::ReviewVideo(_) => "replacement review-video",
+                ReplacementCommand::ValidateVideo(_) => "replacement validate-video",
                 ReplacementCommand::Approve(_) => "replacement approve",
                 ReplacementCommand::Apply(_) => "replacement apply",
                 ReplacementCommand::Status(_) => "replacement status",
@@ -499,7 +500,7 @@ pub struct ExtensionInspectArgs {
 pub struct ReplacementArgs {#[command(subcommand)] pub command:ReplacementCommand}
 #[derive(Debug,Subcommand)]
 pub enum ReplacementCommand {
-    Review(ReplacementReviewArgs),ReviewVideo(VideoReplacementReviewArgs),Approve(ReplacementApproveArgs),
+    Review(ReplacementReviewArgs),ReviewVideo(VideoReplacementReviewArgs),ValidateVideo(VideoValidationArgs),Approve(ReplacementApproveArgs),
     Apply(ReplacementMutationArgs),Status(ReplacementPlanArgs),Restore(ReplacementMutationArgs),
 }
 #[derive(Debug,Args)]
@@ -582,3 +583,6 @@ pub struct ExplanationInvokeArgs {
     #[arg(long)] pub output:PathBuf,
     #[arg(long)] pub sdk_result_output:PathBuf,
 }
+
+#[derive(Debug,Args)]
+pub struct VideoValidationArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf}
