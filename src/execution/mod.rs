@@ -4,6 +4,7 @@ pub mod finalization;
 mod journal;
 pub mod model;
 pub mod property_evidence;
+pub mod descriptor_properties;
 mod mutation;
 mod recovery;
 mod validation;
