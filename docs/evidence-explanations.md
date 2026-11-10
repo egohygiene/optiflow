@@ -15,3 +15,20 @@ Disabled/missing supplied candidates yield typed unavailable partial results wit
 Prompt-like source names are omitted; note text remains inert untrusted plain text. Render without interpreting HTML/shell/Markdown links. Source bytes, plans and preconditions are untouched, and all eligibility/apply/physical-reclamation/provider-execution flags stay false. Advisory output cannot prove exact identity, quality, safe deletion, allocation savings or approval. No raw notes/prompts/paths go to portable telemetry; operational integration remains the existing Flow #14–#21 boundary, with no exporter here.
 
 The synthetic walkthrough in authored cases is pinned report → normalized packet → fake candidate → cited report contribution. Ten source/schema/SDK cases are authored only, uncompiled/unrun. No live inference, private collection, candidate production or physical savings was observed. Full validation remains deferred to flow #88 last. ADR-0003 remains proposed; #133 remains open.
+
+## Explicit pinned-record CLI
+
+`explain prepare --report ABS --report-blake3 PIN [--plan ABS --plan-blake3 PIN]
+--output ABS` saves only the existing normalized packet. `explain accept` takes
+the same source pins plus `--packet ABS --candidate ABS --output ABS`, validates
+current selected record bytes and publishes the existing separate advisory.
+`explain inspect` takes those source/packet/candidate inputs and `--sidecar ABS`
+to compare a saved advisory to a freshly recomputed result. Output files are new,
+immutable records in existing private directories; no scan artifact member or
+SDK role is redefined. Paths/names/raw media never enter the normalized packet.
+
+Ordinary scans/plans/optimization never invoke explanations. These explicit
+commands start no model or provider and read no credentials. Exact recorded
+facts are separate from suggestion meaning; matching pins do not observe the
+current collection, authorize mutation or prove physical space reclamation.
+Three further CLI/staleness cases are authored, uncompiled and unrun.
