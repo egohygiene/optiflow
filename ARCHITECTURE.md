@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.4
+version: 0.1.5
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-10-06
+updated: 2026-11-10
 governed_by:
   - architecture-architecture
 depends_on:
@@ -37,6 +37,18 @@ replacement, validation, quarantine, and recovery are future structural units
 and must not be simulated inside the read-only pipeline.
 
 ## Structural Units or Layers
+
+### Optional evidence explanation (#133)
+
+A bounded domain projection derives normalized record facts from explicitly
+pinned report/plan bytes. The existing SDK v1 ReportProvider accepts only this
+packet and returns an optional cited advisory contribution. Exact host fact
+projection is separate from unverified suggestion meaning; neither establishes
+current source eligibility, physical savings or mutation authority. Source
+paths/content, credentials and raw provider environments never enter this
+packet. A supplied fake candidate exercises the reporting seam without a model
+runtime, new router or Flow dependency. See proposed ADR-0003; trusted runtime
+handoff and released profile adoption remain later explicit work.
 
 ### Interface Layer
 

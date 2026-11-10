@@ -12,6 +12,7 @@ pub mod domain;
 pub mod duplicates;
 pub mod execution;
 pub mod extensions;
+pub mod explanation;
 pub mod filesystem;
 pub mod hashing;
 pub mod inventory;
