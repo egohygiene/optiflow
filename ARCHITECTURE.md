@@ -405,3 +405,14 @@ replacement namespace engine, execution lock and append-only SQLite table.
 Video starts bind the current validation record; every later event preserves
 its action identity. The PNG plan/approval/v1 event parser and 16 MiB ceiling
 retain their meanings. A video action has no original-disposal phase.
+
+### Concrete local explanation provider
+
+An opt-in SDK process wrapper speaks the existing local Ollama text API through
+an exact literal loopback socket. Portable profile/template identity remains
+separate from private deployment/service/model identity and explicit network
+grants. A distinct v2 configuration selects this transport; v1 subprocess-only
+behavior remains intact. The wrapper supplies model-generated notes only to the
+existing host citation/packet validator. No model service, installation, general
+router or media access is introduced; API identity reports do not qualify model
+weights, host resources or offline enforcement.
