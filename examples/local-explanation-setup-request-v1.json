@@ -1,0 +1,16 @@
+{
+  "schema": "optiflow.local-explanation-setup-request.v1",
+  "enabled": false,
+  "executable": "/absolute/bin/optiflow",
+  "working_directory": "/absolute/private-ollama-work",
+  "deployment": {
+    "endpoint": "127.0.0.1:11434",
+    "runtime_version": "operator-observed-version",
+    "model_name": "operator-selected:tag",
+    "model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "service_egress_disabled_declared": true,
+    "context_tokens": 8192,
+    "output_tokens": 512
+  },
+  "template": "Use only the normalized packet facts. Return cited suggestions and review questions as the requested JSON notes. Do not infer source eligibility or authority."
+}

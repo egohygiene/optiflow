@@ -57,7 +57,7 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::Doctor => "doctor",
-            Command::Explain(a) => match &a.command {ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
+            Command::Explain(a) => match &a.command {ExplainCommand::SetupLocal(_)=>"explain setup-local",ExplainCommand::SetupStatus(_)=>"explain setup-status",ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
             Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
             Command::Optimize(arguments) => match &arguments.command {
                 OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
@@ -564,7 +564,7 @@ pub struct VideoReplacementReviewArgs {
 #[derive(Debug,Args)]
 pub struct ExplainArgs {#[command(subcommand)] pub command:ExplainCommand}
 #[derive(Debug,Subcommand)]
-pub enum ExplainCommand {Invoke(ExplanationInvokeArgs),Prepare(ExplanationPrepareArgs),Accept(ExplanationAcceptArgs),Inspect(ExplanationInspectArgs)}
+pub enum ExplainCommand {SetupLocal(ExplanationSetupArgs),SetupStatus(ExplanationSetupStatusArgs),Invoke(ExplanationInvokeArgs),Prepare(ExplanationPrepareArgs),Accept(ExplanationAcceptArgs),Inspect(ExplanationInspectArgs)}
 #[derive(Debug,Args)]
 pub struct ExplanationInputs {
     #[arg(long)] pub report:PathBuf,
@@ -594,3 +594,8 @@ pub struct VideoValidationArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pu
 
 #[derive(Debug,Args)]
 pub struct VideoPlanArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf,#[arg(long,default_value_t=134_217_728)] pub reserve_bytes:u64}
+
+#[derive(Debug,Args)]
+pub struct ExplanationSetupArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output_directory:PathBuf}
+#[derive(Debug,Args)]
+pub struct ExplanationSetupStatusArgs {#[arg(long)] pub directory:PathBuf}

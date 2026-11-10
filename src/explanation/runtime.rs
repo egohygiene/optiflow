@@ -50,7 +50,7 @@ pub fn prepare_invocation(extension:&LoadedExtension,profile:&Profile,packet:&Pa
     let capability=extension.manifest().capabilities.iter().find(|c|c.capability_id=="optiflow/report/evidence-explanation-runtime").context("runtime report capability absent")?;
     ensure!(capability.kind==CapabilityKind::ReportProvider&&capability.configuration_schema==configuration_schema
         &&capability.accepts==[PACKET_SCHEMA]&&capability.produces==[CANDIDATE_SCHEMA]
-        &&capability.effects==effects&&!capability.content_changes&&capability.locality.local_only
+        &&capability.effects==effects&&!capability.content_changes&&capability.locality.local_only==network_hosts.is_empty()
         &&capability.locality.network_hosts==network_hosts,"runtime capability must declare normalized reporting and local-only subprocess effects");
     let Some(ExecutionModeDeclaration::Process {limits,..})=extension.selected_execution_mode() else {anyhow::bail!("explicit SDK process mode required")};
     ensure!((1..=30_000).contains(&limits.timeout_ms)&&(1..=131_072).contains(&limits.max_stdin_bytes)

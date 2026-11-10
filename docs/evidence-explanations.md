@@ -106,3 +106,31 @@ accepts explicit-length or bounded chunked JSON, and rejects ambiguous framing,
 compression, trailers and redirects. All calls share one deadline and one chat
 attempt. Seven pure/fake-loopback cases are authored, uncompiled/unrun; no socket,
 model, native provider, test/build/format/schema command or CI was run here.
+
+## Prepare the wrapper's exact setup documents
+
+Edit the inert example `examples/local-explanation-setup-request-v1.json` with
+an existing built Optiflow executable, private working directory, observed local
+service version and selected model name/full digest. Placeholder pins in the
+example are not observed model evidence. `enabled` defaults to the explicit
+false example; set it true only when selecting the exact local configuration.
+The command itself never starts a service, installs/downloads, queries a model
+or performs inference.
+
+`explain setup-local --request ABS --output-directory ABS` creates profile,
+configuration, manifest, executable-bound operator lock and original private
+request in an existing empty private directory. A last `setup.json` marker pins
+every byte. Failed publication remains incomplete and is never auto-cleaned.
+`explain setup-status --directory ABS` rechecks those files and selected current
+executable bytes. Existing SDK manifest/lock ownership remains authoritative.
+
+SDK v1's `locality.local_only` means **no socket access**. Accordingly the wrapper
+manifest declares `local_only: false`, the network effect and exactly one literal
+loopback host. The domain profile remains local-only and the v2 integration
+checks that precise socket; no SDK locality rule is weakened. Service egress is
+still a separate unverified declaration.
+
+Use the generated profile/manifest/lock with `explain invoke`, then the existing
+pinned-record `explain accept` step. Setup output grants no model qualification,
+source eligibility, disposal, human review or publishing authority. Four setup
+cases are authored, uncompiled/unrun; no checks, socket or model operation ran.

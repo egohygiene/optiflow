@@ -5,6 +5,7 @@ use super::runtime::Profile;
 use std::{net::SocketAddr,time::{Duration,Instant},collections::BTreeSet};
 use crate::extensions::*;
 mod http;
+pub mod setup;
 pub const CONFIG_SCHEMA:&str="optiflow.evidence-explanation-runtime-config.v2";
 pub const MARKER:&str="__optiflow-explanation-ollama-v1";
 #[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
@@ -76,7 +77,7 @@ pub fn execute(bytes:&[u8],cancel:&impl Fn()->bool)->Result<ExtensionResultV1>{
 }
 /// Internal fixed SDK process entry, not a general command runner.
 pub fn internal_provider(arguments:&[std::ffi::OsString])->Option<std::process::ExitCode>{
-    if arguments.get(1).is_none_or(|a|a!=MARKER){return None;}
+    if arguments.get(1).is_none_or(|a|a.as_os_str()!=std::ffi::OsStr::new(MARKER)){return None;}
     let run=||->Result<()>{use std::io::{Read,Write};ensure!(arguments.len()==2,"fixed local provider accepts no extra arguments");let signals=crate::signals::SignalState::install()?;let mut bytes=Vec::new();std::io::stdin().take(131_073).read_to_end(&mut bytes)?;let result=execute(&bytes,&||signals.is_cancelled())?;let mut output=serde_json::to_vec(&result)?;output.push(b'\n');std::io::stdout().lock().write_all(&output)?;Ok(())};
     Some(match run(){Ok(())=>std::process::ExitCode::SUCCESS,Err(_)=>{eprintln!("local explanation provider refused; no retry, model substitution or remote fallback");std::process::ExitCode::from(4)}})
 }
