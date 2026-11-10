@@ -5,6 +5,7 @@ use std::collections::{BTreeMap,BTreeSet};
 use anyhow::{Result,ensure,bail,Context};
 use serde::{Serialize,Deserialize};
 use crate::domain::EvidenceDigest;
+use crate::video_profile::Profile;
 
 #[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -61,8 +62,11 @@ fn no_duplicates(values: &[Element<'_>]) -> Result<()> {
 }
 
 /// Acquire complete bounded structure and elementary packets from actual bytes.
-pub fn inspect(bytes: &[u8]) -> Result<ContainerObservation> {
-    ensure!(!bytes.is_empty() && bytes.len() <= 16_777_216,"Matroska input exceeds closed profile byte bound");
+pub fn inspect(bytes: &[u8]) -> Result<ContainerObservation> {inspect_profile(bytes,Profile::TinyV1)}
+/// Explicit v2 structural inspection, not native decode or candidate acceptance.
+pub fn inspect_v2(bytes:&[u8])->Result<ContainerObservation>{inspect_profile(bytes,Profile::BoundedV2)}
+pub(crate) fn inspect_profile(bytes:&[u8],profile:Profile)->Result<ContainerObservation> {
+    ensure!(!bytes.is_empty() && bytes.len() as u64 <= profile.input_bytes(),"Matroska input exceeds closed profile byte bound");
     let top = elements(bytes,true)?;
     ensure!(top.len() == 2 && top[0].id == 0x1a45dfa3 && top[1].id == 0x18538067,"expected one EBML header and one complete segment");
     let header=elements(top[0].data,false)?;no_duplicates(&header)?;
@@ -77,7 +81,7 @@ pub fn inspect(bytes: &[u8]) -> Result<ContainerObservation> {
     for v in &info {match v.id {
         0x2ad7b1=>ensure!(uint(v.data)? == 1_000_000,"unsupported Matroska timestamp scale"),
         0x4d80|0x5741=>{text(v.data)?;},0x73a4=>ensure!(v.data.len() == 16,"invalid technical segment UID"),
-        0x4489=>{let value=match v.data.len(){4=>f64::from(f32::from_be_bytes(v.data.try_into()?)),8=>f64::from_be_bytes(v.data.try_into()?),_=>bail!("invalid duration width")};ensure!(value.is_finite() && value > 0.0 && value <= 10_000.0,"invalid technical duration");},
+        0x4489=>{let value=match v.data.len(){4=>f64::from(f32::from_be_bytes(v.data.try_into()?)),8=>f64::from_be_bytes(v.data.try_into()?),_=>bail!("invalid duration width")};ensure!(value.is_finite() && value > 0.0 && value <= (profile.frames() as u64*40) as f64,"invalid technical duration");},
         0xec=>(),_=>bail!("unsupported/private Matroska info field"),}}
     let tracks=elements(unique(&segment,0x1654ae6b)?,false)?;
     ensure!(tracks.len() == 1 && tracks[0].id == 0xae,"one video track required");
@@ -99,7 +103,7 @@ pub fn inspect(bytes: &[u8]) -> Result<ContainerObservation> {
     ensure!(contract.get("enabled").map(String::as_str)==Some("1") && contract.get("forced").map(String::as_str)==Some("0"),"disabled/forced track outside closed subset");
     let video=elements(unique(&track,0xe0)?,false)?;no_duplicates(&video)?;
     let width=uint(unique(&video,0xb0)?)?;let height=uint(unique(&video,0xba)?)?;
-    ensure!((2..=640).contains(&width) && (2..=360).contains(&height) && width%2==0 && height%2==0,"unsupported closed-profile geometry");
+    ensure!((2..=u64::from(profile.width())).contains(&width) && (2..=u64::from(profile.height())).contains(&height) && width%2==0 && height%2==0,"unsupported closed-profile geometry");
     let mut colors=false;
     for v in &video {match v.id {
         0xb0|0xba=>(),
@@ -113,33 +117,33 @@ pub fn inspect(bytes: &[u8]) -> Result<ContainerObservation> {
             for required in [0x55b1,0x55b9,0x55ba,0x55bb] {unique(&values,required)?;}
         },0xec=>(),_=>bail!("unknown video/color/transform element"),}}
     ensure!(colors,"explicit color contract required");
-    let mut result=ContainerObservation {profile:"optiflow.matroska-ffv1-closed-ebml.v1".to_owned(),width:width as u32,height:height as u32,
+    let mut result=ContainerObservation {profile:profile.container_profile().to_owned(),width:width as u32,height:height as u32,
         track_contract:contract,codec_private_digest:digest(codec_private),packets:Vec::new(),technical_tag_count:0,void_bytes:0};
     let mut cluster_count=0;
     for v in &segment {match v.id {
         0x1549a966|0x1654ae6b=>(),
-        0x1f43b675=>{cluster_count+=1;ensure!(cluster_count<=250,"too many clusters");cluster(v.data,&mut result.packets)?;},
+        0x1f43b675=>{cluster_count+=1;ensure!(cluster_count<=profile.frames(),"too many clusters");cluster(v.data,&mut result.packets,profile.frames())?;},
         0x114d9b74|0x1c53bb6b=>index_tree(v.id,v.data,0,top[1].data.len())?,
         0x1254c367=>{result.technical_tag_count+=technical_tags(v.data,track_uid)?;ensure!(result.technical_tag_count<=256,"aggregate technical tag count exceeds bound");},
         0xec=>result.void_bytes+=v.data.len() as u64,
         _=>bail!("unknown/CRC/attachment/chapter segment element refused"),}}
-    ensure!(!result.packets.is_empty() && result.packets.len() <= 250,"unsupported complete video packet count");
+    ensure!(!result.packets.is_empty() && result.packets.len() <= profile.frames(),"unsupported complete video packet count");
     for (i,packet) in result.packets.iter().enumerate() {ensure!(packet.pts_milliseconds == i as u64*40,"nonzero/gapped/reordered packet clock refused");}
     Ok(result)
 }
 
-fn cluster(bytes: &[u8],out: &mut Vec<Packet>) -> Result<()> {
+fn cluster(bytes: &[u8],out: &mut Vec<Packet>,maximum:usize) -> Result<()> {
     let values=elements(bytes,false)?;let time=uint(unique(&values,0xe7)?)?;
     for v in values {match v.id {
-        0xe7|0xa7|0xab=>(),0xec=>(),0xa3=>block(v.data,time,None,out)?,
+        0xe7|0xa7|0xab=>(),0xec=>(),0xa3=>block(v.data,time,None,out,maximum)?,
         0xa0=>{let group=elements(v.data,false)?;no_duplicates(&group)?;
             for field in &group {match field.id{0xa1=>(),0x9b=>ensure!(uint(field.data)? == 40,"unsupported block duration"),_=>bail!("block group extensions/reference dependencies refused")}}
-            block(unique(&group,0xa1)?,time,Some(true),out)?;
+            block(unique(&group,0xa1)?,time,Some(true),out,maximum)?;
         },_=>bail!("unknown/CRC cluster element refused"),}}
     Ok(())
 }
-fn block(bytes: &[u8],time: u64,group_keyframe: Option<bool>,out: &mut Vec<Packet>) -> Result<()> {
-    ensure!(out.len()<250,"packet count exceeds bound");let (track,width,unknown)=vint(bytes,false)?;
+fn block(bytes: &[u8],time: u64,group_keyframe: Option<bool>,out: &mut Vec<Packet>,maximum:usize) -> Result<()> {
+    ensure!(out.len()<maximum,"packet count exceeds bound");let (track,width,unknown)=vint(bytes,false)?;
     ensure!(track==1 && !unknown && bytes.len()>width+3,"unsupported/truncated Matroska block");
     let relative=i16::from_be_bytes(bytes[width..width+2].try_into()?);let flags=bytes[width+2];
     ensure!(flags & 0x7f == 0 && (group_keyframe.is_none() || flags==0),"lacing/invisible/discardable/unknown block flags refused");

@@ -5,6 +5,10 @@ use serde_json::Value;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Contract {
+    VideoCandidateRequestV2,
+    VideoProductionRequestV2,
+    VideoCandidateEvidenceV2,
+    VideoCandidateArtifactSetV2,
     ExplanationPacket,
     ExplanationCandidate,
     ExplanationSidecar,
@@ -52,7 +56,9 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
         | Contract::ExecutionFinalizationStatus
         | Contract::PngCandidateEvidence
         | Contract::VideoCandidateEvidence
-        | Contract::VideoCandidateArtifactSet => jsonschema::options()
+        | Contract::VideoCandidateArtifactSet
+        | Contract::VideoCandidateEvidenceV2
+        | Contract::VideoCandidateArtifactSetV2 => jsonschema::options()
             .should_validate_formats(true)
             .build(&schema_document)
             .context("failed to compile strict-format schema")?,
@@ -89,6 +95,10 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
 
 pub fn schema(contract: Contract) -> Result<Value> {
     let source = match contract {
+        Contract::VideoCandidateRequestV2 => include_str!("../schemas/video-candidate-request-v2.schema.json"),
+        Contract::VideoProductionRequestV2 => include_str!("../schemas/video-production-request-v2.schema.json"),
+        Contract::VideoCandidateEvidenceV2 => include_str!("../schemas/video-candidate-evidence-v2.schema.json"),
+        Contract::VideoCandidateArtifactSetV2 => include_str!("../schemas/video-candidate-artifact-set-v2.schema.json"),
         Contract::ExplanationPacket => include_str!("../schemas/explanation-packet-v1.schema.json"),
         Contract::ExplanationCandidate => include_str!("../schemas/explanation-candidate-v1.schema.json"),
         Contract::ExplanationSidecar => include_str!("../schemas/explanation-sidecar-v1.schema.json"),

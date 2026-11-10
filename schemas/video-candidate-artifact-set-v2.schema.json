@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/video-candidate-artifact-set-v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "set_id",
+    "created_at",
+    "state",
+    "members"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.video-candidate-artifact-set.v2"
+    },
+    "set_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "state": {
+      "const": "committed"
+    },
+    "members": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "file_name",
+            "size_bytes",
+            "digest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "candidate_video"
+            },
+            "file_name": {
+              "const": "candidate.mkv"
+            },
+            "size_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 134217728
+            },
+            "digest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "const": "blake3-256"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "file_name",
+            "size_bytes",
+            "digest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "evidence"
+            },
+            "file_name": {
+              "const": "evidence.json"
+            },
+            "size_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8388608
+            },
+            "digest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "const": "blake3-256"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "items": false
+    }
+  },
+  "$comment": "Authored/unvalidated. Explicit 720p/3000-frame/128MiB input and candidate/512MiB decoded maximums intersect selected budgets. V1 retains old semantics; no lossy execution or native qualification."
+}

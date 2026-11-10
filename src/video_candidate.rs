@@ -7,11 +7,14 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contracts::{self, Contract};
+use crate::contracts::{self};
+use crate::video_profile::Profile;
 use crate::domain::{EvidenceDigest, MediaProviderEvidence, NativePath};
 
 pub const SCHEMA: &str = "optiflow.video-candidate-request.v1";
 pub const PROFILE: &str = "optiflow.matroska-ffv1-sdr-candidate.v1";
+pub const SCHEMA_V2: &str = "optiflow.video-candidate-request.v2";
+pub const PROFILE_V2: &str = "optiflow.matroska-ffv1-sdr-candidate.v2";
 pub const PROVIDER_VERSION: &str = "8.0.1";
 const INPUT_BINDING: &str = "fresh_host_observed_read_only_source_descriptor_on_stdin";
 const OUTPUT_BINDING: &str = "bounded_stdout_to_untrusted_host_owned_staging";
@@ -170,7 +173,8 @@ impl std::error::Error for PlanRefusal {}
 
 /// Validate nested shape before deserialization of legacy shared domain types.
 pub fn parse_request(value: &serde_json::Value) -> Result<VideoCandidateRequest, PlanRefusal> {
-    contracts::validate(Contract::VideoCandidateRequest, value)
+    let profile=Profile::candidate(value["schema"].as_str().unwrap_or(""),value["profile"].as_str().unwrap_or("")).map_err(|_|PlanRefusal::InvalidShape)?;
+    contracts::validate(profile.request_contract(), value)
         .map_err(|_| PlanRefusal::InvalidShape)?;
     serde_json::from_value(value.clone()).map_err(|_| PlanRefusal::InvalidShape)
 }
@@ -178,7 +182,7 @@ pub fn parse_request(value: &serde_json::Value) -> Result<VideoCandidateRequest,
 /// Fingerprint the typed request with a separate domain; not arbitrary JSON.
 pub fn request_fingerprint(request: &VideoCandidateRequest) -> EvidenceDigest {
     let mut hasher = blake3::Hasher::new();
-    hasher.update(b"optiflow.video-candidate-request.v1\0");
+    hasher.update(if request.schema==SCHEMA_V2{b"optiflow.video-candidate-request.v2\0"}else{b"optiflow.video-candidate-request.v1\0"});
     hasher.update(&serde_json::to_vec(request).expect("typed request serialization"));
     EvidenceDigest {
         algorithm: "blake3-256".to_owned(),
@@ -187,7 +191,8 @@ pub fn request_fingerprint(request: &VideoCandidateRequest) -> EvidenceDigest {
 }
 
 pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForReview, PlanRefusal> {
-    contracts::validate(Contract::VideoCandidateRequest, request)
+    let profile=Profile::candidate(&request.schema,&request.profile).map_err(|_|PlanRefusal::InvalidShape)?;
+    contracts::validate(profile.request_contract(), request)
         .map_err(|_| PlanRefusal::InvalidShape)?;
     check_provider(&request.producer, "ffmpeg")?;
     check_provider(&request.probe, "ffprobe")?;
@@ -200,6 +205,7 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
         || media.stream_index != 0
         || media.total_streams != 1
         || !matches!(media.disposition.as_str(), "none" | "default")
+        || media.width<2||media.width>profile.width()||media.height<2||media.height>profile.height()||media.frame_count==0||media.frame_count>profile.frames() as u64
         || media.width % 2 != 0
         || media.height % 2 != 0
         || media.pixel_format != "yuv420p"
@@ -258,7 +264,7 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
     });
     let request_fingerprint = request_fingerprint(request);
     let mut hasher = blake3::Hasher::new();
-    hasher.update(b"optiflow.video-candidate-preparation.v1\0");
+    hasher.update(if profile==Profile::BoundedV2{b"optiflow.video-candidate-preparation.v2\0"}else{b"optiflow.video-candidate-preparation.v1\0"});
     hasher.update(&serde_json::to_vec(&(
         &request_fingerprint, &arguments, INPUT_BINDING, OUTPUT_BINDING,
         ENVIRONMENT, preservation_claim, &outstanding_validation,

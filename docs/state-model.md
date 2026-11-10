@@ -108,3 +108,7 @@ Migration 0009 adds immutable `execution_finalization_events` with v4
 the [finalization protocol](execution-finalization.md) requires a separate
 preview and authorization, and a pending removal never becomes committed by
 status inspection.
+
+## Explicit video candidate v2 artifacts
+
+The separate [broader video profile](video-candidate-profile-v2.md) uses its own v2 marker/evidence/request identities with the existing private no-replace artifact protocol. Marker-selected bounded readback requires exact profile/size/hash joins. There is no database migration, legacy-root adoption, replacement or disposal authority. Existing folder v1 remains tiny v1. Source implementation and native qualification remain distinct.

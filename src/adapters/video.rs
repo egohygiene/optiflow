@@ -22,7 +22,7 @@ use crate::video_budget::OperationBudget;
 use crate::video_io::{BoundedFileObservation, validate_private_directory_guarded};
 
 const MAX_BINARY_BYTES: u64 = 128 * 1024 * 1024;
-const MAX_INPUT_BYTES: usize = 16 * 1024 * 1024;
+use crate::video_profile::Profile;
 const VERSION_BYTES: usize = 64 * 1024;
 
 /// Capture byte limits and a shared operation deadline, not provider memory quotas.
@@ -37,8 +37,9 @@ pub struct CaptureLimits {
 }
 
 impl CaptureLimits {
-    pub(crate) fn check(self) -> Result<()> {
-        ensure!((1..=16 * 1024 * 1024).contains(&self.candidate_bytes), "invalid candidate capture bound");
+    pub(crate) fn check(self) -> Result<()> {self.check_profile(Profile::TinyV1)}
+    fn check_profile(self,profile:Profile)->Result<()> {
+        ensure!((1..=profile.candidate_bytes() as usize).contains(&self.candidate_bytes), "invalid candidate capture bound");
         ensure!((1..=4 * 1024 * 1024).contains(&self.probe_bytes), "invalid probe capture bound");
         ensure!((1..=256 * 1024).contains(&self.stderr_bytes), "invalid diagnostic capture bound");
         ensure!((1..=30_000).contains(&self.elapsed_ms), "invalid operation elapsed bound");
@@ -138,6 +139,7 @@ pub struct VideoProviders {
     // beyond a caller's cancellation/deadline expectations.
     invocation_gate: Mutex<()>,
     sandbox: Option<crate::video_sandbox::SandboxSession>,
+    profile:Profile,
 }
 
 impl VideoProviders {
@@ -163,20 +165,24 @@ impl VideoProviders {
         budget: OperationBudget,
         cancel: &impl Fn() -> bool,
     ) -> Result<Self> {
-        Self::lock_selected(ffmpeg,ffprobe,workdir,limits,budget,None,cancel)
+        Self::lock_selected(ffmpeg,ffprobe,workdir,limits,budget,None,Profile::TinyV1,cancel)
     }
 
     pub(crate) fn lock_enforced(ffmpeg: &Path,ffprobe: &Path,workdir: &Path,limits: CaptureLimits,
         budget: OperationBudget,policy: crate::video_sandbox::LinuxVideoSandbox,cancel: &impl Fn()->bool) -> Result<Self> {
+        Self::lock_enforced_profile(ffmpeg,ffprobe,workdir,limits,budget,policy,Profile::TinyV1,cancel)
+    }
+    pub(crate) fn lock_enforced_profile(ffmpeg:&Path,ffprobe:&Path,workdir:&Path,limits:CaptureLimits,budget:OperationBudget,policy:crate::video_sandbox::LinuxVideoSandbox,profile:Profile,cancel:&impl Fn()->bool)->Result<Self>{
+        limits.check_profile(profile)?;
         ensure!(limits.stderr_bytes >= 1024,"resource receipts require diagnostic capacity");
         let sandbox = crate::video_sandbox::SandboxSession::bind(policy,&|| budget.check(cancel))?;
-        Self::lock_selected(ffmpeg,ffprobe,workdir,limits,budget,Some(sandbox),cancel)
+        Self::lock_selected(ffmpeg,ffprobe,workdir,limits,budget,Some(sandbox),profile,cancel)
     }
 
     #[allow(clippy::too_many_arguments)]
     fn lock_selected(ffmpeg: &Path,ffprobe: &Path,workdir: &Path,limits: CaptureLimits,budget: OperationBudget,
-        sandbox: Option<crate::video_sandbox::SandboxSession>,cancel: &impl Fn()->bool) -> Result<Self> {
-        limits.check()?;
+        sandbox: Option<crate::video_sandbox::SandboxSession>,profile:Profile,cancel: &impl Fn()->bool) -> Result<Self> {
+        limits.check_profile(profile)?;
         ensure!(budget.limit() == Duration::from_millis(limits.elapsed_ms),
             "operation budget differs from declared capture limits");
         ensure!(crate::subprocess::bounded_pipe_capture_supported(),
@@ -188,7 +194,7 @@ impl VideoProviders {
         let probe = bind_tool("ffprobe", ffprobe, workdir, limits, budget, sandbox.as_ref(),cancel)?;
         let providers = Self {
             producer, probe, workdir: workdir.to_owned(), limits, budget,
-            invocation_gate: Mutex::new(()), sandbox,
+            invocation_gate: Mutex::new(()), sandbox,profile,
         };
         providers.verify_current_with_cancel(cancel)?;
         Ok(providers)
@@ -222,7 +228,7 @@ impl VideoProviders {
     }
 
     pub(crate) fn decode_untrusted(&self,bytes: &[u8],maximum: usize,cancel: &impl Fn()->bool) -> Result<UntrustedCapture> {
-        ensure!(maximum > 0 && maximum <= 67_108_864,"unsupported complete-decode byte bound");
+        ensure!(maximum > 0 && maximum as u64 <= self.profile.decoded_bytes(),"unsupported complete-decode byte bound");
         let args = ["-hide_banner","-nostdin","-v","error","-xerror","-err_detect","explode","-protocol_whitelist","pipe","-threads","1","-f","matroska","-i","pipe:0","-map","0:0","-filter_threads","1","-c:v","rawvideo","-threads:v","1","-pix_fmt","+yuv420p","-fps_mode:v","passthrough","-f","rawvideo","pipe:1"].into_iter().map(str::to_owned).collect();
         self.invoke(&self.producer,bytes,args,maximum,cancel)
     }
@@ -304,7 +310,7 @@ impl VideoProviders {
     ) -> Result<UntrustedCapture> {
         let _permit = self.invocation_gate.try_lock()
             .map_err(|_| anyhow::anyhow!("video provider capture already active or gate poisoned"))?;
-        ensure!(!bytes.is_empty() && bytes.len() <= MAX_INPUT_BYTES, "video input exceeds capture bounds");
+        ensure!(!bytes.is_empty() && bytes.len() as u64 <= self.profile.input_bytes(), "video input exceeds capture bounds");
         let guard = || self.budget.check(cancel);
         guard()?;
         tool.observation.verify_current_guarded(&guard)?;
@@ -473,3 +479,5 @@ mod tests {
         assert_eq!(arguments.last().map(String::as_str), Some("pipe:1"));
     }
 }
+#[cfg(test)] mod broader_profile_tests {use super::*;
+#[test] fn broader_capture_requires_explicit_internal_profile_selection(){let limits=CaptureLimits {candidate_bytes:134_217_728,probe_bytes:4_194_304,stderr_bytes:4096,elapsed_ms:30_000};assert!(limits.check().is_err());assert!(limits.check_profile(Profile::BoundedV2).is_ok());assert!(CaptureLimits {candidate_bytes:134_217_729,..limits}.check_profile(Profile::BoundedV2).is_err());}}
