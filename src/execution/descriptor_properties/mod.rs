@@ -70,3 +70,5 @@ pub fn preserve_on_copy(source:&File,destination:&File,backend:&impl DescriptorP
     recheck(source,backend,expected,maximum,cancel)?;let copied=observe(destination,backend,maximum,cancel)?;ensure!(copied.properties==expected.properties&&copied.subject.content_blake3==expected.subject.content_blake3&&copied.subject.byte_count==expected.subject.byte_count&&backend.identity()==expected.backend,"destination property/content readback differs after installation");Ok(copied)
 }
 #[cfg(all(test,target_os="linux"))] mod tests;
+
+pub mod transfer;
