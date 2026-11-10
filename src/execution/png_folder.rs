@@ -110,3 +110,5 @@ pub fn discover(request:&Request,signals:&SignalState)->Result<Inventory>{
 }
 
 #[cfg(test)] mod tests;
+
+pub mod coordinator;
