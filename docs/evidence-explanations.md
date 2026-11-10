@@ -32,3 +32,40 @@ commands start no model or provider and read no credentials. Exact recorded
 facts are separate from suggestion meaning; matching pins do not observe the
 current collection, authorize mutation or prove physical space reclamation.
 Three further CLI/staleness cases are authored, uncompiled and unrun.
+
+## Explicit local process backend/profile handoff
+
+`explain invoke --manifest ABS --lock ABS --profile ABS --packet ABS --output
+ABS --sdk-result-output ABS` selects exactly one existing SDK v1 process report
+provider. It is intended for an operator-owned local model wrapper that speaks
+the SDK JSON protocol; an arbitrary model binary is not that wrapper. No backend
+is discovered, installed, downloaded or selected automatically.
+
+The provider capability is `optiflow/report/evidence-explanation-runtime`, accepts
+only `explanation-packet.v1`, and produces only `explanation-candidate.v1`. Its
+configuration schema is `evidence-explanation-runtime-config.v1`, whose values
+are `{ "enabled": true, "profile": <exact profile document> }`. The operator
+lock pins this configuration, manifest, executable, working directory, exact
+process mode/argv and subprocess-only grants. It grants no network, artifact
+read, source mutation, destructive, signing or publishing capability and permits
+no replacements/fallbacks. The existing SDK client clears inherited environment
+and rechecks its executable; profile input accepts no secrets/environment fields.
+
+The profile pins provider/model/runtime names, bounded template bytes and their
+digest, exact candidate output-schema bytes and a canonical profile fingerprint.
+To compute the latter, replace `fingerprint` with `Digest::blake3(b"")` and use
+existing SDK `fingerprint` over that complete profile. Runtime process limits
+are at most 30 s, 128 KiB stdin/stdout and 4 KiB stderr. Disabled configuration
+starts no process. Successful output must match the declared profile exactly,
+pass SDK result validation, remain a single candidate report, and pass host
+citation/packet validation. No retry or remote fallback is performed.
+
+SDK result and candidate are separate new immutable records, written in that
+order; a failed second publication can leave only the SDK result. They are not
+an atomic artifact set. `explain accept` rechecks pinned report/plan records to
+produce the advisory. Process invocation is observable; model identity,
+local-only behavior and explanation usefulness remain unqualified declarations.
+A trusted process is not an OS sandbox, so this handoff does not attest offline
+enforcement. Existing sidecar model-execution/eligibility/apply flags stay false.
+No process/model was run for this checkpoint. Five boundary cases are authored,
+uncompiled and unrun. Native usefulness and final #133 acceptance remain open.

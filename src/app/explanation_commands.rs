@@ -19,6 +19,17 @@ impl Records {
 }
 pub(super) fn run(command:ExplainCommand,signals:&SignalState)->Execution {
     let result=(||->Result<serde_json::Value>{match command {
+        ExplainCommand::Invoke(a)=>{
+            let profile=explanation::runtime::Profile::from_json_slice(&crate::record_io::read(&a.profile,16_384,signals)?)?;
+            let packet=Packet::from_json_slice(&crate::record_io::read(&a.packet,65_536,signals)?)?;
+            let catalog=crate::extensions::ExtensionCatalog::load(&[a.manifest],&[a.lock])?;
+            ensure!(catalog.extensions().len()==1,"exactly one explicitly selected extension required");
+            let output=explanation::runtime::invoke(catalog.extensions()[0].clone(),&profile,&packet,&||signals.is_cancelled())?;
+            let Some(output)=output else {return Ok(serde_json::json!({"status":"disabled","process_invocation_observed":false,"model_execution_qualified":false}));};
+            crate::record_io::write_new(&a.sdk_result_output,&output.sdk_result,131_072)?;
+            crate::record_io::write_new(&a.output,&output.candidate,65_536)?;
+            Ok(serde_json::json!({"status":"candidate_recorded","candidate_fingerprint":crate::extensions::fingerprint(&output.candidate)?,"process_invocation_observed":true,"model_execution_qualified":false,"offline_enforcement_attested":false,"apply_authority":false}))
+        }
         ExplainCommand::Prepare(a)=>{let records=read(&a.inputs,signals)?;let p=records.packet(signals)?;
             ensure!(read(&a.inputs,signals)?.packet(signals)?==p,"pinned records changed before packet publication");crate::record_io::write_new(&a.output,&p,65_536)?;Ok(serde_json::to_value(p)?)},
         ExplainCommand::Accept(a)=>{
