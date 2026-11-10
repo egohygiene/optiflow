@@ -55,3 +55,5 @@ fn digest<T: serde::Serialize>(value: &T) -> Result<String> {
         .map_err(|e| failure(DiagnosticCode::ExecutionPlanInvalid, e.to_string()))?;
     Ok(blake3::hash(&canonical).to_hex().to_string())
 }
+
+pub mod replacement;

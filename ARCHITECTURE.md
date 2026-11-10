@@ -370,3 +370,12 @@ expanding `planning` into an implicit apply engine.
 - The document reflects the current module and data model without claiming that
   future transaction or cloud systems exist.
 - Product-domain code remains independent from a specific cloud-native stack.
+
+### Restorable PNG replacement review (#95)
+
+`execution::replacement` owns the separately versioned replacement plan and
+approval. It reuses execution path/directory/file bindings and the existing PNG
+byte validator and candidate marker. It does not reinterpret exact duplicate
+quarantine or legacy journal fingerprints. Plans bind current source/candidate,
+marker/evidence/policy and private state/retention, with strict smaller encoded
+bytes and an explicit retain-for-restore disposition. Review is source read-only.
