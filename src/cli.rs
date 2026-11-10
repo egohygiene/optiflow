@@ -57,6 +57,7 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::Doctor => "doctor",
+            Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
             Command::Optimize(arguments) => match &arguments.command {
                 OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
                 OptimizeCommand::Run(_) => "optimize run",OptimizeCommand::Resume(_) => "optimize resume",OptimizeCommand::Status(_) => "optimize status",
@@ -74,6 +75,7 @@ impl Cli {
             Command::Apply(_) => "apply",
             Command::Candidate(arguments) => match &arguments.command {
                 CandidateCommand::Png(_) => "candidate png",
+                CandidateCommand::Video(_) => "candidate video",
                 CandidateCommand::Status(_) => "candidate status",
                 CandidateCommand::Recover(_) => "candidate recover",
             },
@@ -102,6 +104,8 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Bounded source-preserving video folders with explicit v1/v2 requests.
+    VideoFolder(VideoFolderArgs),
     /// Plan and inspect explicit serial PNG folders; source mutation requires qualification.
     Optimize(OptimizeArgs),
     /// Review and inspect restorable PNG replacement; mutation requires native qualification.
@@ -282,6 +286,8 @@ pub struct CandidateArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum CandidateCommand {
+    /// Explicit source-preserving video request; profile is selected by its schema.
+    Video(VideoRequestArgs),
     /// Produce an independently validated PNG candidate from an explicit source.
     Png(CandidatePngArgs),
     /// Inspect a candidate set without changing it.
@@ -525,3 +531,12 @@ pub struct OptimizeDiscoverArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] p
 pub struct OptimizeApproveArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub inventory:PathBuf,#[arg(long)] pub approved_by:String,#[arg(long)] pub output:PathBuf}
 #[derive(Debug,Args)]
 pub struct OptimizeRunArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub inventory:PathBuf,#[arg(long)] pub approval:PathBuf}
+
+#[derive(Debug,Args)]
+pub struct VideoRequestArgs {#[arg(long)] pub request:PathBuf}
+#[derive(Debug,Args)]
+pub struct VideoFolderArgs {#[command(subcommand)] pub command:VideoFolderCommand}
+#[derive(Debug,Subcommand)]
+pub enum VideoFolderCommand {Discover(VideoRequestArgs),Run(VideoRequestArgs),Resume(VideoRequestArgs),Status(VideoFolderStatusArgs)}
+#[derive(Debug,Args)]
+pub struct VideoFolderStatusArgs {#[arg(long)] pub run_directory:PathBuf}

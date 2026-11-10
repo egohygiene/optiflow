@@ -1,0 +1,55 @@
+{
+  "schema": "optiflow.video-folder-request.v2",
+  "ffmpeg": "/absolute/bin/ffmpeg-8.0.1",
+  "ffprobe": "/absolute/bin/ffprobe-8.0.1",
+  "private_workdir": "/absolute/private-video-work",
+  "artifact_root": "/absolute/private-video-candidates",
+  "limits": {
+    "input_bytes": 134217728,
+    "candidate_bytes": 134217728,
+    "decoded_bytes": 536870912,
+    "temporary_bytes": 268435456,
+    "memory_bytes": 2147483648,
+    "elapsed_ms": 30000
+  },
+  "sandbox": {
+    "schema": "optiflow.linux-video-sandbox.v1",
+    "systemd_run": {
+      "path": "/absolute/path/to/systemd-run",
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "systemctl": {
+      "path": "/absolute/path/to/systemctl",
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "helper": {
+      "path": "/absolute/path/to/optiflow",
+      "digest": {
+        "algorithm": "blake3-256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "user_bus": "/run/user/1000/bus",
+    "provider_subtree_memory_bytes": 134217728,
+    "provider_scratch_bytes": 8388608,
+    "minimum_free_bytes": 67108864
+  },
+  "source_root": "/absolute/media",
+  "run_directory": "/absolute/private-video-journal",
+  "recursive": true,
+  "batch": {
+    "maximum_entries": 4096,
+    "maximum_files": 256,
+    "maximum_actions": 8,
+    "maximum_depth": 16,
+    "maximum_total_input_bytes": 1073741824,
+    "maximum_publication_bytes": 1073741824,
+    "elapsed_ms": 600000
+  }
+}

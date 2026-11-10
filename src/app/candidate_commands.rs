@@ -35,6 +35,7 @@ pub(super) fn run(
     let root = state.join("candidates");
     let recovered = matches!(&command, CandidateCommand::Recover(_));
     match command {
+        CandidateCommand::Video(arguments) => super::video_commands::candidate(&arguments,signals),
         CandidateCommand::Png(arguments) => png(&arguments, &state, &root, policy, signals),
         CandidateCommand::Status(arguments) | CandidateCommand::Recover(arguments) => {
             let id = match Uuid::parse_str(&arguments.id) {
