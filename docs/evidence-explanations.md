@@ -134,3 +134,13 @@ Use the generated profile/manifest/lock with `explain invoke`, then the existing
 pinned-record `explain accept` step. Setup output grants no model qualification,
 source eligibility, disposal, human review or publishing authority. Four setup
 cases are authored, uncompiled/unrun; no checks, socket or model operation ran.
+
+The November 10 local-wrapper source-review extension binds requested context
+and output-token limits into the existing closed runtime profile revision:
+`ollama/VERSION/ctxCONTEXT/outOUTPUT`. The selected service version is still
+checked separately via its API. Changing either generation limit invalidates
+old profile/candidate identity until setup is explicitly regenerated. Reported
+token counts above the selected limits refuse the response; missing usage remains
+unknown. Full deployment and executable identity still belong to the SDK lock.
+One additional generation-identity regression is authored/uncompiled/unrun.
+No service/model, test, compiler, schema validator or CLI operation was invoked.
