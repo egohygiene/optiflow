@@ -10,6 +10,10 @@ pub(super) fn run(command:ReplacementCommand,state:&Path,policy:&EffectivePolicy
     let outcome=(||->Result<serde_json::Value>{
         let read_plan=|path:&Path|ReplacementPlan::from_json_slice(&crate::record_io::read(path,4_194_304,signals)?);
         match command {
+            ReplacementCommand::ReviewVideo(a)=>{
+                let review=crate::execution::video_replacement::review(&a.source,&a.candidate_set,&a.artifact_schema,state,&a.retention,&a.video_policy,signals)?;
+                crate::record_io::write_new(&a.output,&review,4_194_304)?;Ok(serde_json::to_value(review)?)
+            }
             ReplacementCommand::Review(a)=>{
                 let p=replacement::review_png(&a.source,&a.candidate_set,state,&a.retention,&policy.fingerprints.evidence_policy.value,Limits {maximum_file_bytes:a.maximum_file_bytes,free_space_reserve_bytes:a.reserve_bytes,journal_budget_bytes:1_048_576},signals)?;
                 crate::record_io::write_new(&a.output,&p,4_194_304)?;Ok(serde_json::to_value(p)?)

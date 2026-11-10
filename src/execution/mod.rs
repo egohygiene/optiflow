@@ -59,3 +59,5 @@ fn digest<T: serde::Serialize>(value: &T) -> Result<String> {
 pub mod replacement;
 
 pub mod png_folder;
+
+pub mod video_replacement;
