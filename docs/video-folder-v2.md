@@ -39,3 +39,20 @@ before writable state. The existing PNG transaction parser rejects this type;
 video evidence never bypasses PNG limits or reuses its approval. A future live
 validator/property adapter and native qualification must explicitly complete the
 shared transaction seam. Four further refusal cases are authored and unrun.
+
+## Current native validation source checkpoint (#146)
+
+`replacement validate-video --request ABS --output ABS` explicitly selects a
+review plus its exact guarded production profile. It invokes current complete
+source/candidate probe and decode through the existing Linux guard, verifies
+full sample-byte equality and exact reported frame timing, and rechecks current
+subjects, original resource policy and selected executable/build identities.
+Each invocation must have an observed guard receipt. No optimization or writable
+transaction-state access occurs in validation.
+
+A non-deserializable live token retains all subject/tool bindings and the same
+cooperative deadline. Saved validation output cannot become a live token or
+mutation permission. Provider subtree quotas and conservative host payload
+admission retain existing limits; total host RSS and blocked syscalls are not
+preempted. Native qualification and macOS property backend gates remain open.
+Five cases are authored, uncompiled/unrun; no native command or check ran here.
