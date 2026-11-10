@@ -80,6 +80,14 @@ impl ReplacementPlan {
     }
 }
 impl Approval {
+    /// Bounded closed declaration, checked against one exact reviewed PNG plan.
+    /// Parsing conveys neither native qualification nor irreversible authority.
+    pub fn from_json_slice(bytes:&[u8],plan:&ReplacementPlan)->Result<Self> {
+        ensure!(bytes.len()<=16_384,"PNG replacement approval exceeds16KiB");
+        let raw:serde_json::Value=serde_json::from_slice(bytes)?;
+        crate::contracts::validate(crate::contracts::Contract::ReplacementApproval,&raw)?;
+        let value:Self=serde_json::from_slice(bytes)?;value.validate(plan)?;Ok(value)
+    }
     pub fn validate(&self, plan: &ReplacementPlan) -> Result<()> {
         plan.validate()?;
         let mut copy=self.clone();copy.authorization_id.clear();
