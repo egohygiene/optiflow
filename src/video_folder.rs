@@ -8,7 +8,7 @@ use crate::video_candidate::{RequestedLimits,VideoOperation};
 use crate::video_production::{VideoProductionRequest,VideoProductionOutcome};
 pub use crate::video_io::FileSnapshot;
 const JOURNAL_BYTES:usize=16_777_216;
-const PUBLICATION_OVERHEAD:u64=540_672;
+use crate::video_profile::Profile;
 const INVENTORY_BYTES:usize=4_194_304;
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -17,11 +17,13 @@ pub struct FolderLimits {
     pub maximum_total_input_bytes:u64,pub maximum_publication_bytes:u64,pub elapsed_ms:u64,
 }
 impl FolderLimits {
-    pub fn validate(&self)->Result<()> {
+    pub fn validate(&self)->Result<()> {self.validate_for(Profile::TinyV1)}
+    fn validate_for(&self,profile:Profile)->Result<()> {
+        let aggregate=if profile==Profile::TinyV1 {268_435_456}else{1_073_741_824};
         ensure!((1..=4096).contains(&self.maximum_entries)&&(1..=256).contains(&self.maximum_files)
             &&self.maximum_files<=self.maximum_entries&&(1..=32).contains(&self.maximum_actions)&&self.maximum_actions<=self.maximum_files
-            &&(1..=32).contains(&self.maximum_depth)&&(1..=268_435_456).contains(&self.maximum_total_input_bytes)
-            &&(1..=268_435_456).contains(&self.maximum_publication_bytes)&&(1..=600_000).contains(&self.elapsed_ms),"folder bounds exceed the selected serial subset");Ok(())
+            &&(1..=32).contains(&self.maximum_depth)&&(1..=aggregate).contains(&self.maximum_total_input_bytes)
+            &&(1..=aggregate).contains(&self.maximum_publication_bytes)&&(1..=600_000).contains(&self.elapsed_ms),"folder bounds exceed the selected serial subset");Ok(())
     }
 }
 fn yes()->bool {true}
@@ -34,14 +36,18 @@ pub struct VideoFolderRequest {
     pub batch:FolderLimits,#[serde(default="yes")] pub recursive:bool,
 }
 impl VideoFolderRequest {
+    fn profile(&self)->Result<Profile>{match self.schema.as_str(){"optiflow.video-folder-request.v1"=>Ok(Profile::TinyV1),"optiflow.video-folder-request.v2"=>Ok(Profile::BoundedV2),_=>anyhow::bail!("unknown explicit video folder profile")}}
+    fn contract(&self)->Result<crate::contracts::Contract>{Ok(if self.profile()?==Profile::TinyV1{crate::contracts::Contract::VideoFolderProtocol}else{crate::contracts::Contract::VideoFolderProtocolV2})}
+    fn document_schema(&self,kind:&str)->Result<String>{Ok(format!("optiflow.video-folder-{kind}.v{}",if self.profile()?==Profile::TinyV1{1}else{2}))}
+    fn overhead(&self)->Result<u64>{Ok(self.profile()?.publication_overhead())}
     fn production(&self,source:PathBuf)->VideoProductionRequest {
-        VideoProductionRequest {schema:"optiflow.video-production-request.v1".into(),source,ffmpeg:self.ffmpeg.clone(),ffprobe:self.ffprobe.clone(),
+        VideoProductionRequest {schema:if self.schema=="optiflow.video-folder-request.v2" {"optiflow.video-production-request.v2"}else{"optiflow.video-production-request.v1"}.into(),source,ffmpeg:self.ffmpeg.clone(),ffprobe:self.ffprobe.clone(),
             private_workdir:self.private_workdir.clone(),artifact_root:self.artifact_root.clone(),operation:VideoOperation::StreamCopy,limits:self.limits,sandbox:self.sandbox.clone()}
     }
     pub fn validate(&self)->Result<()> {
-        ensure!(self.schema=="optiflow.video-folder-request.v1","unsupported video folder request");self.batch.validate()?;
+        self.batch.validate_for(self.profile()?)?;
         ensure!(serde_json::to_vec(self)?.len()<=131_072,"folder request exceeds 128 KiB");
-        crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,self)?;
+        crate::contracts::validate(self.contract()?,self)?;
         crate::video_production::admission(&self.production(self.source_root.join("source-placeholder")))?;
         let namespaces=[&self.source_root,&self.private_workdir,&self.artifact_root,&self.run_directory];
         for (i,path) in namespaces.iter().enumerate() {
@@ -215,12 +221,12 @@ mod native {
                 else {
                     let guard=||budget.check(cancel);let observation=BoundedFileObservation::open_guarded(&path,request.limits.input_bytes,&guard)?;
                     ensure!(observation.snapshot().device_id==device&&observation.snapshot().link_count==1,"source identity/device/link changed during discovery");
-                    let bytes=observation.read_bytes_guarded(&guard)?;hashed+=bytes.len() as u64;
+                    let bytes=observation.read_bytes_profile(request.profile()?,&guard)?;hashed+=bytes.len() as u64;
                     let kind=infer::get(&bytes).map(|v|crate::inventory::classify_content_type(v.mime_type()));
                     let looks_video=matches!(kind,Some(crate::domain::MediaKind::Video))||bytes.starts_with(&[0x1a,0x45,0xdf,0xa3]);
                     record.source=Some(SourceBinding {snapshot:observation.snapshot().clone(),digest:observation.digest().clone()});
                     if !looks_video {record.disposition=EntryDisposition::Unsupported;record.reason="not_a_supported_video_content_type".into();}
-                    else if crate::video_container::inspect(&bytes).is_err() {record.disposition=EntryDisposition::Unsupported;record.reason="outside_closed_matroska_ffv1_subset".into();}
+                    else if crate::video_container::inspect_profile(&bytes,request.profile()?).is_err() {record.disposition=EntryDisposition::Unsupported;record.reason="outside_closed_matroska_ffv1_subset".into();}
                     else {record.reason="closed_container_observed_native_validation_pending".into();}
                     observation.verify_current_guarded(&guard)?;
                 }
@@ -228,7 +234,7 @@ mod native {
             retained=retained.checked_add(serde_json::to_vec(record)?.len()).context("inventory byte overflow")?;ensure!(retained<=INVENTORY_BYTES,"folder inventory retention exceeds 4 MiB; no candidate started");
         }
         budget.check(cancel)?;
-        Ok(FolderInventory {components:None,schema:"optiflow.video-folder-inventory.v1".into(),request_fingerprint:digest(request)?,entries_seen:seen,files_seen:files,hashed_input_bytes:hashed,entries:entries.into_iter().map(|(_,v,_)|v).collect(),
+        Ok(FolderInventory {components:None,schema:request.document_schema("inventory")?,request_fingerprint:digest(request)?,entries_seen:seen,files_seen:files,hashed_input_bytes:hashed,entries:entries.into_iter().map(|(_,v,_)|v).collect(),
             scope:"bounded observed directory walk; no symlink following; device boundaries skipped; same-device bind mounts are not attested".into()})
     }
     fn lock(directory:&File)->Result<()> {rustix::fs::flock(directory,rustix::fs::FlockOperation::NonBlockingLockExclusive).context("another folder owner holds this private directory")}
@@ -263,9 +269,9 @@ mod native {
         }
         if let VideoProductionOutcome::Accepted {artifact_set_id,artifact_directory,source_bytes,candidate_bytes,encoded_bytes_saved}=outcome {
             ensure!(uuid::Uuid::parse_str(artifact_set_id)?.to_string()==*artifact_set_id&&artifact_directory==&request.artifact_root.join(artifact_set_id),"folder artifact locator escaped its store");
-            crate::video_artifact::inspect(artifact_directory)?;
+            let manifest=crate::video_artifact::inspect(artifact_directory)?;ensure!(manifest.schema==request.profile()?.marker_schema(),"folder candidate profile differs from explicit request");
             let bound=crate::candidate_artifact::open_directory(artifact_directory)?;
-            let evidence:serde_json::Value=serde_json::from_slice(&crate::candidate_artifact::read_member(&bound,crate::video_artifact::EVIDENCE_NAME,524_288)?)?;
+            let evidence:serde_json::Value=serde_json::from_slice(&crate::candidate_artifact::read_member(&bound,crate::video_artifact::EVIDENCE_NAME,request.profile()?.evidence_bytes())?)?;
             let source=entry.source.as_ref().context("accepted folder source binding missing")?;
             ensure!(evidence["source"]["content"]["digest"]==serde_json::to_value(&source.digest)?&&evidence["source"]["snapshot"]==serde_json::to_value(&source.snapshot)?
                 &&evidence["source"]["path"]==serde_json::to_value(NativePath::from_path(&entry_path(&request.source_root,&entry.relative_path)?))?
@@ -285,11 +291,11 @@ mod native {
     fn require_components(request:&VideoFolderRequest,inventory:&FolderInventory,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<()> {
         ensure!(inventory.components.as_ref()==Some(&components(request,budget,cancel)?),"folder tools changed or legacy inventory lacks exact baseline; reconcile without replay");Ok(())
     }
-    fn ledger(records:&[FolderRecord])->Result<(u64,u64,Vec<String>)> {
+    fn ledger(request:&VideoFolderRequest,records:&[FolderRecord])->Result<(u64,u64,Vec<String>)> {
         let mut publication=0u64;let mut saved=0u64;let mut known=Vec::new();
         for record in records {if let Some(VideoProductionOutcome::Accepted {artifact_set_id,source_bytes,candidate_bytes,encoded_bytes_saved,..})=&record.production {
             ensure!(candidate_bytes<source_bytes&&source_bytes-candidate_bytes==*encoded_bytes_saved&&!known.contains(artifact_set_id),"folder accepted savings or unique artifact identity differs");
-            publication=publication.checked_add(candidate_bytes.checked_add(PUBLICATION_OVERHEAD).context("publication accounting overflow")?).context("publication accounting overflow")?;
+            publication=publication.checked_add(candidate_bytes.checked_add(request.overhead()?).context("publication accounting overflow")?).context("publication accounting overflow")?;
             if record.status=="accepted" {saved=saved.checked_add(*encoded_bytes_saved).context("savings accounting overflow")?;}known.push(artifact_set_id.clone());
         }}Ok((publication,saved,known))
     }
@@ -304,7 +310,7 @@ mod native {
         free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
         write(&request.run_directory,&journal,"request.json",&serde_json::to_vec(request)?)?;
         write(&request.run_directory,&journal,"inventory.json",&serde_json::to_vec(&inventory)?)?;
-        let report=FolderReport {continuation:None,schema:"optiflow.video-folder-report.v1".into(),request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,actions_started:0,records:Vec::new(),counts:FolderCounts::default(),publication_admission_bytes:0,encoded_bytes_saved:0,elapsed_ms:0,physical_space_reclaimed:false,replacement_authority:false,qualification:"source_only_native_host_unqualified".into()};
+        let report=FolderReport {continuation:None,schema:request.document_schema("report")?,request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,actions_started:0,records:Vec::new(),counts:FolderCounts::default(),publication_admission_bytes:0,encoded_bytes_saved:0,elapsed_ms:0,physical_space_reclaimed:false,replacement_authority:false,qualification:"source_only_native_host_unqualified".into()};
         advance(request,&inventory,budget,cancel,&journal,&store,&source_root,report,Vec::new(),&[],"report.json")
     }
     fn advance(request:&VideoFolderRequest,inventory:&FolderInventory,budget:&BatchBudget,cancel:&impl Fn()->bool,journal:&File,store:&File,source_root:&File,
@@ -318,7 +324,7 @@ mod native {
             if report.stop_reason.is_none() {
                 if budget.cancelled_or_expired(cancel){report.stop_reason=Some("cancelled_or_cooperative_deadline".into());}
                 else if report.actions_started>=request.batch.maximum_actions {report.stop_reason=Some("action_limit".into());}
-                else if report.publication_admission_bytes.checked_add(request.limits.candidate_bytes+PUBLICATION_OVERHEAD).is_none_or(|v|v>request.batch.maximum_publication_bytes) {report.stop_reason=Some("publication_byte_limit".into());}
+                else if report.publication_admission_bytes.checked_add(request.limits.candidate_bytes+request.overhead()?).is_none_or(|v|v>request.batch.maximum_publication_bytes) {report.stop_reason=Some("publication_byte_limit".into());}
             }
             if let Some(reason)=&report.stop_reason {record.reason=reason.clone();report.records.push(record);continue;}
             // Namespace, capacity and source checks precede the immutable start.
@@ -333,16 +339,16 @@ mod native {
             }
             let mut production=request.production(source);production.limits.elapsed_ms=production.limits.elapsed_ms.min(budget.remaining_ms());
             if production.limits.elapsed_ms==0 {report.stop_reason=Some("cooperative_deadline".into());record.reason="cooperative_deadline".into();report.records.push(record);continue;}
-            free(&request.artifact_root,request.sandbox.minimum_free_bytes.checked_add(production.limits.candidate_bytes+PUBLICATION_OVERHEAD).context("folder store reserve overflow")?)?;
+            free(&request.artifact_root,request.sandbox.minimum_free_bytes.checked_add(production.limits.candidate_bytes+request.overhead()?).context("folder store reserve overflow")?)?;
             free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
-            write(&request.run_directory,&journal,&format!("{index:04}-start.json"),&serde_json::to_vec(&serde_json::json!({"schema":"optiflow.video-folder-start.v1","index":index,"request_fingerprint":report.request_fingerprint,"inventory_fingerprint":report.inventory_fingerprint,"source":entry.source,"effective_limits":production.limits}))?)?;
+            write(&request.run_directory,&journal,&format!("{index:04}-start.json"),&serde_json::to_vec(&serde_json::json!({"schema":request.document_schema("start")?,"index":index,"request_fingerprint":report.request_fingerprint,"inventory_fingerprint":report.inventory_fingerprint,"source":entry.source,"effective_limits":production.limits}))?)?;
             report.actions_started+=1;
             match crate::video_production::produce(&production,||budget.cancelled_or_expired(cancel)) {
                 Ok(outcome)=>{
                     match &outcome {
                         VideoProductionOutcome::Accepted {artifact_set_id,candidate_bytes,encoded_bytes_saved,..}=>{
                             // Account before readback; any uncertain readback stops further work.
-                            report.publication_admission_bytes+=candidate_bytes+PUBLICATION_OVERHEAD;
+                            report.publication_admission_bytes+=candidate_bytes+request.overhead()?;
                             known.push(artifact_set_id.clone());record.status="accepted".into();record.reason="validated_strictly_smaller_source_preserved".into();
                             if let Err(error)=accepted(request,entry,&outcome){record.status="failed".into();record.reason="published_candidate_readback_uncertain".into();record.detail=Some(error.to_string().chars().take(4096).collect());report.stop_reason=Some(record.reason.clone());}
                             else {report.encoded_bytes_saved+=encoded_bytes_saved;}
@@ -378,12 +384,12 @@ mod native {
     }
     fn inspect_locked(root:&Path,bound:&File)->Result<FolderRecovery> {
         journal_size(root)?;
-        let request:VideoFolderRequest=read(&bound,"request.json")?;request.batch.validate()?;
-        crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&request)?;
+        let request:VideoFolderRequest=read(&bound,"request.json")?;request.batch.validate_for(request.profile()?)?;
+        crate::contracts::validate(request.contract()?,&request)?;
         ensure!(request.run_directory==root,"folder recovery locator differs");
         let inventory:FolderInventory=read(&bound,"inventory.json")?;
-        crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&inventory)?;
-        ensure!(inventory.schema=="optiflow.video-folder-inventory.v1"&&inventory.request_fingerprint==digest(&request)?&&inventory.entries.len()<=request.batch.maximum_entries as usize,"folder inventory/request binding differs");
+        crate::contracts::validate(request.contract()?,&inventory)?;
+        ensure!(inventory.schema==request.document_schema("inventory")?&&inventory.request_fingerprint==digest(&request)?&&inventory.entries.len()<=request.batch.maximum_entries as usize,"folder inventory/request binding differs");
         let mut allowed=std::collections::BTreeSet::from([std::ffi::OsString::from("request.json"),"inventory.json".into(),"report.json".into()]);
         let mut results=Vec::new();let mut unfinished=Vec::new();let mut pending=0;let mut gap=false;
         for (index,entry) in inventory.entries.iter().enumerate() {
@@ -397,11 +403,11 @@ mod native {
                 ensure!(!gap,"folder attempt order skipped a never-started eligible predecessor");
                 ensure!(entry.disposition==EntryDisposition::Eligible,"attempt names an ineligible entry");
                 let start:serde_json::Value=read(&bound,&start_name)?;
-                crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&start)?;
+                crate::contracts::validate(request.contract()?,&start)?;
                 let effective:RequestedLimits=serde_json::from_value(start["effective_limits"].clone())?;let mut expected_limits=request.limits;
                 ensure!(effective.elapsed_ms>0&&effective.elapsed_ms<=expected_limits.elapsed_ms,"folder effective time budget was widened");expected_limits.elapsed_ms=effective.elapsed_ms;
                 ensure!(serde_json::to_value(expected_limits)?==start["effective_limits"],"folder effective production bounds differ");
-                ensure!(start["schema"]=="optiflow.video-folder-start.v1"&&start["index"].as_u64()==Some(index as u64)
+                ensure!(start["schema"]==request.document_schema("start")?&&start["index"].as_u64()==Some(index as u64)
                     &&start["request_fingerprint"]==serde_json::to_value(digest(&request)?)?&&start["inventory_fingerprint"]==serde_json::to_value(digest(&inventory)?)?
                     &&start["source"]==serde_json::to_value(&entry.source)?,"folder start identity differs");
                 allowed.insert(start_name.into());
@@ -418,8 +424,8 @@ mod native {
             match root.join(&name).symlink_metadata() {Ok(_)=>{},Err(e)if e.kind()==std::io::ErrorKind::NotFound=>{if sequence>0 {report_gap=true;}continue;},Err(e)=>return Err(e.into())}
             ensure!(!report_gap,"folder continuation report sequence has a gap");let current:FolderReport=read(bound,&name)?;
             let prefix=results.get(..usize::try_from(current.actions_started)?).context("folder report claims unrecorded results")?;
-            let (publication,saved,_)=ledger(prefix)?;
-            ensure!(current.schema=="optiflow.video-folder-report.v1"&&current.request_fingerprint==digest(&request)?&&current.inventory_fingerprint==digest(&inventory)?
+            let (publication,saved,_)=ledger(&request,prefix)?;
+            ensure!(current.schema==request.document_schema("report")?&&current.request_fingerprint==digest(&request)?&&current.inventory_fingerprint==digest(&inventory)?
                 &&current.counts==counts(&inventory,&current.records)&&!current.replacement_authority&&!current.physical_space_reclaimed
                 &&current.actions_started<=request.batch.maximum_actions&&current.publication_admission_bytes==publication&&current.encoded_bytes_saved==saved&&publication<=request.batch.maximum_publication_bytes
                 &&current.records.len()==inventory.entries.len()&&current.records.iter().enumerate().all(|(i,r)|r.index==i as u64&&r.relative_path==inventory.entries[i].relative_path)
@@ -435,12 +441,12 @@ mod native {
                     &&c.prior_results_fingerprint==digest(&earlier)?&&c.elapsed_policy=="fresh_invocation; cumulative_actions_and_publication"
                     &&report.as_ref().is_none_or(|old|c.prior_result_count>=old.actions_started),"continuation report history differs");
             }
-            crate::contracts::validate(crate::contracts::Contract::VideoFolderProtocol,&current)?;allowed.insert(name.into());report=Some(current);
+            crate::contracts::validate(request.contract()?,&current)?;allowed.insert(name.into());report=Some(current);
         }
         let mut count=0;let mut total=0u64;for item in std::fs::read_dir(root)? {count+=1;ensure!(count<=2*request.batch.maximum_actions+35,"folder journal member count exceeds bounds");let item=item?;
             ensure!(allowed.contains(&item.file_name())&&item.file_type()?.is_file(),"folder journal contains an unowned member");total=total.checked_add(item.metadata()?.len()).context("journal size overflow")?;ensure!(total<=JOURNAL_BYTES as u64,"folder journal exceeds aggregate bound");}
         same(root,&bound)?;
-        Ok(FolderRecovery {schema:"optiflow.video-folder-recovery.v1".into(),request_fingerprint:digest(&request)?,recorded_results:results,unfinished_attempts:unfinished,unstarted_eligible:pending,completed_report:report,replay_authority:false,
+        Ok(FolderRecovery {schema:request.document_schema("recovery")?,request_fingerprint:digest(&request)?,recorded_results:results,unfinished_attempts:unfinished,unstarted_eligible:pending,completed_report:report,replay_authority:false,
             source_freshness:"historical source binding only; current source is not revalidated by journal inspection".into()})
     }
     pub(super) fn resume(request:&VideoFolderRequest,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<FolderReport> {
@@ -455,18 +461,18 @@ mod native {
         let inventory:FolderInventory=read(&journal,"inventory.json")?;require_components(request,&inventory,budget,cancel)?;
         let mut current=discover(request,budget,cancel)?;current.components=Some(components(request,budget,cancel)?);
         ensure!(digest(&current)?==digest(&inventory)?,"folder source inventory or tool bytes changed; preserve prior state and reconcile");
-        let (publication,saved,known)=ledger(&recovery.recorded_results)?;
+        let (publication,saved,known)=ledger(request,&recovery.recorded_results)?;
         ensure!(recovery.recorded_results.len() as u64<=request.batch.maximum_actions&&publication<=request.batch.maximum_publication_bytes,"folder cumulative admission already exceeded");
         same(&request.source_root,&source_root)?;same(&request.artifact_root,&store)?;store_members(request,&known)?;
         if let Some(report)=&recovery.completed_report {
             if report.actions_started==recovery.recorded_results.len() as u64&&(recovery.unstarted_eligible==0||report.actions_started>=request.batch.maximum_actions
-                ||publication.checked_add(request.limits.candidate_bytes+PUBLICATION_OVERHEAD).is_none_or(|n|n>request.batch.maximum_publication_bytes)){return Ok(report.clone());}
+                ||publication.checked_add(request.limits.candidate_bytes+request.overhead()?).is_none_or(|n|n>request.batch.maximum_publication_bytes)){return Ok(report.clone());}
         }
         let sequence=recovery.completed_report.as_ref().and_then(|r|r.continuation.as_ref()).map(|c|c.sequence).unwrap_or(0)+1;
         ensure!(sequence<=32,"folder continuation report limit exhausted; reconcile before another run");
         let report=FolderReport {continuation:Some(FolderContinuation {sequence,previous_report_fingerprint:recovery.completed_report.as_ref().map(digest).transpose()?,
             prior_result_count:recovery.recorded_results.len() as u64,prior_results_fingerprint:digest(&recovery.recorded_results)?,elapsed_policy:"fresh_invocation; cumulative_actions_and_publication".into()}),
-            schema:"optiflow.video-folder-report.v1".into(),request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,
+            schema:request.document_schema("report")?,request_fingerprint:digest(request)?,inventory_fingerprint:digest(&inventory)?,state:"complete".into(),stop_reason:None,
             actions_started:recovery.recorded_results.len() as u64,records:Vec::new(),counts:FolderCounts::default(),publication_admission_bytes:publication,encoded_bytes_saved:saved,
             elapsed_ms:0,physical_space_reclaimed:false,replacement_authority:false,qualification:"source_only_native_host_unqualified".into()};
         free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
@@ -594,4 +600,9 @@ mod tests {
         let path=f.request.run_directory.join("report-0001.json");let mut report:serde_json::Value=serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();report["publication_admission_bytes"]=serde_json::json!(1);
         std::fs::write(&path,serde_json::to_vec(&report).unwrap()).unwrap();assert!(inspect_recovery(&f.request.run_directory).is_err());assert!(resume(&f.request,||false).is_err());
     }
+    #[test] fn v2_folder_is_explicit_and_preserves_v1_per_file_limits(){let mut f=fixture();f.request.limits.input_bytes=134_217_728;assert!(f.request.validate().is_err());f.request.schema="optiflow.video-folder-request.v2".into();let p:VideoProductionRequest=serde_json::from_str(include_str!("../examples/video-production-request-v2.json")).unwrap();f.request.limits=p.limits;f.request.sandbox=p.sandbox;f.request.validate().unwrap();assert_eq!(f.request.production(f.request.source_root.join("x.mkv")).schema,"optiflow.video-production-request.v2");}
+    #[test] fn v2_budget_does_not_widen_old_folder_schema(){let mut limits=fixture().request.batch;limits.maximum_publication_bytes=1_073_741_824;assert!(limits.validate().is_err());limits.validate_for(Profile::BoundedV2).unwrap();}
+    #[test] fn unknown_folder_version_never_selects_latest_profile(){let mut f=fixture();f.request.schema="optiflow.video-folder-request.v3".into();assert!(f.request.profile().is_err());}
+    #[test] fn video_folder_cli_requires_explicit_request_and_has_no_disposition_flag(){use clap::Parser;assert!(crate::cli::Cli::try_parse_from(["optiflow","video-folder","run"]).is_err());assert!(crate::cli::Cli::try_parse_from(["optiflow","video-folder","run","--request","/records/r.json","--discard-originals"]).is_err());}
+
 }

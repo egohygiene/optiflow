@@ -1,0 +1,858 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/video-folder-v2.schema.json",
+  "description": "Closed source-preserving serial folder development protocol. Exact source/provider/candidate validation remains with existing production/artifact owners. Encoded savings do not imply physical reclamation. Recovery inspection grants no replay/replacement/disposal authority.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/inventory"
+    },
+    {
+      "$ref": "#/$defs/start"
+    },
+    {
+      "$ref": "#/$defs/report"
+    },
+    {
+      "$ref": "#/$defs/recovery"
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^/",
+      "maxLength": 4096
+    },
+    "nativePath": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "encoding",
+            "value"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "utf8"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "encoding",
+            "base64"
+          ],
+          "properties": {
+            "encoding": {
+              "const": "unix_bytes"
+            },
+            "base64": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192,
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          }
+        }
+      ]
+    },
+    "launcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "digest"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_bytes",
+        "candidate_bytes",
+        "decoded_bytes",
+        "temporary_bytes",
+        "memory_bytes",
+        "elapsed_ms"
+      ],
+      "properties": {
+        "input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "candidate_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "decoded_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 536870912
+        },
+        "temporary_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 536870912
+        },
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483648
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        }
+      }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "systemd_run",
+        "systemctl",
+        "helper",
+        "user_bus",
+        "provider_subtree_memory_bytes",
+        "provider_scratch_bytes",
+        "minimum_free_bytes"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.linux-video-sandbox.v1"
+        },
+        "systemd_run": {
+          "$ref": "#/$defs/launcher"
+        },
+        "systemctl": {
+          "$ref": "#/$defs/launcher"
+        },
+        "helper": {
+          "$ref": "#/$defs/launcher"
+        },
+        "user_bus": {
+          "type": "string",
+          "pattern": "^/run/user/[0-9]+/bus$"
+        },
+        "provider_subtree_memory_bytes": {
+          "type": "integer",
+          "minimum": 67108864,
+          "maximum": 2147483648
+        },
+        "provider_scratch_bytes": {
+          "type": "integer",
+          "minimum": 1048576,
+          "maximum": 134217728,
+          "multipleOf": 4096
+        },
+        "minimum_free_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_entries",
+        "maximum_files",
+        "maximum_actions",
+        "maximum_depth",
+        "maximum_total_input_bytes",
+        "maximum_publication_bytes",
+        "elapsed_ms"
+      ],
+      "properties": {
+        "maximum_entries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "maximum_files": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "maximum_actions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maximum_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maximum_total_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "maximum_publication_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600000
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "source_root",
+        "ffmpeg",
+        "ffprobe",
+        "private_workdir",
+        "artifact_root",
+        "run_directory",
+        "limits",
+        "sandbox",
+        "batch",
+        "recursive"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.video-folder-request.v2"
+        },
+        "source_root": {
+          "$ref": "#/$defs/path"
+        },
+        "ffmpeg": {
+          "$ref": "#/$defs/path"
+        },
+        "ffprobe": {
+          "$ref": "#/$defs/path"
+        },
+        "private_workdir": {
+          "$ref": "#/$defs/path"
+        },
+        "artifact_root": {
+          "$ref": "#/$defs/path"
+        },
+        "run_directory": {
+          "$ref": "#/$defs/path"
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        },
+        "sandbox": {
+          "$ref": "#/$defs/sandbox"
+        },
+        "batch": {
+          "$ref": "#/$defs/batch"
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "inode",
+        "mode",
+        "owner_uid",
+        "group_gid",
+        "link_count",
+        "logical_bytes",
+        "modified_unix_ns",
+        "changed_unix_ns"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inode": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "owner_uid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "group_gid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "link_count": {
+          "const": 1
+        },
+        "logical_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "modified_unix_ns": {
+          "type": "integer"
+        },
+        "changed_unix_ns": {
+          "type": "integer"
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot",
+        "digest"
+      ],
+      "properties": {
+        "snapshot": {
+          "$ref": "#/$defs/snapshot"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_path",
+        "disposition",
+        "reason",
+        "source"
+      ],
+      "properties": {
+        "relative_path": {
+          "$ref": "#/$defs/nativePath"
+        },
+        "disposition": {
+          "enum": [
+            "eligible",
+            "skipped",
+            "unsupported",
+            "failed"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/binding"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "request_fingerprint",
+        "entries_seen",
+        "files_seen",
+        "hashed_input_bytes",
+        "entries",
+        "scope"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.video-folder-inventory.v2"
+        },
+        "request_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ffmpeg",
+            "ffprobe"
+          ],
+          "properties": {
+            "ffmpeg": {
+              "$ref": "#/$defs/binding"
+            },
+            "ffprobe": {
+              "$ref": "#/$defs/binding"
+            }
+          },
+          "description": "Optional exact local tool baseline for safe continuation; legacy source-only inventories remain inspectable. Source per-file bounds remain enforced by Rust."
+        },
+        "entries_seen": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "files_seen": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "hashed_input_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "start": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "index",
+        "request_fingerprint",
+        "inventory_fingerprint",
+        "source",
+        "effective_limits"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.video-folder-start.v2"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4095
+        },
+        "request_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "inventory_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "source": {
+          "$ref": "#/$defs/binding"
+        },
+        "effective_limits": {
+          "$ref": "#/$defs/limits"
+        }
+      }
+    },
+    "production": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "artifact_set_id",
+            "artifact_directory",
+            "source_bytes",
+            "candidate_bytes",
+            "encoded_bytes_saved"
+          ],
+          "properties": {
+            "status": {
+              "const": "accepted"
+            },
+            "artifact_set_id": {
+              "type": "string",
+              "pattern": "^[0-9a-f-]{36}$"
+            },
+            "artifact_directory": {
+              "$ref": "#/$defs/path"
+            },
+            "source_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "encoded_bytes_saved": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason",
+            "source_bytes",
+            "candidate_bytes"
+          ],
+          "properties": {
+            "status": {
+              "const": "unchanged"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "source_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            }
+          }
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "relative_path",
+        "status",
+        "reason",
+        "production",
+        "detail"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4095
+        },
+        "relative_path": {
+          "$ref": "#/$defs/nativePath"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "unchanged",
+            "unsupported",
+            "skipped",
+            "failed"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "production": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/production"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inspected_files",
+        "eligible_files",
+        "optimized_files",
+        "unchanged_files",
+        "unsupported_files",
+        "skipped_entries",
+        "failed_files"
+      ],
+      "properties": {
+        "inspected_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "eligible_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "optimized_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "unchanged_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "unsupported_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "skipped_entries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "failed_files": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "request_fingerprint",
+        "inventory_fingerprint",
+        "state",
+        "stop_reason",
+        "actions_started",
+        "records",
+        "counts",
+        "publication_admission_bytes",
+        "encoded_bytes_saved",
+        "elapsed_ms",
+        "physical_space_reclaimed",
+        "replacement_authority",
+        "qualification"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.video-folder-report.v2"
+        },
+        "request_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "inventory_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "continuation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "previous_report_fingerprint",
+            "prior_result_count",
+            "prior_results_fingerprint",
+            "elapsed_policy"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "previous_report_fingerprint": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/digest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "prior_result_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32
+            },
+            "prior_results_fingerprint": {
+              "$ref": "#/$defs/digest"
+            },
+            "elapsed_policy": {
+              "const": "fresh_invocation; cumulative_actions_and_publication"
+            }
+          }
+        },
+        "state": {
+          "enum": [
+            "complete",
+            "stopped"
+          ]
+        },
+        "stop_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "actions_started": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/record"
+          }
+        },
+        "counts": {
+          "$ref": "#/$defs/counts"
+        },
+        "publication_admission_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "encoded_bytes_saved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "physical_space_reclaimed": {
+          "const": false
+        },
+        "replacement_authority": {
+          "const": false
+        },
+        "qualification": {
+          "const": "source_only_native_host_unqualified"
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "request_fingerprint",
+        "recorded_results",
+        "unfinished_attempts",
+        "unstarted_eligible",
+        "completed_report",
+        "replay_authority",
+        "source_freshness"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.video-folder-recovery.v2"
+        },
+        "request_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "recorded_results": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/record"
+          }
+        },
+        "unfinished_attempts": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4095
+          }
+        },
+        "unstarted_eligible": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "completed_report": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/report"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "replay_authority": {
+          "const": false
+        },
+        "source_freshness": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

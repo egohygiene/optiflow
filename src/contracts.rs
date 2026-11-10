@@ -5,6 +5,7 @@ use serde_json::Value;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Contract {
+    VideoFolderProtocolV2,
     PngFolderProtocol,
     ReplacementEvent,
     ReplacementPlan,
@@ -101,6 +102,7 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
 
 pub fn schema(contract: Contract) -> Result<Value> {
     let source = match contract {
+        Contract::VideoFolderProtocolV2 => include_str!("../schemas/video-folder-v2.schema.json"),
         Contract::PngFolderProtocol => include_str!("../schemas/png-folder-v1.schema.json"),
         Contract::ReplacementEvent => include_str!("../schemas/replacement-event-v1.schema.json"),
         Contract::ReplacementPlan => include_str!("../schemas/replacement-plan-v1.schema.json"),
