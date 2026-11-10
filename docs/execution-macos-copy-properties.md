@@ -124,3 +124,18 @@ still refuses. This source does not adopt or qualify the exacl patch. Native
 backend selection, namespace-transition observation and recovery integration
 remain required. Nine Linux synthetic cases were authored and not run; no
 compiler, formatter, schema validation, native execution or CI was invoked.
+
+## Strong copy and read-only recovery receipt
+
+`descriptor_properties::transfer::finish_copy` completes properties on a copied
+private destination, synchronizes data with the existing platform primitive,
+and rechecks both held subjects. The independently versioned receipt can be
+compared to a current retained pair by `inspect_retained_pair`; changed data,
+identity, metadata, ACLs or backend identity refuse. Copy-out and restore-copy
+are distinguished. Neither direction removes a file or commits a namespace.
+
+No legacy v1–v4 journal accepts this stronger fingerprint implicitly. Receipt
+flags deny namespace commitment, qualification and finalization authority.
+Native backend adoption and namespace/journal recovery wiring remain #111 work;
+this additive source does not enable production cross-volume mutation. Three
+additional synthetic cases were authored, uncompiled and unrun.
