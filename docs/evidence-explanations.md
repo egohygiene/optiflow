@@ -69,3 +69,8 @@ A trusted process is not an OS sandbox, so this handoff does not attest offline
 enforcement. Existing sidecar model-execution/eligibility/apply flags stay false.
 No process/model was run for this checkpoint. Five boundary cases are authored,
 uncompiled and unrun. Native usefulness and final #133 acceptance remain open.
+
+Manual source review follow-up: runtime output destinations are checked as
+absent private records before invoking the locked process. Final publication
+still uses exclusive creation, and separate result/candidate writes remain
+non-atomic. No process or model was launched during this review.

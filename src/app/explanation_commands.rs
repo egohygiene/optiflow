@@ -20,6 +20,8 @@ impl Records {
 pub(super) fn run(command:ExplainCommand,signals:&SignalState)->Execution {
     let result=(||->Result<serde_json::Value>{match command {
         ExplainCommand::Invoke(a)=>{
+            ensure!(a.output!=a.sdk_result_output,"candidate and SDK result require distinct output records");
+            crate::record_io::preflight_new(&a.output)?;crate::record_io::preflight_new(&a.sdk_result_output)?;
             let profile=explanation::runtime::Profile::from_json_slice(&crate::record_io::read(&a.profile,16_384,signals)?)?;
             let packet=Packet::from_json_slice(&crate::record_io::read(&a.packet,65_536,signals)?)?;
             let catalog=crate::extensions::ExtensionCatalog::load(&[a.manifest],&[a.lock])?;
