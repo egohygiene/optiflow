@@ -19,6 +19,8 @@ impl Records {
 }
 pub(super) fn run(command:ExplainCommand,signals:&SignalState)->Execution {
     let result=(||->Result<serde_json::Value>{match command {
+        ExplainCommand::SetupLocal(a)=>{let request=explanation::ollama::setup::Request::from_json_slice(&crate::record_io::read(&a.request,32_768,signals)?)?;Ok(serde_json::to_value(explanation::ollama::setup::write(&request,&a.output_directory,signals)?)?)},
+        ExplainCommand::SetupStatus(a)=>Ok(serde_json::to_value(explanation::ollama::setup::inspect(&a.directory,signals)?)?),
         ExplainCommand::Invoke(a)=>{
             ensure!(a.output!=a.sdk_result_output,"candidate and SDK result require distinct output records");
             crate::record_io::preflight_new(&a.output)?;crate::record_io::preflight_new(&a.sdk_result_output)?;

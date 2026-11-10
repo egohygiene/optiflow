@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/optiflow/schemas/local-explanation-setup-report-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "enabled",
+    "profile_fingerprint",
+    "members",
+    "process_invocation_observed",
+    "model_execution_qualified",
+    "offline_enforcement_verified"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.local-explanation-setup-report.v1"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "profile_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "members": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "byte_count",
+          "blake3"
+        ],
+        "properties": {
+          "name": {
+            "enum": [
+              "profile.json",
+              "configuration.json",
+              "manifest.json",
+              "lock.json",
+              "request.json"
+            ]
+          },
+          "byte_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 131072
+          },
+          "blake3": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "process_invocation_observed": {
+      "const": false
+    },
+    "model_execution_qualified": {
+      "const": false
+    },
+    "offline_enforcement_verified": {
+      "const": false
+    }
+  }
+}

@@ -416,3 +416,9 @@ behavior remains intact. The wrapper supplies model-generated notes only to the
 existing host citation/packet validator. No model service, installation, general
 router or media access is introduced; API identity reports do not qualify model
 weights, host resources or offline enforcement.
+
+Local wrapper setup emits existing SDK declarations and a private last-marker
+bundle over selected executable bytes. Its read-only status reobserves those
+bytes; neither setup nor status contacts a model. Domain local-only policy stays
+separate from SDK v1's explicit network-effect declaration for the loopback
+transport. There is no new general environment, installer or registry owner.
