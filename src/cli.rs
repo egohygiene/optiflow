@@ -57,6 +57,7 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::Doctor => "doctor",
+            Command::Explain(a) => match &a.command {ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
             Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
             Command::Optimize(arguments) => match &arguments.command {
                 OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
@@ -105,6 +106,8 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Optional advisory explanations of explicitly pinned report/plan records.
+    Explain(ExplainArgs),
     /// Bounded source-preserving video folders with explicit v1/v2 requests.
     VideoFolder(VideoFolderArgs),
     /// Plan and inspect explicit serial PNG folders; source mutation requires qualification.
@@ -551,3 +554,21 @@ pub struct VideoReplacementReviewArgs {
     #[arg(long)] pub retention:PathBuf,
     #[arg(long)] pub output:PathBuf,
 }
+
+#[derive(Debug,Args)]
+pub struct ExplainArgs {#[command(subcommand)] pub command:ExplainCommand}
+#[derive(Debug,Subcommand)]
+pub enum ExplainCommand {Prepare(ExplanationPrepareArgs),Accept(ExplanationAcceptArgs),Inspect(ExplanationInspectArgs)}
+#[derive(Debug,Args)]
+pub struct ExplanationInputs {
+    #[arg(long)] pub report:PathBuf,
+    #[arg(long)] pub report_blake3:String,
+    #[arg(long,requires="plan_blake3")] pub plan:Option<PathBuf>,
+    #[arg(long,requires="plan")] pub plan_blake3:Option<String>,
+}
+#[derive(Debug,Args)]
+pub struct ExplanationPrepareArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub output:PathBuf}
+#[derive(Debug,Args)]
+pub struct ExplanationAcceptArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub packet:PathBuf,#[arg(long)] pub candidate:PathBuf,#[arg(long)] pub output:PathBuf}
+#[derive(Debug,Args)]
+pub struct ExplanationInspectArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub packet:PathBuf,#[arg(long)] pub candidate:PathBuf,#[arg(long)] pub sidecar:PathBuf}

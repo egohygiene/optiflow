@@ -17,6 +17,7 @@ mod candidate_commands;
 mod replacement_commands;
 mod optimize_commands;
 mod video_commands;
+mod explanation_commands;
 mod execution_commands;
 mod extension_commands;
 mod reporting;
@@ -80,6 +81,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
     }
     let execution = match cli.command {
         Command::Doctor => run_doctor(&state_directory),
+        Command::Explain(a) => explanation_commands::run(a.command,signals),
         Command::VideoFolder(a) => video_commands::folder(a.command,signals),
         Command::Optimize(arguments) => optimize_commands::run(arguments.command,&effective_policy,signals),
         Command::Replacement(arguments) => replacement_commands::run(arguments.command,&state_directory,&effective_policy,signals),

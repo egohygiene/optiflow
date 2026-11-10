@@ -44,7 +44,8 @@ fn render_human(result: &CommandResult) -> Result<()> {
             artifact.path.display()
         )?;
     }
-    if result.command.starts_with("video-folder ")
+    if result.command.starts_with("explain ")
+        || result.command.starts_with("video-folder ")
         || result.command=="candidate video"
         || result.command.starts_with("optimize ")
         || result.command.starts_with("replacement ")
