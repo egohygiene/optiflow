@@ -379,3 +379,14 @@ byte validator and candidate marker. It does not reinterpret exact duplicate
 quarantine or legacy journal fingerprints. Plans bind current source/candidate,
 marker/evidence/policy and private state/retention, with strict smaller encoded
 bytes and an explicit retain-for-restore disposition. Review is source read-only.
+
+### Serial media and optional explanation source boundaries
+
+The 2026-11-10 draft source stack is indexed in
+`docs/optiflow-source-sprint-2026-11-10.md`. PNG serial inventory/batch authority
+joins the existing replacement lock/journal while keeping discard authority
+separate; public mutation remains qualification-gated. Video folder v2 explicitly
+selects the existing bounded profile and preserves v1/PNG ceilings. Its staged
+replacement review cannot enter the PNG transaction lane. Optional explanation
+CLI/runtime handoff reuse normalized record contracts and SDK v1 reporting;
+operator locks and declared model profiles never confer source authority.

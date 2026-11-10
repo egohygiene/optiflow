@@ -79,7 +79,7 @@ pub fn discover(request:&Request,signals:&SignalState)->Result<Inventory>{
     #[cfg(unix)] {
         use std::os::unix::{fs::MetadataExt,ffi::OsStrExt};
         let root=diag(fs::directory(&request.source_root))?;let mut stack=vec![(request.source_root.clone(),0u64)];
-        let mut entries=Vec::new();let mut seen=0u64;let mut files=0u64;let mut observed=0u64;
+        let mut entries=Vec::new();let mut candidates=std::collections::BTreeMap::new();let mut seen=0u64;let mut files=0u64;let mut observed=0u64;
         while let Some((path,depth))=stack.pop(){guard()?;let held=crate::candidate_artifact::open_directory(&path)?;
             let before=crate::filesystem::identity::FileStateSignature::from_file_metadata(&held.metadata()?);
             for item in std::fs::read_dir(&path)? {guard()?;seen+=1;ensure!(seen<=request.batch.maximum_entries,"entry bound exceeded; no provider started");let item=item?;let leaf=item.file_name();let path=item.path();let m=std::fs::symlink_metadata(&path)?;
@@ -91,19 +91,30 @@ pub fn discover(request:&Request,signals:&SignalState)->Result<Inventory>{
                 else if !m.is_file(){entry.reason="special_file_not_opened".into();}
                 else {files+=1;ensure!(files<=request.batch.maximum_files,"file bound exceeded; no provider started");
                     if m.nlink()!=1||m.len()==0||m.len()>request.per_file.maximum_file_bytes{entry.reason="link_empty_or_file_bound".into();}
-                    else if observed.checked_add(m.len()).is_none_or(|n|n>request.batch.maximum_total_input_bytes){entry.reason="aggregate_input_bound".into();}
-                    else {let observation=crate::video_io::BoundedFileObservation::open_guarded(&path,request.per_file.maximum_file_bytes,&guard)?;let data=observation.read_bytes_guarded(&guard)?;observed=observed.checked_add(data.len() as u64).context("input accounting overflow")?;
-                        let valid=crate::png_validation::validate_png_source(&data,crate::png_validation::ByteValidationLimits {source_bytes:request.per_file.maximum_file_bytes as usize,candidate_bytes:request.per_file.maximum_file_bytes as usize,decoded_bytes_per_image:67_108_864,chunks_per_image:256,decoder_allocation_bytes:67_108_864});
-                        observation.verify_current_guarded(&guard)?;
-                        if valid.is_ok(){entry.source=Some(diag(fs::snapshot(&path,signals,request.per_file.maximum_file_bytes))?);ensure!(entry.source.as_ref().is_some_and(|s|s.blake3==observation.digest().value),"PNG source changed after classification");entry.disposition="eligible".into();entry.reason="independent_supported_PNG_observed".into();}
-                        else {entry.disposition="unsupported".into();entry.reason="outside_supported_static_PNG_profile".into();}
-                    }
+                    else {entry.disposition="pending".into();entry.reason="classification_pending".into();candidates.insert(path.clone(),crate::filesystem::identity::FileStateSignature::from_symlink_metadata(&m));}
                 }
                 entries.push(entry);ensure!(serde_json::to_vec(&entries)?.len()<=4_194_304,"inventory exceeds 4 MiB");
             }
             guard()?;let now=crate::candidate_artifact::open_directory(&path)?;ensure!(crate::filesystem::identity::FileStateSignature::from_file_metadata(&now.metadata()?)==before&&crate::filesystem::identity::FileStateSignature::from_file_metadata(&held.metadata()?)==before,"directory changed during bounded discovery");
         }
         entries.sort_by_key(|e|e.path.to_path_buf());
+        // Complete bounded enumeration, then admit reads in exact native path
+        // order so filesystem enumeration order cannot change selected inputs.
+        for entry in &mut entries {
+            guard()?;if entry.disposition!="pending" {continue;}
+            let path=diag(fs::native_path(&entry.path))?;
+            let before=candidates.get(&path).context("PNG classification metadata absent")?;
+            ensure!(crate::filesystem::identity::FileStateSignature::from_symlink_metadata(&std::fs::symlink_metadata(&path)?)==*before,"source changed between enumeration and classification");
+            if observed.checked_add(before.logical_size_bytes).is_none_or(|n|n>request.batch.maximum_total_input_bytes){entry.disposition="skipped".into();entry.reason="aggregate_input_bound".into();continue;}
+            let observation=crate::video_io::BoundedFileObservation::open_guarded(&path,request.per_file.maximum_file_bytes,&guard)?;
+            let data=observation.read_bytes_guarded(&guard)?;observed=observed.checked_add(data.len() as u64).context("input accounting overflow")?;
+            ensure!(observed<=request.batch.maximum_total_input_bytes,"source grew beyond aggregate admission");
+            let valid=crate::png_validation::validate_png_source(&data,crate::png_validation::ByteValidationLimits {source_bytes:request.per_file.maximum_file_bytes as usize,candidate_bytes:request.per_file.maximum_file_bytes as usize,decoded_bytes_per_image:67_108_864,chunks_per_image:256,decoder_allocation_bytes:67_108_864});
+            observation.verify_current_guarded(&guard)?;
+            if valid.is_ok(){entry.source=Some(diag(fs::snapshot(&path,signals,request.per_file.maximum_file_bytes))?);ensure!(entry.source.as_ref().is_some_and(|s|s.blake3==observation.digest().value),"PNG source changed after classification");entry.disposition="eligible".into();entry.reason="independent_supported_PNG_observed".into();}
+            else {entry.disposition="unsupported".into();entry.reason="outside_supported_static_PNG_profile".into();}
+        }
+        ensure!(serde_json::to_vec(&entries)?.len()<=4_194_304,"classified inventory exceeds 4 MiB");
         let mut inventory=Inventory {schema:"optiflow.png-folder-inventory.v1".into(),request_fingerprint:hash(request)?,fingerprint:String::new(),source_root:root,entries_seen:seen,files_seen:files,observed_input_bytes:observed,entries,one_file_in_flight:true,physical_space_reclaimed:false};inventory.fingerprint=hash(&inventory)?;inventory.validate(request)?;guard()?;Ok(inventory)
     }
     #[cfg(not(unix))] {let _=guard;anyhow::bail!("PNG folder discovery requires no-follow Unix filesystem bindings")}

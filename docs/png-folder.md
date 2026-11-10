@@ -49,3 +49,13 @@ Per-file reservation accounts for candidate/stage/journal bytes plus a reserve;
 provider RSS/work usage and filesystem physical reclamation are not proven by
 this admission calculation. An interrupted cleanup/disposal remains inspectable
 and blocks advance. Four additional refusal/CLI cases are authored and unrun.
+
+Manual source review follow-up: input admission now runs in sorted native path
+order after bounded enumeration, so directory enumeration order cannot select a
+different byte-limited batch. Recovery rejects unknown/redirected journal members
+and checks terminal item records against exact replacement plans, approvals,
+append-only phases and current published/retained subjects before continuation.
+Discarded terminal records require the exact batch disposal pin and completed
+namespace cleanup. Uncertain starts still grant no replay authority. Two extra
+refusal cases are authored and unrun; these source observations do not qualify
+native crash recovery or change the deferred alignment cancellation issue.

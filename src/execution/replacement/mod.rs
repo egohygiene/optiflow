@@ -145,6 +145,8 @@ pub fn review_png(source:&Path,set:&Path,state:&Path,retention:&Path,policy:&str
     ensure!(artifact::read_member(&directory,artifact::MARKER_NAME,16_384)?==marker
         && artifact::read_member(&directory,artifact::EVIDENCE_NAME,artifact::MAX_EVIDENCE_BYTES)?==evidence_bytes
         && !signals.is_cancelled(),"candidate records changed or review cancelled");
+    let final_set=artifact::inspect(set);
+    ensure!(final_set.status==artifact::Status::Committed&&final_set.manifest.as_ref()==Some(&manifest),"candidate commitment changed after independent review");
     let body=PlanBody {operation:"replace_validated_png.v1".into(),source:bound_source,candidate,candidate_set:NativePath::from_path(set),marker_blake3:blake3::hash(&marker).to_hex().to_string(),evidence_blake3:blake3::hash(&evidence_bytes).to_hex().to_string(),state,retention:retained,limits,evidence_policy_fingerprint:policy.into(),encoded_logical_reduction_bytes:validated.encoded_byte_reduction(),original_disposition:"retain_for_restore".into(),qualification:"unqualified_source_checkpoint".into()};
     let plan=ReplacementPlan {schema:PLAN_SCHEMA.into(),fingerprint:hash(&body)?,body};plan.validate()?;Ok(plan)
 }

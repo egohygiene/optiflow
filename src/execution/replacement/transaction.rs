@@ -128,8 +128,14 @@ fn apply_linux_source(plan:&ReplacementPlan,approval:&Approval,signals:&SignalSt
 pub fn status(plan:&ReplacementPlan)->Result<Vec<ReplacementEvent>>{
     plan.validate()?;let state=diag(fs::check_directory(&plan.body.state))?;artifact::require_private_root(&state)?;
     let path=diag(fs::native_path(&plan.body.state.path))?.join("state.sqlite3");
-    let _database=diag(fs::open(&path,false))?;
+    match std::fs::symlink_metadata(&path) {Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(Vec::new()),Err(e)=>return Err(e.into()),Ok(_)=>{}}
+    let database=diag(fs::open(&path,false))?;
+    ensure!(database.metadata()?.is_file(),"replacement journal is not a regular file");
+    #[cfg(unix)] {use std::os::unix::fs::MetadataExt;ensure!(database.metadata()?.nlink()==1,"replacement journal hard-link alias refused");}
     let connection=rusqlite::Connection::open_with_flags(path,rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let version:i64=connection.query_row("SELECT COALESCE(MAX(version),0) FROM schema_migrations",[],|r|r.get(0))?;
+    ensure!(version<=10,"replacement journal was migrated by a newer implementation");
+    if version<10 {return Ok(Vec::new());}
     let (count,total):(u64,u64)=connection.query_row("SELECT COUNT(*),COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",[&plan.fingerprint],|r|Ok((r.get(0)?,r.get(1)?)))?;
     ensure!(count<=32&&total<=plan.body.limits.journal_budget_bytes,"replacement journal exceeds count/byte bounds");
     let records:Vec<String>=connection.prepare("SELECT document_json FROM execution_replacement_events WHERE plan_fingerprint=?1 ORDER BY sequence")?.query_map([&plan.fingerprint],|r|r.get(0))?.collect::<std::result::Result<_,_>>()?;

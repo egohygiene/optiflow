@@ -60,6 +60,7 @@ pub fn review(source:&Path,set:&Path,expected_artifact_schema:&str,state:&Path,r
     source_observation.verify_current_guarded(&guard)?;
     let current=diag(fs::snapshot(&candidate_path,signals,profile.candidate_bytes()))?;
     ensure!(hash(&current)?==hash(&candidate)?&&artifact::read_member(&directory,video::MARKER_NAME,16_384)?==marker&&artifact::read_member(&directory,video::EVIDENCE_NAME,profile.evidence_bytes())?==evidence_bytes,"video candidate records changed");
+    ensure!(video::inspect(set)?==manifest,"video commitment changed after independent review");
     let saved=bound_source.size_bytes.checked_sub(candidate.size_bytes).filter(|n|*n>0).context("video candidate not strictly smaller")?;
     let mut r=StagedVideoReview {schema:"optiflow.staged-video-replacement-review.v1".into(),fingerprint:String::new(),operation:"stage_video_replacement.v1".into(),artifact_schema:expected_artifact_schema.into(),source:bound_source,candidate,candidate_set:NativePath::from_path(set),marker_blake3:blake3::hash(&marker).to_hex().to_string(),evidence_blake3:blake3::hash(&evidence_bytes).to_hex().to_string(),policy_fingerprint:policy.into(),state,retention,encoded_logical_reduction_bytes:saved,current_source_content_bound:true,independent_container_comparison:true,live_decode_observed:false,native_properties_preserved:false,replacement_qualified:false,apply_authority:false,original_disposal_authority:false};r.fingerprint=hash(&r)?;r.validate()?;guard()?;Ok(r)
 }

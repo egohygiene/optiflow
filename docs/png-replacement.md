@@ -42,3 +42,12 @@ nothing. Original disposal is separately owned by #121 explicit batch authority.
 
 This source is uncompiled/unrun and cannot establish native durability or crash
 recovery qualification. Four further transition/gate/CLI cases are authored.
+
+Manual source review follow-up: preparation inspects the committed candidate
+again after independent source/pair validation and requires the same complete
+manifest. The staged video handoff has the corresponding final commitment check.
+
+Read-only replacement status now treats an unused state directory or a legacy
+pre-migration-10 journal as having no replacement events. It creates no database
+or migration and refuses newer journal versions and hard-link aliases. One
+additional read-only refusal/side-effect boundary case is authored and unrun.

@@ -9,7 +9,15 @@ pub(crate) fn read(path:&Path,maximum:u64,signals:&SignalState)->Result<Vec<u8>>
     let record=crate::video_io::BoundedFileObservation::open_guarded(path,maximum,&guard)?;
     let bytes=record.read_bytes_guarded(&guard)?;record.verify_current_guarded(&guard)?;Ok(bytes)
 }
+pub(crate) fn preflight_new(path:&Path)->Result<()> {
+    ensure!(path.is_absolute(),"absolute record output required");
+    let parent=crate::candidate_artifact::open_directory(path.parent().context("record parent absent")?)?;
+    crate::candidate_artifact::require_private_root(&parent)?;
+    ensure!(path.file_name().and_then(|s|s.to_str()).is_some_and(|s|!s.is_empty()&&s!="."&&s!=".."),"UTF-8 record leaf required");
+    ensure!(std::fs::symlink_metadata(path).is_err_and(|e|e.kind()==std::io::ErrorKind::NotFound),"record output already exists or cannot be inspected");Ok(())
+}
 pub(crate) fn write_new<T:Serialize>(path:&Path,record:&T,maximum:usize)->Result<()> {
+    preflight_new(path)?;
     ensure!(path.is_absolute()&&(1..=16_777_216).contains(&maximum),"absolute bounded record output required");
     let parent=crate::candidate_artifact::open_directory(path.parent().context("record parent absent")?)?;
     crate::candidate_artifact::require_private_root(&parent)?;

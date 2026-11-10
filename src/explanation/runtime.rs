@@ -32,6 +32,7 @@ pub struct RuntimeConfiguration {pub enabled:bool,pub profile:Profile}
 pub fn prepare_invocation(extension:&LoadedExtension,profile:&Profile,packet:&Packet,cancel:&impl Fn()->bool)->Result<Option<ExtensionInvocationV1>>{
     ensure!(!cancel(),"explanation runtime cancelled");profile.validate()?;packet.validate()?;
     let lock=extension.lock();let locked=lock.configurations.get(CONFIG_SCHEMA).context("explicit locked explanation runtime configuration absent")?;
+    contracts::validate(Contract::ExplanationRuntimeConfig,&locked.values)?;
     let config:RuntimeConfiguration=serde_json::from_value(locked.values.clone())?;
     ensure!(config.profile==*profile&&locked.fingerprint==fingerprint(&locked.values)?,"runtime profile differs from operator lock");
     if !config.enabled {return Ok(None);}
