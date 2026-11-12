@@ -12,10 +12,12 @@ pub fn describe() -> Value {
             {"id":"exact-dedup-transaction-v0.2","source_mutation":true,"state":"requires_existing_native_qualification_and_exact_authority"},
             {"id":"lossless-png-replacement-v1","source_mutation":true,"state":"requires_existing_native_qualification_and_exact_authority"},
             {"id":"video-candidates-v2","source_mutation":false,"state":"source_candidate; runtime_and_release_evidence_required"},
+            {"id":"video-folder-preview-v1","source_mutation":false,"state":"read_only_source_discovery; no_provider_or_run_authority"},
             {"id":"local-explanations-v1","source_mutation":false,"state":"optional_advisory; no_mutation_authority"}],
         "native_packaging_targets":["x86_64-unknown-linux-gnu","aarch64-apple-darwin","x86_64-apple-darwin"],
         "retained_target_objectives":["x86_64-pc-windows-msvc"],
         "schemas":[
+            {"name":"video-folder-preview-request-v1.schema.json","document":include_str!("../schemas/video-folder-preview-request-v1.schema.json")},
             {"name":"command-result.schema.json","document":include_str!("../schemas/command-result.schema.json")},
             {"name":"extension-lock-v1.schema.json","document":include_str!("../schemas/extension-lock-v1.schema.json")}]
     })

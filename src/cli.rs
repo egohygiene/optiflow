@@ -59,7 +59,7 @@ impl Cli {
             Command::ReleaseContract => "release-contract",
             Command::Doctor => "doctor",
             Command::Explain(a) => match &a.command {ExplainCommand::SetupLocal(_)=>"explain setup-local",ExplainCommand::SetupStatus(_)=>"explain setup-status",ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
-            Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
+            Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Profiles=>"video-folder profiles",VideoFolderCommand::Preview(_)=>"video-folder preview",VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
             Command::Optimize(arguments) => match &arguments.command {
                 OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
                 OptimizeCommand::Run(_) => "optimize run",OptimizeCommand::Resume(_) => "optimize resume",OptimizeCommand::Status(_) => "optimize status",
@@ -550,7 +550,7 @@ pub struct VideoRequestArgs {#[arg(long)] pub request:PathBuf}
 #[derive(Debug,Args)]
 pub struct VideoFolderArgs {#[command(subcommand)] pub command:VideoFolderCommand}
 #[derive(Debug,Subcommand)]
-pub enum VideoFolderCommand {Discover(VideoRequestArgs),Run(VideoRequestArgs),Resume(VideoRequestArgs),Status(VideoFolderStatusArgs)}
+pub enum VideoFolderCommand {Profiles,Preview(VideoRequestArgs),Discover(VideoRequestArgs),Run(VideoRequestArgs),Resume(VideoRequestArgs),Status(VideoFolderStatusArgs)}
 #[derive(Debug,Args)]
 pub struct VideoFolderStatusArgs {#[arg(long)] pub run_directory:PathBuf}
 

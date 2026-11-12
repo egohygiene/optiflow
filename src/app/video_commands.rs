@@ -11,6 +11,8 @@ pub(super) fn candidate(a:&VideoRequestArgs,signals:&SignalState)->Execution {ou
     Ok(serde_json::to_value(crate::video_production::produce(&request,||signals.is_cancelled())?)?)
 })())}
 pub(super) fn folder(command:VideoFolderCommand,signals:&SignalState)->Execution {outcome((||{
+    if matches!(&command,VideoFolderCommand::Profiles){return Ok(crate::video_folder::profiles());}
+    if let VideoFolderCommand::Preview(a)=&command{let bytes=crate::record_io::read(&a.request,131_072,signals)?;let request:crate::video_folder::PreviewRequest=serde_json::from_slice(&bytes)?;return Ok(serde_json::to_value(crate::video_folder::preview(&request,||signals.is_cancelled())?)?);}
     if let VideoFolderCommand::Status(a)=&command {return Ok(serde_json::to_value(crate::video_folder::inspect_recovery(&a.run_directory)?)?);}
     let a=match &command{VideoFolderCommand::Discover(a)|VideoFolderCommand::Run(a)|VideoFolderCommand::Resume(a)=>a,_=>unreachable!()};
     let bytes=crate::record_io::read(&a.request,131_072,signals)?;let raw:serde_json::Value=serde_json::from_slice(&bytes)?;
@@ -19,3 +21,5 @@ pub(super) fn folder(command:VideoFolderCommand,signals:&SignalState)->Execution
     let request:crate::video_folder::VideoFolderRequest=serde_json::from_slice(&bytes)?;
     match command {VideoFolderCommand::Discover(_)=>Ok(serde_json::to_value(crate::video_folder::discover(&request,||signals.is_cancelled())?)?),VideoFolderCommand::Run(_)=>Ok(serde_json::to_value(crate::video_folder::run(&request,||signals.is_cancelled())?)?),VideoFolderCommand::Resume(_)=>Ok(serde_json::to_value(crate::video_folder::resume(&request,||signals.is_cancelled())?)?),_=>unreachable!()}
 })())}
+
+pub(super) fn preview(a:&VideoRequestArgs,signals:&SignalState)->Execution {outcome((||{let bytes=crate::record_io::read(&a.request,131_072,signals)?;let request:crate::video_folder::PreviewRequest=serde_json::from_slice(&bytes)?;Ok(serde_json::to_value(crate::video_folder::preview(&request,||signals.is_cancelled())?)?)})())}

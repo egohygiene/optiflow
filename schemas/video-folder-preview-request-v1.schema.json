@@ -1,0 +1,27 @@
+{
+ "$schema":"https://json-schema.org/draft/2020-12/schema",
+ "$id":"optiflow.video-folder-preview-request.v1",
+ "type":"object","additionalProperties":false,
+ "required":["schema","source_root","profile","recursive","input_bytes","batch"],
+ "properties":{
+  "schema":{"const":"optiflow.video-folder-preview-request.v1"},
+  "source_root":{"type":"string","minLength":1,"maxLength":4096},
+  "profile":{"enum":["tiny_v1","bounded_v2"]},
+  "recursive":{"type":"boolean"},
+  "input_bytes":{"type":"integer","minimum":1,"maximum":134217728},
+  "batch":{
+   "type":"object","additionalProperties":false,
+   "required":["maximum_entries","maximum_files","maximum_actions","maximum_depth","maximum_total_input_bytes","maximum_publication_bytes","elapsed_ms"],
+   "properties":{
+    "maximum_entries":{"type":"integer","minimum":1,"maximum":4096},
+    "maximum_files":{"type":"integer","minimum":1,"maximum":256},
+    "maximum_actions":{"type":"integer","minimum":1,"maximum":32},
+    "maximum_depth":{"type":"integer","minimum":1,"maximum":32},
+    "maximum_total_input_bytes":{"type":"integer","minimum":1,"maximum":1073741824},
+    "maximum_publication_bytes":{"type":"integer","minimum":1,"maximum":1073741824},
+    "elapsed_ms":{"type":"integer","minimum":1,"maximum":600000}
+   }
+  }
+ },
+ "allOf":[{"if":{"properties":{"profile":{"const":"tiny_v1"}}},"then":{"properties":{"input_bytes":{"maximum":16777216},"batch":{"properties":{"maximum_total_input_bytes":{"maximum":268435456},"maximum_publication_bytes":{"maximum":268435456}}}}}}]
+}

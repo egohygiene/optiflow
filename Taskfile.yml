@@ -2,6 +2,20 @@
 version: "3"
 
 tasks:
+  video:profiles:
+    desc: Describe explicit source-only video candidate profile limits
+    cmds:
+      - optiflow video-folder profiles
+
+  video:preview:
+    desc: Inspect selected video folder without providers or writable workspaces
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_VIDEO_PREVIEW_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow video-folder preview --request "$OPTIFLOW_VIDEO_PREVIEW_REQUEST"
+
   default:
     desc: List available tasks.
     cmds:

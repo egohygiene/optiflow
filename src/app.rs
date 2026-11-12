@@ -54,6 +54,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
     if matches!(&cli.command, Command::ReleaseContract) {
         return (CommandResult::resolve("release-contract",None,Vec::new(),Vec::new(),Some(crate::release_contract::describe())),cli.selected_output_format());
     }
+    if let Command::VideoFolder(a)=&cli.command {if matches!(&a.command,crate::cli::VideoFolderCommand::Profiles){return (CommandResult::resolve("video-folder profiles",None,Vec::new(),Vec::new(),Some(crate::video_folder::profiles())),cli.selected_output_format());}if let crate::cli::VideoFolderCommand::Preview(request)=&a.command {let execution=video_commands::preview(request,signals);return (CommandResult::resolve("video-folder preview",execution.coverage,execution.artifacts,execution.diagnostics,execution.result),cli.selected_output_format());}}
     let command_name = cli.command_name();
     let fallback_output_format = cli.selected_output_format();
     let resolution = match crate::configuration::resolve(&cli) {

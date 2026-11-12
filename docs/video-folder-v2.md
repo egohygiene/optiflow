@@ -1,5 +1,9 @@
 # Explicit bounded video folder v2
 
+[Tool-free folder preview](video-folder-preview.md) exposes the existing v1/v2
+limits and closed-container eligibility before production tools/workspaces are
+prepared. Its separate inventory cannot be adopted by run/resume.
+
 Issue #146 source checkpoint; no native invocation or qualification occurred.
 
 `candidate video --request ABS` selects the existing v1/v2 single-file producer

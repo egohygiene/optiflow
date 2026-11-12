@@ -1,5 +1,11 @@
 # ADR-0002 — Bound development video candidates without collection mutation
 
+November 12 proposed source extension: tool-free profile-aware folder preview
+reuses the same discovery owner with an explicit v1/v2 selection, separate request
+fingerprint and inventory schema. Pure profile description and preview bypass
+mutable application state. They grant no native, replay, candidate, mutation or
+physical-reclamation authority. No new codec or implicit profile upgrade is added.
+
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
 - **Date:** 2026-11-06
 - **Issue:** #146
