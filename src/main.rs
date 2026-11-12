@@ -1,3 +1,5 @@
+#[path="cli/root_help.rs"]
+mod root_help;
 use std::ffi::OsString;
 use std::process::ExitCode;
 
@@ -38,6 +40,7 @@ fn main() -> ExitCode {
                 error.kind(),
                 ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
             ) {
+                if error.kind()==ErrorKind::DisplayHelp {root_help::write_if_selected(&arguments[1..]);}
                 let _ = error.print();
                 return ExitCode::SUCCESS;
             }
