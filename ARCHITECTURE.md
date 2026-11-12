@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.9
+version: 0.1.10
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-11-11
+updated: 2026-11-12
 governed_by:
   - architecture-architecture
 depends_on:
@@ -22,6 +22,15 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Tool-free video folder preview
+
+The existing bounded discovery walker also serves an explicit read-only preview
+request with selected v1/v2 profile limits. Preview requires no FFmpeg, sandbox,
+work/store/journal namespaces or production request. Its separate fingerprint and
+inventory schema cannot be adopted by run/resume. A pure profile catalog exposes
+the same internal limits used by production; preview does not add codecs or
+qualify native execution, reclaim space, replace files or grant replay authority.
 
 ## Independent release cohort and interface inventory
 

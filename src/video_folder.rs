@@ -10,6 +10,11 @@ pub use crate::video_io::FileSnapshot;
 const JOURNAL_BYTES:usize=16_777_216;
 use crate::video_profile::Profile;
 const INVENTORY_BYTES:usize=4_194_304;
+mod preview;
+pub use preview::{PreviewProfile,PreviewRequest,Preview,profiles,preview};
+struct Discovery {source_root:PathBuf,batch:FolderLimits,recursive:bool,input_bytes:u64,profile:Profile,request_fingerprint:EvidenceDigest,inventory_schema:String}
+impl Discovery {fn for_run(request:&VideoFolderRequest)->Result<Self>{Ok(Self {source_root:request.source_root.clone(),batch:request.batch.clone(),recursive:request.recursive,input_bytes:request.limits.input_bytes,profile:request.profile()?,request_fingerprint:digest(request)?,inventory_schema:request.document_schema("inventory")?})}}
+
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FolderLimits {
@@ -136,7 +141,7 @@ impl BatchBudget {
 }
 pub fn discover(request:&VideoFolderRequest,cancel:impl Fn()->bool)->Result<FolderInventory> {
     request.validate()?;let budget=BatchBudget::new(request.batch.elapsed_ms)?;
-    #[cfg(target_os="linux")] {native::discover(request,&budget,&cancel)}
+    #[cfg(target_os="linux")] {native::discover(&Discovery::for_run(request)?,&budget,&cancel)}
     #[cfg(not(target_os="linux"))] {let _=(budget,cancel);anyhow::bail!("video folder lane currently requires Linux");}
 }
 pub fn run(request:&VideoFolderRequest,cancel:impl Fn()->bool)->Result<FolderReport> {
@@ -176,7 +181,7 @@ mod native {
         }
         fn check(&self)->Result<()> {same(&self.path,&self.bound)?;ensure!(FileStateSignature::from_file_metadata(&self.bound.metadata()?)==self.before,"source directory changed during discovery");Ok(())}
     }
-    pub(super) fn discover(request:&VideoFolderRequest,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<FolderInventory> {
+    pub(super) fn discover(request:&Discovery,budget:&BatchBudget,cancel:&impl Fn()->bool)->Result<FolderInventory> {
         budget.check(cancel)?;let root=Directory::open(request.source_root.clone(),0)?;let device=root.bound.metadata()?.dev();
         let mut stack=vec![root];let mut entries=Vec::<(PathBuf,FolderEntry,FileStateSignature)>::new();let mut seen=0u64;let mut files=0u64;let mut hashed=0u64;let mut retained=0usize;
         while !stack.is_empty() {
@@ -201,7 +206,7 @@ mod native {
                 if metadata.nlink()!=1 {record.reason="hard_link_alias_not_admitted".into();}
                 else if path.to_str().is_none(){record.reason="production_source_requires_utf8_locator".into();}
                 else if metadata.len()==0 {record.reason="empty_file".into();}
-                else if metadata.len()>request.limits.input_bytes {record.reason="per_file_input_byte_limit".into();}
+                else if metadata.len()>request.input_bytes {record.reason="per_file_input_byte_limit".into();}
                 else {
                     record.disposition=EntryDisposition::Eligible;record.reason="classification_pending".into();
                 }
@@ -219,14 +224,14 @@ mod native {
                 ensure!(FileStateSignature::from_symlink_metadata(&std::fs::symlink_metadata(&path)?)==*before,"source changed between traversal and classification");
                 if hashed.checked_add(before.logical_size_bytes).is_none_or(|v|v>request.batch.maximum_total_input_bytes){record.disposition=EntryDisposition::Skipped;record.reason="batch_input_read_byte_limit".into();}
                 else {
-                    let guard=||budget.check(cancel);let observation=BoundedFileObservation::open_guarded(&path,request.limits.input_bytes,&guard)?;
+                    let guard=||budget.check(cancel);let observation=BoundedFileObservation::open_guarded(&path,request.input_bytes,&guard)?;
                     ensure!(observation.snapshot().device_id==device&&observation.snapshot().link_count==1,"source identity/device/link changed during discovery");
-                    let bytes=observation.read_bytes_profile(request.profile()?,&guard)?;hashed+=bytes.len() as u64;
+                    let bytes=observation.read_bytes_profile(request.profile,&guard)?;hashed+=bytes.len() as u64;
                     let kind=infer::get(&bytes).map(|v|crate::inventory::classify_content_type(v.mime_type()));
                     let looks_video=matches!(kind,Some(crate::domain::MediaKind::Video))||bytes.starts_with(&[0x1a,0x45,0xdf,0xa3]);
                     record.source=Some(SourceBinding {snapshot:observation.snapshot().clone(),digest:observation.digest().clone()});
                     if !looks_video {record.disposition=EntryDisposition::Unsupported;record.reason="not_a_supported_video_content_type".into();}
-                    else if crate::video_container::inspect_profile(&bytes,request.profile()?).is_err() {record.disposition=EntryDisposition::Unsupported;record.reason="outside_closed_matroska_ffv1_subset".into();}
+                    else if crate::video_container::inspect_profile(&bytes,request.profile).is_err() {record.disposition=EntryDisposition::Unsupported;record.reason="outside_closed_matroska_ffv1_subset".into();}
                     else {record.reason="closed_container_observed_native_validation_pending".into();}
                     observation.verify_current_guarded(&guard)?;
                 }
@@ -234,7 +239,7 @@ mod native {
             retained=retained.checked_add(serde_json::to_vec(record)?.len()).context("inventory byte overflow")?;ensure!(retained<=INVENTORY_BYTES,"folder inventory retention exceeds 4 MiB; no candidate started");
         }
         budget.check(cancel)?;
-        Ok(FolderInventory {components:None,schema:request.document_schema("inventory")?,request_fingerprint:digest(request)?,entries_seen:seen,files_seen:files,hashed_input_bytes:hashed,entries:entries.into_iter().map(|(_,v,_)|v).collect(),
+        Ok(FolderInventory {components:None,schema:request.inventory_schema.clone(),request_fingerprint:request.request_fingerprint.clone(),entries_seen:seen,files_seen:files,hashed_input_bytes:hashed,entries:entries.into_iter().map(|(_,v,_)|v).collect(),
             scope:"bounded observed directory walk; no symlink following; device boundaries skipped; same-device bind mounts are not attested".into()})
     }
     fn lock(directory:&File)->Result<()> {rustix::fs::flock(directory,rustix::fs::FlockOperation::NonBlockingLockExclusive).context("another folder owner holds this private directory")}
@@ -305,7 +310,7 @@ mod native {
         lock(&journal)?;lock(&store)?;
         ensure!(std::fs::read_dir(&request.run_directory)?.next().is_none(),"folder journal must be empty; inspect retained recovery state instead of replaying");store_members(request,&[])?;
         let source_root=crate::candidate_artifact::open_directory(&request.source_root)?;
-        let mut inventory=discover(request,budget,cancel)?;inventory.components=Some(components(request,budget,cancel)?);
+        let mut inventory=discover(&Discovery::for_run(request)?,budget,cancel)?;inventory.components=Some(components(request,budget,cancel)?);
         ensure!(serde_json::to_vec(&inventory)?.len()<=INVENTORY_BYTES,"complete folder inventory including tool baseline exceeds 4 MiB");
         free(&request.run_directory,request.sandbox.minimum_free_bytes.checked_add(JOURNAL_BYTES as u64).context("journal reserve overflow")?)?;
         write(&request.run_directory,&journal,"request.json",&serde_json::to_vec(request)?)?;
@@ -459,7 +464,7 @@ mod native {
         ensure!(recovery.unfinished_attempts.is_empty()&&!recovery.recorded_results.iter().any(|r|r.status=="failed")
             &&recovery.completed_report.as_ref().is_none_or(|r|!r.records.iter().any(|row|row.status=="failed")),"unresolved start or failed/uncertain result blocks continuation; no replay/adoption is permitted");
         let inventory:FolderInventory=read(&journal,"inventory.json")?;require_components(request,&inventory,budget,cancel)?;
-        let mut current=discover(request,budget,cancel)?;current.components=Some(components(request,budget,cancel)?);
+        let mut current=discover(&Discovery::for_run(request)?,budget,cancel)?;current.components=Some(components(request,budget,cancel)?);
         ensure!(digest(&current)?==digest(&inventory)?,"folder source inventory or tool bytes changed; preserve prior state and reconcile");
         let (publication,saved,known)=ledger(request,&recovery.recorded_results)?;
         ensure!(recovery.recorded_results.len() as u64<=request.batch.maximum_actions&&publication<=request.batch.maximum_publication_bytes,"folder cumulative admission already exceeded");
