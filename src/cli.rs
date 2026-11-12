@@ -56,6 +56,7 @@ impl Cli {
 
     pub fn command_name(&self) -> &'static str {
         match &self.command {
+            Command::ReleaseContract => "release-contract",
             Command::Doctor => "doctor",
             Command::Explain(a) => match &a.command {ExplainCommand::SetupLocal(_)=>"explain setup-local",ExplainCommand::SetupStatus(_)=>"explain setup-status",ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
             Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
@@ -112,6 +113,8 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Describe compiled release interfaces without state or tool observation.
+    ReleaseContract,
     /// Optional advisory explanations of explicitly pinned report/plan records.
     Explain(ExplainArgs),
     /// Bounded source-preserving video folders with explicit v1/v2 requests.

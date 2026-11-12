@@ -51,6 +51,9 @@ impl Execution {
 }
 
 pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
+    if matches!(&cli.command, Command::ReleaseContract) {
+        return (CommandResult::resolve("release-contract",None,Vec::new(),Vec::new(),Some(crate::release_contract::describe())),cli.selected_output_format());
+    }
     let command_name = cli.command_name();
     let fallback_output_format = cli.selected_output_format();
     let resolution = match crate::configuration::resolve(&cli) {
@@ -80,6 +83,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
         );
     }
     let execution = match cli.command {
+        Command::ReleaseContract => Execution::success(&crate::release_contract::describe()),
         Command::Doctor => run_doctor(&state_directory),
         Command::Explain(a) => explanation_commands::run(a.command,signals),
         Command::VideoFolder(a) => video_commands::folder(a.command,signals),
