@@ -171,3 +171,33 @@ tasks:
       - task: smoke
       - task: performance:check
       - task: site:build
+
+  release:report:publisher:
+    desc: Assemble an unsigned publisher report from exact existing release files.
+    requires:
+      vars: [REQUEST, OUTPUT_DIRECTORY]
+    env:
+      OWNER_REPORT_REQUEST: '{{.REQUEST}}'
+      OWNER_REPORT_OUTPUT: '{{.OUTPUT_DIRECTORY}}'
+    cmds:
+      - python3 scripts/owner_reports.py publisher --request "$OWNER_REPORT_REQUEST" --output-directory "$OWNER_REPORT_OUTPUT"
+
+  release:report:qualified:
+    desc: Assemble an unsigned report from supplied real positive native evidence.
+    requires:
+      vars: [REQUEST, OUTPUT_DIRECTORY]
+    env:
+      OWNER_REPORT_REQUEST: '{{.REQUEST}}'
+      OWNER_REPORT_OUTPUT: '{{.OUTPUT_DIRECTORY}}'
+    cmds:
+      - python3 scripts/owner_reports.py qualified --request "$OWNER_REPORT_REQUEST" --output-directory "$OWNER_REPORT_OUTPUT"
+
+  release:cohort:prepare:
+    desc: Index exact qualified native archives and compiled descriptor sidecars.
+    requires:
+      vars: [REQUEST, OUTPUT_DIRECTORY]
+    env:
+      OPTIFLOW_COHORT_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_COHORT_OUTPUT: '{{.OUTPUT_DIRECTORY}}'
+    cmds:
+      - python3 scripts/cohort_assets.py --request "$OPTIFLOW_COHORT_REQUEST" --output-directory "$OPTIFLOW_COHORT_OUTPUT"

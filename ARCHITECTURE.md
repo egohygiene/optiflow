@@ -3,12 +3,12 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.8
+version: 0.1.9
 status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-11-10
+updated: 2026-11-11
 governed_by:
   - architecture-architecture
 depends_on:
@@ -22,6 +22,16 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Independent release cohort and interface inventory
+
+The public `release_contract` SDK describes compiled interfaces without observing
+state, providers or native capability. Thin CLI delivery bypasses normal mutable
+configuration/state setup for this descriptor. Offline distribution scripting
+retains exact existing qualified archives, adds descriptor sidecars and a bounded
+unsigned target/profile cohort index, and assembles independently versioned owner
+reports. It does not repackage qualified bytes or grant mutation/runtime authority.
+Existing native, transaction, PNG, release and signing owners remain authoritative.
 
 ## Purpose and Scope
 

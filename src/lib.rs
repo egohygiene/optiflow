@@ -25,6 +25,7 @@ pub mod png_production;
 pub mod png_validation;
 pub mod render;
 pub mod reports;
+pub mod release_contract;
 pub mod signals;
 pub mod state;
 pub mod subprocess;
