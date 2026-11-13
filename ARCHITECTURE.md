@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.22
+version: 0.1.23
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,18 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Held replacement subjects at namespace transitions (#95)
+
+The existing private Linux replacement engine rechecks full bounded bytes and
+preserved properties through the held original and staged/optimized handles
+before retention, publication and each restore move, and before recording a
+completed transition. Directory handles and their current path identities must
+still agree. Rename updates are observed as new bindings without accepting a
+new subject. A refusal after an intent leaves that phase pending with both
+objects retained; it grants no replay, rollback, unlink or adoption authority.
+These checks are observations, not atomic snapshots or native qualification.
+The application/SDK gates, PNG limits and legacy plan/event meanings remain intact.
 
 ## Native mutation release-review evidence (#93)
 
