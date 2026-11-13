@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.11
+version: 0.1.12
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,16 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Explicit MP4 quality and size planning
+
+Read-only delivery planning binds source/container identity, selected provider
+and launcher bytes, explicit quality or byte-budget policy and complete resource
+admission. Target-size arithmetic reserves the observed copied-audio payload
+and explicit mux allowance before allocating a two-pass video bitrate. Estimated
+rate is intent, never a guaranteed output size or musical/visual approval. Fixed
+argv preserves clocks, geometry and audio-copy intent without shell evaluation,
+trimming or automatic lossy retries. Native execution remains a separate action.
 
 ## Explicit MP4 delivery candidates
 
