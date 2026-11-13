@@ -40,6 +40,7 @@ pub mod video_container;
 pub mod video_production;
 pub mod video_artifact;
 pub mod video_folder;
+pub mod mp4_delivery;
 
 use crate::cli::Cli;
 use crate::signals::SignalState;

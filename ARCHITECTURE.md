@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.10
+version: 0.1.11
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,17 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Explicit MP4 delivery candidates
+
+A separate MP4 delivery boundary admits a bounded H.264/AAC, SDR, progressive,
+constant-frame-rate subset. Descriptor-bound range reads and a host-owned ISO
+sample-table observer retain source bytes, presentation clocks, audio payload
+identity and supported metadata independently of provider claims. The larger
+input ceiling is opt-in; historical observation and FFV1 v1/v2 contracts retain
+their limits. Codec declarations do not establish native decode, perceptual
+quality, qualification or replacement authority. Existing bounded supervision
+and private artifact primitives remain the owners of later execution/publication.
 
 ## Tool-free video folder preview
 

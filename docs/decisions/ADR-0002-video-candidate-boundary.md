@@ -1,5 +1,15 @@
 # ADR-0002 — Bound development video candidates without collection mutation
 
+November 12 proposed MP4 extension: a distinct H264/AAC delivery profile admits
+larger explicitly bounded files through descriptor-bound hashes/range reads and
+independent ISO sample-table/clock/audio/metadata observation. Historical FFV1
+profiles and default observation ceilings do not widen. Container declarations
+are not native codec/decode or perceptual acceptance. Later lossy processing
+must preserve originals and separate structure, actual byte caps, independent
+decode, human review and release/native qualification. No source replacement,
+disposal, second orchestration engine or automatic Flow placement is authorized.
+This remains proposed and unqualified.
+
 November 12 proposed source extension: tool-free profile-aware folder preview
 reuses the same discovery owner with an explicit v1/v2 selection, separate request
 fingerprint and inventory schema. Pure profile description and preview bypass

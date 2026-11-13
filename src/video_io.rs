@@ -38,6 +38,7 @@ pub(crate) struct BoundedFileObservation {
     file: File,
     snapshot: FileSnapshot,
     digest: EvidenceDigest,
+    observation_ceiling:u64,
 }
 
 impl BoundedFileObservation {
@@ -51,7 +52,11 @@ impl BoundedFileObservation {
         maximum: u64,
         guard: &impl Fn() -> Result<()>,
     ) -> Result<Self> {
-        let (file, snapshot, digest, _) = observe(path, maximum, false, guard)?;
+        Self::open_scoped(path,maximum,MAX_OBSERVATION_BYTES,guard)
+    }
+    pub(crate) fn open_mp4(path:&Path,maximum:u64,guard:&impl Fn()->Result<()>)->Result<Self>{Self::open_scoped(path,maximum,536_870_912,guard)}
+    fn open_scoped(path:&Path,maximum:u64,ceiling:u64,guard:&impl Fn()->Result<()>)->Result<Self>{
+        let (file, snapshot, digest, _) = observe_scoped(path,maximum,false,MAX_RETAINED_BYTES,ceiling,guard)?;
         guard()?;
         Ok(Self {
             path: path.to_path_buf(),
@@ -59,6 +64,7 @@ impl BoundedFileObservation {
             file,
             snapshot,
             digest,
+            observation_ceiling:ceiling,
         })
     }
 
@@ -78,7 +84,7 @@ impl BoundedFileObservation {
 
     pub(crate) fn verify_current_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<()> {
         ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
-        let current = Self::open_guarded(&self.path, self.maximum, guard)?;
+        let current = Self::open_scoped(&self.path,self.maximum,self.observation_ceiling,guard)?;
         ensure!(
             current.snapshot == self.snapshot && current.digest == self.digest,
             "file identity, metadata or complete content changed"
@@ -97,6 +103,13 @@ impl BoundedFileObservation {
     pub(crate) fn read_bytes_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<Vec<u8>> {self.read_bytes_bounded(MAX_RETAINED_BYTES,guard)}
 
     pub(crate) fn read_bytes_profile(&self,profile:crate::video_profile::Profile,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{self.read_bytes_bounded(profile.input_bytes(),guard)}
+    pub(crate) fn read_mp4_bytes(&self,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{ensure!(self.observation_ceiling==536_870_912,"explicit MP4 observation required");self.read_bytes_bounded(self.maximum,guard)}
+    pub(crate) fn range(&self,offset:u64,count:usize,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{
+        guard()?;ensure!(count<=16_777_216&&offset.checked_add(count as u64).is_some_and(|n|n<=self.snapshot.logical_bytes),"bounded in-file metadata/sample range required");
+        ensure!(snapshot_guarded(&self.file,guard)?==self.snapshot,"bound range source changed");
+        #[cfg(unix)] {use std::os::unix::fs::FileExt;let mut bytes=vec![0;count];self.file.read_exact_at(&mut bytes,offset)?;guard()?;ensure!(snapshot_guarded(&self.file,guard)?==self.snapshot,"bound range source changed");Ok(bytes)}
+        #[cfg(not(unix))] {let _=(offset,count);anyhow::bail!("descriptor range observation unavailable on this host")}
+    }
 
     fn read_bytes_bounded(&self,retained_maximum:u64,guard:&impl Fn()->Result<()>)->Result<Vec<u8>> {
         guard()?;
@@ -106,7 +119,7 @@ impl BoundedFileObservation {
         );
         ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
         let (_, current, digest, bytes) =
-            observe_bounded(&self.path, self.maximum.min(retained_maximum), true,retained_maximum, guard)?;
+            observe_scoped(&self.path,self.maximum.min(retained_maximum),true,retained_maximum,self.observation_ceiling,guard)?;
         ensure!(
             current == self.snapshot && digest == self.digest,
             "file identity, metadata or complete content changed"
@@ -125,13 +138,16 @@ fn observe(
 ) -> Result<(File, FileSnapshot, EvidenceDigest, Vec<u8>)> {observe_bounded(path,maximum,retain,MAX_RETAINED_BYTES,guard)}
 
 fn observe_bounded(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,guard:&impl Fn()->Result<()>)->Result<(File,FileSnapshot,EvidenceDigest,Vec<u8>)>{
+    observe_scoped(path,maximum,retain,retained_maximum,MAX_OBSERVATION_BYTES,guard)
+}
+fn observe_scoped(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,ceiling:u64,guard:&impl Fn()->Result<()>)->Result<(File,FileSnapshot,EvidenceDigest,Vec<u8>)>{
     guard()?;
     ensure!(
-        maximum > 0 && maximum <= MAX_OBSERVATION_BYTES,
+        maximum > 0 && maximum <= ceiling,
         "invalid observation byte ceiling"
     );
     ensure!(
-        !retain || (retained_maximum<=MAX_OBSERVATION_BYTES&&maximum<=retained_maximum),
+        !retain || (retained_maximum<=ceiling&&maximum<=retained_maximum),
         "invalid retained-byte ceiling"
     );
     let mut file = open_regular_guarded(path, guard)?;
