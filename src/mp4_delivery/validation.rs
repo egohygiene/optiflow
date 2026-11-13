@@ -1,94 +1,634 @@
 //! Independent presentation/audio/container checks and complete native decode.
 use super::*;
 use anyhow::Context;
-use std::{fs::File,time::{Duration,Instant}};
-use container::{Summary,TrackSummary,Time};
+use container::{Summary, Time, TrackSummary};
+use std::{
+    fs::File,
+    time::{Duration, Instant},
+};
 use worker::Operation;
-#[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Trace {pub schema:String,pub kind:String,pub frames:u64,pub decoded_bytes:u64,pub decoded_audio_samples:Option<u64>,pub first_pts:Time,pub last_end:Time,pub clock_digest:EvidenceDigest,pub decoded_content_digest:EvidenceDigest,pub trace_digest:EvidenceDigest}
-fn trace(bytes:&[u8],track:&TrackSummary)->Result<Trace>{
-    ensure!(bytes.len()<=worker::TRACE_BYTES,"decode trace exceeds bound");let text=std::str::from_utf8(bytes)?;let audio=track.kind=="audio_aac_lc";let mut base=None;let mut rows:Vec<(Time,Time,u64,String)>=vec![];let mut total=0u64;let mut media=false;let mut codec=false;let mut algorithm=false;
-    for line in text.lines(){let line=line.trim();if let Some(value)=line.strip_prefix("#tb 0:"){ensure!(base.is_none(),"duplicate decode timebase");let (n,d)=value.trim().split_once('/').context("decode timebase missing")?;let n=n.parse::<u32>()?;let d=d.parse::<u32>()?;ensure!(n>0&&d>0,"positive decode timebase required");base=Some((n,d));continue;}
-        if let Some(value)=line.strip_prefix("#media_type 0:"){ensure!(value.trim()==if audio{"audio"}else{"video"},"decode media type differs");media=true;continue;}
-        if let Some(value)=line.strip_prefix("#codec_id 0:"){ensure!(value.trim()==if audio{"pcm_f32le"}else{"rawvideo"},"decode codec differs");codec=true;continue;}
-        if let Some(value)=line.strip_prefix("#hash:"){ensure!(value.trim()=="SHA256","decode hash algorithm differs");algorithm=true;continue;}
-        if line.is_empty()||line.starts_with('#'){continue;}let fields=line.split(',').map(str::trim).collect::<Vec<_>>();ensure!(fields.len()==6&&fields[0]=="0"&&rows.len()<if audio{MAX_AUDIO_PACKETS+2}else{MAX_FRAMES},"bounded complete selected decode trace required");
-        let (n,d)=base.context("decode rows precede timebase")?;let dts=fields[1].parse::<i64>()?;let pts=fields[2].parse::<i64>()?;let duration=fields[3].parse::<u64>()?;let size=fields[4].parse::<u64>()?;
-        ensure!(dts==pts&&duration>0&&size>0&&fields[5].len()==64&&fields[5].bytes().all(|b|b.is_ascii_hexdigit()),"decode row clock/size/hash invalid");
-        let start=Time::new(i128::from(pts)*i128::from(n),u64::from(d))?;let span=Time::new(i128::from(duration)*i128::from(n),u64::from(d))?;
-        let expected_size=if audio{let samples=i128::from(span.numerator)*i128::from(track.sample_rate);ensure!(samples>0&&samples%i128::from(span.denominator)==0,"complete decoded audio samples required");u64::try_from(samples/i128::from(span.denominator))?.checked_mul(u64::from(track.channels)*4).context("decoded PCM byte overflow")?}else{u64::from(track.width)*u64::from(track.height)*3/2};ensure!(size==expected_size,"complete native decoded precision/geometry differs");
-        if let Some((last,span,_,_))=rows.last(){ensure!(last.add(*span)?==start,"decoded frame/sample clock has a gap or overlap");}
-        rows.push((start,span,size,fields[5].to_ascii_lowercase()));total=total.checked_add(size).context("decode byte sum overflow")?;
+pub struct Trace {
+    pub schema: String,
+    pub kind: String,
+    pub frames: u64,
+    pub decoded_bytes: u64,
+    pub decoded_audio_samples: Option<u64>,
+    pub first_pts: Time,
+    pub last_end: Time,
+    pub clock_digest: EvidenceDigest,
+    pub decoded_content_digest: EvidenceDigest,
+    pub trace_digest: EvidenceDigest,
+}
+fn trace(bytes: &[u8], track: &TrackSummary) -> Result<Trace> {
+    ensure!(
+        bytes.len() <= worker::TRACE_BYTES,
+        "decode trace exceeds bound"
+    );
+    let text = std::str::from_utf8(bytes)?;
+    let audio = track.kind == "audio_aac_lc";
+    let mut base = None;
+    let mut rows: Vec<(Time, Time, u64, String)> = vec![];
+    let mut total = 0u64;
+    let mut media = false;
+    let mut codec = false;
+    let mut algorithm = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(value) = line.strip_prefix("#tb 0:") {
+            ensure!(base.is_none(), "duplicate decode timebase");
+            let (n, d) = value
+                .trim()
+                .split_once('/')
+                .context("decode timebase missing")?;
+            let n = n.parse::<u32>()?;
+            let d = d.parse::<u32>()?;
+            ensure!(n > 0 && d > 0, "positive decode timebase required");
+            base = Some((n, d));
+            continue;
+        }
+        if let Some(value) = line.strip_prefix("#media_type 0:") {
+            ensure!(
+                value.trim() == if audio { "audio" } else { "video" },
+                "decode media type differs"
+            );
+            media = true;
+            continue;
+        }
+        if let Some(value) = line.strip_prefix("#codec_id 0:") {
+            ensure!(
+                value.trim() == if audio { "pcm_f32le" } else { "rawvideo" },
+                "decode codec differs"
+            );
+            codec = true;
+            continue;
+        }
+        if let Some(value) = line.strip_prefix("#hash:") {
+            ensure!(value.trim() == "SHA256", "decode hash algorithm differs");
+            algorithm = true;
+            continue;
+        }
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let fields = line.split(',').map(str::trim).collect::<Vec<_>>();
+        ensure!(
+            fields.len() == 6
+                && fields[0] == "0"
+                && rows.len()
+                    < if audio {
+                        MAX_AUDIO_PACKETS + 2
+                    } else {
+                        MAX_FRAMES
+                    },
+            "bounded complete selected decode trace required"
+        );
+        let (n, d) = base.context("decode rows precede timebase")?;
+        let dts = fields[1].parse::<i64>()?;
+        let pts = fields[2].parse::<i64>()?;
+        let duration = fields[3].parse::<u64>()?;
+        let size = fields[4].parse::<u64>()?;
+        ensure!(
+            dts == pts
+                && duration > 0
+                && size > 0
+                && fields[5].len() == 64
+                && fields[5].bytes().all(|b| b.is_ascii_hexdigit()),
+            "decode row clock/size/hash invalid"
+        );
+        let start = Time::new(i128::from(pts) * i128::from(n), u64::from(d))?;
+        let span = Time::new(i128::from(duration) * i128::from(n), u64::from(d))?;
+        let expected_size = if audio {
+            let samples = i128::from(span.numerator) * i128::from(track.sample_rate);
+            ensure!(
+                samples > 0 && samples % i128::from(span.denominator) == 0,
+                "complete decoded audio samples required"
+            );
+            u64::try_from(samples / i128::from(span.denominator))?
+                .checked_mul(u64::from(track.channels) * 4)
+                .context("decoded PCM byte overflow")?
+        } else {
+            u64::from(track.width) * u64::from(track.height) * 3 / 2
+        };
+        ensure!(
+            size == expected_size,
+            "complete native decoded precision/geometry differs"
+        );
+        if let Some((last, span, _, _)) = rows.last() {
+            ensure!(
+                last.add(*span)? == start,
+                "decoded frame/sample clock has a gap or overlap"
+            );
+        }
+        rows.push((start, span, size, fields[5].to_ascii_lowercase()));
+        total = total
+            .checked_add(size)
+            .context("decode byte sum overflow")?;
     }
-    ensure!(media&&codec&&algorithm&&!rows.is_empty(),"complete decode framing missing");let clocks=rows.iter().map(|r|(r.0,r.1)).collect::<Vec<_>>();
-    let decoded_samples=if audio{let samples=total/(u64::from(track.channels)*4);let encoded=u64::from(track.sample_count)*1024;ensure!(samples>0&&samples<=encoded&&samples>=encoded.saturating_sub(2048)&&rows[0].0==track.edit_start,"AAC decoded extent outside supported priming/tail scope");Some(samples)}else{ensure!(rows.len()==track.sample_count as usize&&digest(&clocks)?==track.presentation_digest,"complete native video frame count/clock differs from independent sample tables");None};
-    let last=rows.last().context("decode rows absent")?;Ok(Trace {schema:"optiflow.mp4-complete-decode-trace.v1".into(),kind:track.kind.clone(),frames:rows.len() as u64,decoded_bytes:total,decoded_audio_samples:decoded_samples,first_pts:rows[0].0,last_end:last.0.add(last.1)?,clock_digest:digest(&clocks)?,decoded_content_digest:digest(&rows)?,trace_digest:hash(bytes)})
+    ensure!(
+        media && codec && algorithm && !rows.is_empty(),
+        "complete decode framing missing"
+    );
+    let clocks = rows.iter().map(|r| (r.0, r.1)).collect::<Vec<_>>();
+    let decoded_samples = if audio {
+        let samples = total / (u64::from(track.channels) * 4);
+        let encoded = u64::from(track.sample_count) * 1024;
+        ensure!(
+            samples > 0
+                && samples <= encoded
+                && samples >= encoded.saturating_sub(2048)
+                && rows[0].0 == track.edit_start,
+            "AAC decoded extent outside supported priming/tail scope"
+        );
+        Some(samples)
+    } else {
+        ensure!(
+            rows.len() == track.sample_count as usize
+                && digest(&clocks)? == track.presentation_digest,
+            "complete native video frame count/clock differs from independent sample tables"
+        );
+        None
+    };
+    let last = rows.last().context("decode rows absent")?;
+    Ok(Trace {
+        schema: "optiflow.mp4-complete-decode-trace.v1".into(),
+        kind: track.kind.clone(),
+        frames: rows.len() as u64,
+        decoded_bytes: total,
+        decoded_audio_samples: decoded_samples,
+        first_pts: rows[0].0,
+        last_end: last.0.add(last.1)?,
+        clock_digest: digest(&clocks)?,
+        decoded_content_digest: digest(&rows)?,
+        trace_digest: hash(bytes),
+    })
 }
-fn same_audio(a:&Trace,b:&Trace)->bool{a.schema==b.schema&&a.kind==b.kind&&a.frames==b.frames&&a.decoded_bytes==b.decoded_bytes&&a.decoded_audio_samples==b.decoded_audio_samples&&a.first_pts==b.first_pts&&a.last_end==b.last_end&&a.clock_digest==b.clock_digest&&a.decoded_content_digest==b.decoded_content_digest}
-pub(crate) fn compare(source:&Summary,candidate:&Summary)->Result<()> {
-    let a=&source.video;let b=&candidate.video;
-    ensure!(source.schema=="optiflow.mp4-container-observation.v1"&&candidate.schema==source.schema&&source.movie_timescale==candidate.movie_timescale&&source.metadata==candidate.metadata,"MP4 movie clock/supported metadata changed");
-    ensure!(a.kind==b.kind&&a.width==b.width&&a.height==b.height&&a.sample_count==b.sample_count&&a.timescale==b.timescale&&a.presentation_digest==b.presentation_digest&&a.frame_period==b.frame_period&&a.presentation_start==b.presentation_start&&a.presentation_end==b.presentation_end&&a.edit_start==b.edit_start&&a.edit_duration==b.edit_duration,"MP4 video presentation/geometry/extent changed");
-    ensure!(source.audio==candidate.audio,"AAC payload/configuration/channels/clocks/edits/auxiliary properties changed; audio re-encoding is not permitted");Ok(())
+fn same_audio(a: &Trace, b: &Trace) -> bool {
+    a.schema == b.schema
+        && a.kind == b.kind
+        && a.frames == b.frames
+        && a.decoded_bytes == b.decoded_bytes
+        && a.decoded_audio_samples == b.decoded_audio_samples
+        && a.first_pts == b.first_pts
+        && a.last_end == b.last_end
+        && a.clock_digest == b.clock_digest
+        && a.decoded_content_digest == b.decoded_content_digest
 }
-#[derive(Debug,Clone,Serialize,Deserialize)]
+pub(crate) fn compare(source: &Summary, candidate: &Summary) -> Result<()> {
+    let a = &source.video;
+    let b = &candidate.video;
+    ensure!(
+        source.schema == "optiflow.mp4-container-observation.v1"
+            && candidate.schema == source.schema
+            && source.movie_timescale == candidate.movie_timescale
+            && source.metadata == candidate.metadata,
+        "MP4 movie clock/supported metadata changed"
+    );
+    ensure!(
+        a.kind == b.kind
+            && a.width == b.width
+            && a.height == b.height
+            && a.sample_count == b.sample_count
+            && a.timescale == b.timescale
+            && a.presentation_digest == b.presentation_digest
+            && a.frame_period == b.frame_period
+            && a.presentation_start == b.presentation_start
+            && a.presentation_end == b.presentation_end
+            && a.edit_start == b.edit_start
+            && a.edit_duration == b.edit_duration,
+        "MP4 video presentation/geometry/extent changed"
+    );
+    ensure!(
+        source.audio == candidate.audio,
+        "AAC payload/configuration/channels/clocks/edits/auxiliary properties changed; audio re-encoding is not permitted"
+    );
+    Ok(())
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Evidence {
-    pub schema:String,pub plan:Plan,pub candidate_digest:EvidenceDigest,pub candidate_bytes:u64,pub candidate:Summary,
-    pub source_probe:String,pub candidate_probe:String,pub source_video:Trace,pub source_audio:Trace,pub candidate_video:Trace,pub candidate_audio:Trace,
-    pub invocations:Vec<runtime::Invocation>,pub encoded_bytes_saved:u64,pub full_native_decode_observed:bool,pub video_pixel_equivalence:bool,
-    pub quality_review:String,pub native_qualified:bool,pub source_unchanged_at_precommit:bool,pub physical_space_reclaimed:bool,pub replacement_authority:bool,pub upload_authority:bool,
+    pub schema: String,
+    pub plan: Plan,
+    pub candidate_digest: EvidenceDigest,
+    pub candidate_bytes: u64,
+    pub candidate: Summary,
+    pub source_probe: String,
+    pub candidate_probe: String,
+    pub source_video: Trace,
+    pub source_audio: Trace,
+    pub candidate_video: Trace,
+    pub candidate_audio: Trace,
+    pub invocations: Vec<runtime::Invocation>,
+    pub encoded_bytes_saved: u64,
+    pub full_native_decode_observed: bool,
+    pub video_pixel_equivalence: bool,
+    pub quality_review: String,
+    pub native_qualified: bool,
+    pub source_unchanged_at_precommit: bool,
+    pub physical_space_reclaimed: bool,
+    pub replacement_authority: bool,
+    pub upload_authority: bool,
 }
-pub(crate) fn retained(e:&Evidence,actual:&Summary,bytes:u64,content:&EvidenceDigest)->Result<()> {
-    planning::retained(&e.plan)?;ensure!(e.schema=="optiflow.mp4-delivery-evidence.v1"&&e.candidate==*actual&&e.candidate_bytes==bytes&&e.candidate_digest==*content,"MP4 retained source/plan/candidate identity differs");
-    let p=&e.plan.payload;let source=&p.source;compare(&source.media,actual)?;
-    ensure!(bytes>0&&bytes<=p.allocation.maximum_candidate_bytes&&bytes<source.snapshot.logical_bytes&&e.encoded_bytes_saved==source.snapshot.logical_bytes-bytes&&e.full_native_decode_observed&&!e.video_pixel_equivalence&&e.quality_review=="required; explicitly lossy video"&&!e.native_qualified&&e.source_unchanged_at_precommit&&!e.physical_space_reclaimed&&!e.replacement_authority&&!e.upload_authority,"MP4 size/acceptance/authority scope differs");
-    runtime::require_probe(e.source_probe.as_bytes(),&source.media)?;runtime::require_probe(e.candidate_probe.as_bytes(),actual)?;
-    ensure!(same_audio(&e.source_audio,&e.candidate_audio)&&e.source_video.frames==u64::from(source.media.video.sample_count)&&e.candidate_video.frames==u64::from(actual.video.sample_count)&&e.source_video.clock_digest==source.media.video.presentation_digest&&e.candidate_video.clock_digest==actual.video.presentation_digest,"recorded complete native audio/video decode joins differ");
-    ensure!(e.invocations.len()==9,"fixed MP4 invocation sequence incomplete");
-    for (index,i) in e.invocations.iter().enumerate(){crate::video_sandbox::check_receipt(&i.resource,p.request.sandbox.provider_subtree_memory_bytes,p.request.sandbox.provider_scratch_bytes)?;
-        if index<2{let name=if index==0{"ffmpeg"}else{"ffprobe"};let text=i.version_text.as_ref().context("native version text missing")?;let words=text.lines().next().unwrap_or("").split_whitespace().collect::<Vec<_>>();ensure!(words.len()>=3&&words[0]==name&&words[1]=="version"&&words[2]=="8.0.1"&&hash(text.as_bytes())==i.output_digest&&i.output_bytes==text.len() as u64&&i.job.is_none()&&i.report.is_none()&&i.operation==format!("{name}_version")&&i.job_digest==digest(&(name,"-version"))?,"recorded native version/build differs");continue;}
-        let j:worker::Job=serde_json::from_value(i.job.clone().context("native worker job absent")?)?;j.validate()?;let r:worker::Report=serde_json::from_value(i.report.clone().context("native worker report absent")?)?;
-        let (op,input,media)=match index{2=>(Operation::Probe,&source.content_digest,&source.media),3=>(Operation::DecodeVideo,&source.content_digest,&source.media),4=>(Operation::DecodeAudio,&source.content_digest,&source.media),5=>(Operation::Encode,&source.content_digest,&source.media),6=>(Operation::Probe,content,actual),7=>(Operation::DecodeVideo,content,actual),8=>(Operation::DecodeAudio,content,actual),_=>unreachable!()};
-        let input_bytes=if index<=5{source.snapshot.logical_bytes}else{bytes};
-        ensure!(j.operation==op&&j.input_digest==*input&&j.input_bytes==input_bytes&&j.media==*media&&i.operation==op.name()&&i.job_digest==digest(&j)?&&r.job_digest==i.job_digest&&r.schema=="optiflow.mp4-worker-report.v1"&&r.output_digest==i.output_digest&&r.output_bytes==i.output_bytes&&!r.runtime_qualified&&!r.source_mutation&&j.ffmpeg.digest==p.request.ffmpeg.digest&&j.ffprobe.digest==p.request.ffprobe.digest&&j.ffmpeg.path==p.request.ffmpeg.path&&j.ffprobe.path==p.request.ffprobe.path&&j.allocation==p.allocation&&serde_json::to_value(&j.control)?==serde_json::to_value(&p.request.control)?&&j.elapsed_ms<=p.request.limits.elapsed_ms&&j.provider_memory_bytes==p.request.sandbox.provider_subtree_memory_bytes&&j.scratch_bytes==p.request.sandbox.provider_scratch_bytes,"recorded worker subject/output identity differs");
-        let expected=if index==5{p.encoder_argv.len()}else{1};ensure!(r.children.len()==expected&&r.children.iter().all(|c|c.exit_code==0&&c.stderr_bytes==0),"native child acceptance differs");
-        let args=worker::expected_argv(&j)?;let tool=if op==Operation::Probe{&j.ffprobe.path}else{&j.ffmpeg.path};ensure!(r.children.iter().map(|c|&c.argv).eq(args.iter())&&r.children.iter().all(|c|c.tool==tool.to_string_lossy()),"native worker arguments/tool differ from the closed operation");
-        if index==5{ensure!(r.children.iter().map(|c|&c.argv).eq(p.encoder_argv.iter())&&i.output_digest==*content&&i.output_bytes==bytes,"recorded encoder arguments/candidate differ");}
-        let expected_digest=match index{2=>Some(hash(e.source_probe.as_bytes())),3=>Some(e.source_video.trace_digest.clone()),4=>Some(e.source_audio.trace_digest.clone()),6=>Some(hash(e.candidate_probe.as_bytes())),7=>Some(e.candidate_video.trace_digest.clone()),8=>Some(e.candidate_audio.trace_digest.clone()),_=>None};if let Some(expected)=expected_digest{ensure!(i.output_digest==expected,"native trace/probe capture join differs");}
-    }Ok(())
+pub(crate) fn retained(
+    e: &Evidence,
+    actual: &Summary,
+    bytes: u64,
+    content: &EvidenceDigest,
+) -> Result<()> {
+    planning::retained(&e.plan)?;
+    ensure!(
+        e.schema == "optiflow.mp4-delivery-evidence.v1"
+            && e.candidate == *actual
+            && e.candidate_bytes == bytes
+            && e.candidate_digest == *content,
+        "MP4 retained source/plan/candidate identity differs"
+    );
+    let p = &e.plan.payload;
+    let source = &p.source;
+    compare(&source.media, actual)?;
+    ensure!(
+        bytes > 0
+            && bytes <= p.allocation.maximum_candidate_bytes
+            && bytes < source.snapshot.logical_bytes
+            && e.encoded_bytes_saved == source.snapshot.logical_bytes - bytes
+            && e.full_native_decode_observed
+            && !e.video_pixel_equivalence
+            && e.quality_review == "required; explicitly lossy video"
+            && !e.native_qualified
+            && e.source_unchanged_at_precommit
+            && !e.physical_space_reclaimed
+            && !e.replacement_authority
+            && !e.upload_authority,
+        "MP4 size/acceptance/authority scope differs"
+    );
+    runtime::require_probe(e.source_probe.as_bytes(), &source.media)?;
+    runtime::require_probe(e.candidate_probe.as_bytes(), actual)?;
+    ensure!(
+        same_audio(&e.source_audio, &e.candidate_audio)
+            && e.source_video.frames == u64::from(source.media.video.sample_count)
+            && e.candidate_video.frames == u64::from(actual.video.sample_count)
+            && e.source_video.clock_digest == source.media.video.presentation_digest
+            && e.candidate_video.clock_digest == actual.video.presentation_digest,
+        "recorded complete native audio/video decode joins differ"
+    );
+    ensure!(
+        e.invocations.len() == 9,
+        "fixed MP4 invocation sequence incomplete"
+    );
+    for (index, i) in e.invocations.iter().enumerate() {
+        crate::video_sandbox::check_receipt(
+            &i.resource,
+            p.request.sandbox.provider_subtree_memory_bytes,
+            p.request.sandbox.provider_scratch_bytes,
+        )?;
+        if index < 2 {
+            let name = if index == 0 { "ffmpeg" } else { "ffprobe" };
+            let text = i
+                .version_text
+                .as_ref()
+                .context("native version text missing")?;
+            let words = text
+                .lines()
+                .next()
+                .unwrap_or("")
+                .split_whitespace()
+                .collect::<Vec<_>>();
+            ensure!(
+                words.len() >= 3
+                    && words[0] == name
+                    && words[1] == "version"
+                    && words[2] == "8.0.1"
+                    && hash(text.as_bytes()) == i.output_digest
+                    && i.output_bytes == text.len() as u64
+                    && i.job.is_none()
+                    && i.report.is_none()
+                    && i.operation == format!("{name}_version")
+                    && i.job_digest == digest(&(name, "-version"))?,
+                "recorded native version/build differs"
+            );
+            continue;
+        }
+        let j: worker::Job =
+            serde_json::from_value(i.job.clone().context("native worker job absent")?)?;
+        j.validate()?;
+        let r: worker::Report =
+            serde_json::from_value(i.report.clone().context("native worker report absent")?)?;
+        let (op, input, media) = match index {
+            2 => (Operation::Probe, &source.content_digest, &source.media),
+            3 => (
+                Operation::DecodeVideo,
+                &source.content_digest,
+                &source.media,
+            ),
+            4 => (
+                Operation::DecodeAudio,
+                &source.content_digest,
+                &source.media,
+            ),
+            5 => (Operation::Encode, &source.content_digest, &source.media),
+            6 => (Operation::Probe, content, actual),
+            7 => (Operation::DecodeVideo, content, actual),
+            8 => (Operation::DecodeAudio, content, actual),
+            _ => unreachable!(),
+        };
+        let input_bytes = if index <= 5 {
+            source.snapshot.logical_bytes
+        } else {
+            bytes
+        };
+        ensure!(
+            j.operation == op
+                && j.input_digest == *input
+                && j.input_bytes == input_bytes
+                && j.media == *media
+                && i.operation == op.name()
+                && i.job_digest == digest(&j)?
+                && r.job_digest == i.job_digest
+                && r.schema == "optiflow.mp4-worker-report.v1"
+                && r.output_digest == i.output_digest
+                && r.output_bytes == i.output_bytes
+                && !r.runtime_qualified
+                && !r.source_mutation
+                && j.ffmpeg.digest == p.request.ffmpeg.digest
+                && j.ffprobe.digest == p.request.ffprobe.digest
+                && j.ffmpeg.path == p.request.ffmpeg.path
+                && j.ffprobe.path == p.request.ffprobe.path
+                && j.allocation == p.allocation
+                && serde_json::to_value(&j.control)? == serde_json::to_value(&p.request.control)?
+                && j.elapsed_ms <= p.request.limits.elapsed_ms
+                && j.provider_memory_bytes == p.request.sandbox.provider_subtree_memory_bytes
+                && j.scratch_bytes == p.request.sandbox.provider_scratch_bytes,
+            "recorded worker subject/output identity differs"
+        );
+        let expected = if index == 5 { p.encoder_argv.len() } else { 1 };
+        ensure!(
+            r.children.len() == expected
+                && r.children
+                    .iter()
+                    .all(|c| c.exit_code == 0 && c.stderr_bytes == 0),
+            "native child acceptance differs"
+        );
+        let args = worker::expected_argv(&j)?;
+        let tool = if op == Operation::Probe {
+            &j.ffprobe.path
+        } else {
+            &j.ffmpeg.path
+        };
+        ensure!(
+            r.children.iter().map(|c| &c.argv).eq(args.iter())
+                && r.children.iter().all(|c| c.tool == tool.to_string_lossy()),
+            "native worker arguments/tool differ from the closed operation"
+        );
+        if index == 5 {
+            ensure!(
+                r.children.iter().map(|c| &c.argv).eq(p.encoder_argv.iter())
+                    && i.output_digest == *content
+                    && i.output_bytes == bytes,
+                "recorded encoder arguments/candidate differ"
+            );
+        }
+        let expected_digest = match index {
+            2 => Some(hash(e.source_probe.as_bytes())),
+            3 => Some(e.source_video.trace_digest.clone()),
+            4 => Some(e.source_audio.trace_digest.clone()),
+            6 => Some(hash(e.candidate_probe.as_bytes())),
+            7 => Some(e.candidate_video.trace_digest.clone()),
+            8 => Some(e.candidate_audio.trace_digest.clone()),
+            _ => None,
+        };
+        if let Some(expected) = expected_digest {
+            ensure!(
+                i.output_digest == expected,
+                "native trace/probe capture join differs"
+            );
+        }
+    }
+    Ok(())
 }
-#[derive(Debug,Clone,Serialize,Deserialize)]
-#[serde(tag="state",rename_all="snake_case",deny_unknown_fields)]
-pub enum Outcome {Accepted {artifact:artifact::Pin,source_bytes:u64,candidate_bytes:u64,encoded_bytes_saved:u64,quality_review:String,physical_space_reclaimed:bool,attempt_directory:PathBuf},Unchanged {reason:String,source_bytes:u64,candidate_bytes:Option<u64>,candidate_digest:Option<EvidenceDigest>,attempt_directory:Option<PathBuf>}}
-fn store_trace(directory:&File,name:&str,bytes:&[u8])->Result<()>{runtime::write_member(directory,name,bytes)}
-pub fn produce(request:&Request,cancel:impl Fn()->bool)->Result<Outcome>{
-    produce_bound(request,None,None,cancel)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "state", rename_all = "snake_case", deny_unknown_fields)]
+pub enum Outcome {
+    Accepted {
+        artifact: artifact::Pin,
+        source_bytes: u64,
+        candidate_bytes: u64,
+        encoded_bytes_saved: u64,
+        quality_review: String,
+        physical_space_reclaimed: bool,
+        attempt_directory: PathBuf,
+    },
+    Unchanged {
+        reason: String,
+        source_bytes: u64,
+        candidate_bytes: Option<u64>,
+        candidate_digest: Option<EvidenceDigest>,
+        attempt_directory: Option<PathBuf>,
+    },
 }
-pub(crate) fn produce_bound(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool)->Result<Outcome>{
-    let started=Instant::now();let stop=||cancel()||started.elapsed()>=Duration::from_millis(request.limits.elapsed_ms);let planned=planning::plan(request,&stop)?;
-    if let Some(expected)=expected{ensure!(planned.payload.source.snapshot==expected.snapshot&&planned.payload.source.content_digest==expected.digest,"MP4 input differs from frozen folder selection");}
-    if let Some(tools)=tools{ensure!(planned.payload.tools.as_slice()==tools,"MP4 tools differ from frozen folder baseline");}
-    if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes){return Ok(Outcome::Unchanged {reason:"original already fits the explicit target; no encoding performed".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:None,candidate_digest:None,attempt_directory:None});}
-    let (attempt,directory)=runtime::fresh_directory(&request.private_workdir,"mp4-attempt")?;runtime::write_member(&directory,"intent.json",&serde_json::to_vec(&planned)?)?;
-    let mut session=runtime::Session::new_at(request,&cancel,started).with_context(||format!("retain MP4 attempt {}",attempt.display()))?;ensure!(session.plan.plan_digest==planned.plan_digest,"MP4 input/tool/settings changed before execution");
-    let source=session.source_bytes()?;let source_media=planned.payload.source.media.clone();let source_probe=session.call(Operation::Probe,&source,&source_media)?;runtime::require_probe(&source_probe,&source_media)?;
-    let sv=session.call(Operation::DecodeVideo,&source,&source_media)?;let sa=session.call(Operation::DecodeAudio,&source,&source_media)?;let source_video=trace(&sv,&source_media.video)?;let source_audio=trace(&sa,&source_media.audio)?;store_trace(&directory,"source-video.framehash",&sv)?;store_trace(&directory,"source-audio.framehash",&sa)?;
-    let candidate=session.call(Operation::Encode,&source,&source_media)?;runtime::write_member(&directory,"candidate.mp4",&candidate)?;
-    let candidate_file=BoundedFileObservation::open_mp4(&attempt.join("candidate.mp4"),planned.payload.allocation.maximum_candidate_bytes,&||session.check())?;let parsed=container::observe(&candidate_file,&||session.check())?;compare(&source_media,&parsed.summary)?;
-    let candidate_probe=session.call(Operation::Probe,&candidate,&parsed.summary)?;runtime::require_probe(&candidate_probe,&parsed.summary)?;
-    let cv=session.call(Operation::DecodeVideo,&candidate,&parsed.summary)?;let ca=session.call(Operation::DecodeAudio,&candidate,&parsed.summary)?;let candidate_video=trace(&cv,&parsed.summary.video)?;let candidate_audio=trace(&ca,&parsed.summary.audio)?;store_trace(&directory,"candidate-video.framehash",&cv)?;store_trace(&directory,"candidate-audio.framehash",&ca)?;
-    ensure!(same_audio(&candidate_audio,&source_audio),"complete decoded AAC samples/clock differ");candidate_file.verify_current_guarded(&||session.check())?;session.recheck()?;
-    if candidate.len() as u64>=planned.payload.source.snapshot.logical_bytes{return Ok(Outcome::Unchanged {reason:"validated lossy candidate is not strictly smaller; original retained".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:Some(candidate.len() as u64),candidate_digest:Some(hash(&candidate)),attempt_directory:Some(attempt)});}
-    let e=Evidence {schema:"optiflow.mp4-delivery-evidence.v1".into(),plan:planned.clone(),candidate_digest:hash(&candidate),candidate_bytes:candidate.len() as u64,candidate:parsed.summary,source_probe:String::from_utf8(source_probe)?,candidate_probe:String::from_utf8(candidate_probe)?,source_video,source_audio,candidate_video,candidate_audio,invocations:session.invocations.clone(),encoded_bytes_saved:planned.payload.source.snapshot.logical_bytes-candidate.len() as u64,full_native_decode_observed:true,video_pixel_equivalence:false,quality_review:"required; explicitly lossy video".into(),native_qualified:false,source_unchanged_at_precommit:true,physical_space_reclaimed:false,replacement_authority:false,upload_authority:false};
-    retained(&e,&e.candidate,e.candidate_bytes,&e.candidate_digest)?;runtime::write_member(&directory,"validation.json",&serde_json::to_vec(&e)?)?;
-    let artifact=artifact::publish(&request.artifact_root,&candidate,&e,||{session.recheck()?;candidate_file.verify_current_guarded(&||session.check())})?;
-    Ok(Outcome::Accepted {artifact,source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:e.candidate_bytes,encoded_bytes_saved:e.encoded_bytes_saved,quality_review:e.quality_review,physical_space_reclaimed:false,attempt_directory:attempt})
+fn store_trace(directory: &File, name: &str, bytes: &[u8]) -> Result<()> {
+    runtime::write_member(directory, name, bytes)
+}
+pub fn produce(request: &Request, cancel: impl Fn() -> bool) -> Result<Outcome> {
+    produce_bound(request, None, None, cancel)
+}
+pub(crate) fn produce_bound(
+    request: &Request,
+    expected: Option<&crate::video_folder::SourceBinding>,
+    tools: Option<&[planning::Tool]>,
+    cancel: impl Fn() -> bool,
+) -> Result<Outcome> {
+    let started = Instant::now();
+    let stop = || cancel() || started.elapsed() >= Duration::from_millis(request.limits.elapsed_ms);
+    let planned = planning::plan(request, &stop)?;
+    if let Some(expected) = expected {
+        ensure!(
+            planned.payload.source.snapshot == expected.snapshot
+                && planned.payload.source.content_digest == expected.digest,
+            "MP4 input differs from frozen folder selection"
+        );
+    }
+    if let Some(tools) = tools {
+        ensure!(
+            planned.payload.tools.as_slice() == tools,
+            "MP4 tools differ from frozen folder baseline"
+        );
+    }
+    if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes)
+    {
+        return Ok(Outcome::Unchanged {
+            reason: "original already fits the explicit target; no encoding performed".into(),
+            source_bytes: planned.payload.source.snapshot.logical_bytes,
+            candidate_bytes: None,
+            candidate_digest: None,
+            attempt_directory: None,
+        });
+    }
+    let (attempt, directory) = runtime::fresh_directory(&request.private_workdir, "mp4-attempt")?;
+    runtime::write_member(&directory, "intent.json", &serde_json::to_vec(&planned)?)?;
+    let mut session = runtime::Session::new_at(request, &cancel, started)
+        .with_context(|| format!("retain MP4 attempt {}", attempt.display()))?;
+    ensure!(
+        session.plan.plan_digest == planned.plan_digest,
+        "MP4 input/tool/settings changed before execution"
+    );
+    let source = session.source_bytes()?;
+    let source_media = planned.payload.source.media.clone();
+    let source_probe = session.call(Operation::Probe, &source, &source_media)?;
+    runtime::require_probe(&source_probe, &source_media)?;
+    let sv = session.call(Operation::DecodeVideo, &source, &source_media)?;
+    let sa = session.call(Operation::DecodeAudio, &source, &source_media)?;
+    let source_video = trace(&sv, &source_media.video)?;
+    let source_audio = trace(&sa, &source_media.audio)?;
+    store_trace(&directory, "source-video.framehash", &sv)?;
+    store_trace(&directory, "source-audio.framehash", &sa)?;
+    let candidate = session.call(Operation::Encode, &source, &source_media)?;
+    runtime::write_member(&directory, "candidate.mp4", &candidate)?;
+    let candidate_file = BoundedFileObservation::open_mp4(
+        &attempt.join("candidate.mp4"),
+        planned.payload.allocation.maximum_candidate_bytes,
+        &|| session.check(),
+    )?;
+    let parsed = container::observe(&candidate_file, &|| session.check())?;
+    compare(&source_media, &parsed.summary)?;
+    let candidate_probe = session.call(Operation::Probe, &candidate, &parsed.summary)?;
+    runtime::require_probe(&candidate_probe, &parsed.summary)?;
+    let cv = session.call(Operation::DecodeVideo, &candidate, &parsed.summary)?;
+    let ca = session.call(Operation::DecodeAudio, &candidate, &parsed.summary)?;
+    let candidate_video = trace(&cv, &parsed.summary.video)?;
+    let candidate_audio = trace(&ca, &parsed.summary.audio)?;
+    store_trace(&directory, "candidate-video.framehash", &cv)?;
+    store_trace(&directory, "candidate-audio.framehash", &ca)?;
+    ensure!(
+        same_audio(&candidate_audio, &source_audio),
+        "complete decoded AAC samples/clock differ"
+    );
+    candidate_file.verify_current_guarded(&|| session.check())?;
+    session.recheck()?;
+    if candidate.len() as u64 >= planned.payload.source.snapshot.logical_bytes {
+        return Ok(Outcome::Unchanged {
+            reason: "validated lossy candidate is not strictly smaller; original retained".into(),
+            source_bytes: planned.payload.source.snapshot.logical_bytes,
+            candidate_bytes: Some(candidate.len() as u64),
+            candidate_digest: Some(hash(&candidate)),
+            attempt_directory: Some(attempt),
+        });
+    }
+    let e = Evidence {
+        schema: "optiflow.mp4-delivery-evidence.v1".into(),
+        plan: planned.clone(),
+        candidate_digest: hash(&candidate),
+        candidate_bytes: candidate.len() as u64,
+        candidate: parsed.summary,
+        source_probe: String::from_utf8(source_probe)?,
+        candidate_probe: String::from_utf8(candidate_probe)?,
+        source_video,
+        source_audio,
+        candidate_video,
+        candidate_audio,
+        invocations: session.invocations.clone(),
+        encoded_bytes_saved: planned.payload.source.snapshot.logical_bytes - candidate.len() as u64,
+        full_native_decode_observed: true,
+        video_pixel_equivalence: false,
+        quality_review: "required; explicitly lossy video".into(),
+        native_qualified: false,
+        source_unchanged_at_precommit: true,
+        physical_space_reclaimed: false,
+        replacement_authority: false,
+        upload_authority: false,
+    };
+    retained(&e, &e.candidate, e.candidate_bytes, &e.candidate_digest)?;
+    runtime::write_member(&directory, "validation.json", &serde_json::to_vec(&e)?)?;
+    let artifact = artifact::publish(&request.artifact_root, &candidate, &e, || {
+        session.recheck()?;
+        candidate_file.verify_current_guarded(&|| session.check())
+    })?;
+    Ok(Outcome::Accepted {
+        artifact,
+        source_bytes: planned.payload.source.snapshot.logical_bytes,
+        candidate_bytes: e.candidate_bytes,
+        encoded_bytes_saved: e.encoded_bytes_saved,
+        quality_review: e.quality_review,
+        physical_space_reclaimed: false,
+        attempt_directory: attempt,
+    })
 }
 
-#[cfg(test)]mod tests {
+#[cfg(test)]
+mod tests {
     use super::*;
-    #[test]fn zero_exit_style_traces_cannot_hide_missing_frames_or_audio_precision_changes(){let mut track=TrackSummary {kind:"audio_aac_lc".into(),timescale:48000,sample_count:1,width:0,height:0,channels:2,sample_rate:48000,codec_configuration:vec![17,144],payload_bytes:10,payload_digest:hash(b"fixture"),presentation_digest:hash(b"fixture"),frame_period:None,presentation_start:Time::new(0,1).unwrap(),presentation_end:Time::new(1024,48000).unwrap(),edit_start:Time::new(0,1).unwrap(),edit_duration:Time::new(1024,48000).unwrap(),auxiliary:Default::default()};let good=format!("#tb 0: 1/48000\n#media_type 0: audio\n#codec_id 0: pcm_f32le\n#hash: SHA256\n0, 0, 0, 1024, 8192, {}\n","a".repeat(64));assert!(trace(good.as_bytes(),&track).is_ok());assert!(trace(good.replace("8192","4096").as_bytes(),&track).is_err());track.sample_count=10;assert!(trace(good.as_bytes(),&track).is_err());}
-    #[test]fn smaller_video_never_excuses_changed_audio_metadata_or_clock(){let track=TrackSummary {kind:"audio_aac_lc".into(),timescale:48000,sample_count:2,width:0,height:0,channels:2,sample_rate:48000,codec_configuration:vec![17,144],payload_bytes:100,payload_digest:hash(b"original AAC"),presentation_digest:hash(b"original clock"),frame_period:None,presentation_start:Time::new(0,1).unwrap(),presentation_end:Time::new(2048,48000).unwrap(),edit_start:Time::new(0,1).unwrap(),edit_duration:Time::new(2048,48000).unwrap(),auxiliary:Default::default()};let mut video=track.clone();video.kind="video_h264".into();video.width=1920;video.height=1080;let source=Summary {schema:"optiflow.mp4-container-observation.v1".into(),movie_timescale:1000,video,audio:track,metadata:Default::default(),qualification:"fixture".into()};assert!(compare(&source,&source).is_ok());let mut changed=source.clone();changed.audio.payload_digest=hash(b"different AAC");assert!(compare(&source,&changed).is_err());let mut changed=source.clone();changed.metadata.insert("title".into(),b"changed".to_vec());assert!(compare(&source,&changed).is_err());let mut changed=source.clone();changed.video.presentation_digest=hash(b"new clock");assert!(compare(&source,&changed).is_err());}
+    #[test]
+    fn zero_exit_style_traces_cannot_hide_missing_frames_or_audio_precision_changes() {
+        let mut track = TrackSummary {
+            kind: "audio_aac_lc".into(),
+            timescale: 48000,
+            sample_count: 1,
+            width: 0,
+            height: 0,
+            channels: 2,
+            sample_rate: 48000,
+            codec_configuration: vec![17, 144],
+            payload_bytes: 10,
+            payload_digest: hash(b"fixture"),
+            presentation_digest: hash(b"fixture"),
+            frame_period: None,
+            presentation_start: Time::new(0, 1).unwrap(),
+            presentation_end: Time::new(1024, 48000).unwrap(),
+            edit_start: Time::new(0, 1).unwrap(),
+            edit_duration: Time::new(1024, 48000).unwrap(),
+            auxiliary: Default::default(),
+        };
+        let good = format!(
+            "#tb 0: 1/48000\n#media_type 0: audio\n#codec_id 0: pcm_f32le\n#hash: SHA256\n0, 0, 0, 1024, 8192, {}\n",
+            "a".repeat(64)
+        );
+        assert!(trace(good.as_bytes(), &track).is_ok());
+        assert!(trace(good.replace("8192", "4096").as_bytes(), &track).is_err());
+        track.sample_count = 10;
+        assert!(trace(good.as_bytes(), &track).is_err());
+    }
+    #[test]
+    fn smaller_video_never_excuses_changed_audio_metadata_or_clock() {
+        let track = TrackSummary {
+            kind: "audio_aac_lc".into(),
+            timescale: 48000,
+            sample_count: 2,
+            width: 0,
+            height: 0,
+            channels: 2,
+            sample_rate: 48000,
+            codec_configuration: vec![17, 144],
+            payload_bytes: 100,
+            payload_digest: hash(b"original AAC"),
+            presentation_digest: hash(b"original clock"),
+            frame_period: None,
+            presentation_start: Time::new(0, 1).unwrap(),
+            presentation_end: Time::new(2048, 48000).unwrap(),
+            edit_start: Time::new(0, 1).unwrap(),
+            edit_duration: Time::new(2048, 48000).unwrap(),
+            auxiliary: Default::default(),
+        };
+        let mut video = track.clone();
+        video.kind = "video_h264".into();
+        video.width = 1920;
+        video.height = 1080;
+        let source = Summary {
+            schema: "optiflow.mp4-container-observation.v1".into(),
+            movie_timescale: 1000,
+            video,
+            audio: track,
+            metadata: Default::default(),
+            qualification: "fixture".into(),
+        };
+        assert!(compare(&source, &source).is_ok());
+        let mut changed = source.clone();
+        changed.audio.payload_digest = hash(b"different AAC");
+        assert!(compare(&source, &changed).is_err());
+        let mut changed = source.clone();
+        changed.metadata.insert("title".into(), b"changed".to_vec());
+        assert!(compare(&source, &changed).is_err());
+        let mut changed = source.clone();
+        changed.video.presentation_digest = hash(b"new clock");
+        assert!(compare(&source, &changed).is_err());
+    }
 }

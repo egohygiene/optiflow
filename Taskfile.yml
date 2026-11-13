@@ -146,12 +146,14 @@ tasks:
   format:
     desc: Format Rust source.
     cmds:
-      - cargo fmt --all
+      - cargo +1.85.0 fmt --all
+      - cargo +1.85.0 fmt --manifest-path fuzz/Cargo.toml --all
 
   format:check:
     desc: Verify Rust formatting.
     cmds:
-      - cargo fmt --all -- --check
+      - cargo +1.85.0 fmt --all -- --check
+      - cargo +1.85.0 fmt --manifest-path fuzz/Cargo.toml --all -- --check
 
   lint:
     desc: Run strict Clippy checks.

@@ -1,4 +1,4 @@
-#[path="cli/root_help.rs"]
+#[path = "cli/root_help.rs"]
 mod root_help;
 use std::ffi::OsString;
 use std::process::ExitCode;
@@ -16,9 +16,15 @@ use optiflow::signals::SignalState;
 
 fn main() -> ExitCode {
     let arguments: Vec<OsString> = std::env::args_os().collect();
-    if let Some(result) = optiflow::video_sandbox::internal_exec_guard(&arguments) { return result; }
-    if let Some(result) = optiflow::mp4_delivery::internal_worker(&arguments) { return result; }
-    if let Some(result) = optiflow::explanation::ollama::internal_provider(&arguments) { return result; }
+    if let Some(result) = optiflow::video_sandbox::internal_exec_guard(&arguments) {
+        return result;
+    }
+    if let Some(result) = optiflow::mp4_delivery::internal_worker(&arguments) {
+        return result;
+    }
+    if let Some(result) = optiflow::explanation::ollama::internal_provider(&arguments) {
+        return result;
+    }
     let requested_format = requested_output_format(&arguments);
     let signals = match SignalState::install() {
         Ok(signals) => signals,
@@ -41,7 +47,9 @@ fn main() -> ExitCode {
                 error.kind(),
                 ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
             ) {
-                if error.kind()==ErrorKind::DisplayHelp {root_help::write_if_selected(&arguments[1..]);}
+                if error.kind() == ErrorKind::DisplayHelp {
+                    root_help::write_if_selected(&arguments[1..]);
+                }
                 let _ = error.print();
                 return ExitCode::SUCCESS;
             }

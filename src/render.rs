@@ -46,7 +46,7 @@ fn render_human(result: &CommandResult) -> Result<()> {
     }
     if result.command.starts_with("explain ")
         || result.command.starts_with("video-folder ")
-        || result.command=="candidate video"
+        || result.command == "candidate video"
         || result.command.starts_with("optimize ")
         || result.command.starts_with("replacement ")
         || result.command.starts_with("config ")

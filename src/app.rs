@@ -15,15 +15,15 @@ use crate::state::StateStore;
 
 mod candidate_commands;
 mod diagnostics_commands;
-mod replacement_commands;
-mod optimize_commands;
-mod video_commands;
-mod mp4_commands;
-mod explanation_commands;
 mod execution_commands;
+mod explanation_commands;
 mod extension_commands;
+mod mp4_commands;
+mod optimize_commands;
+mod replacement_commands;
 mod reporting;
 mod scan;
+mod video_commands;
 
 pub(super) struct Execution {
     pub(super) coverage: Option<CoverageStatus>,
@@ -53,15 +53,71 @@ impl Execution {
 }
 
 pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
-    if let Command::Diagnostics(a)=&cli.command{let value=diagnostics_commands::run(&a.command,signals);return(CommandResult::resolve(cli.command_name(),value.coverage,value.artifacts,value.diagnostics,value.result),cli.selected_output_format());}
-    if let Command::Mp4Delivery(a)=&cli.command {
-        let execution=mp4_commands::run(&a.command,signals);
-        return (CommandResult::resolve(cli.command_name(),execution.coverage,execution.artifacts,execution.diagnostics,execution.result),cli.selected_output_format());
+    if let Command::Diagnostics(a) = &cli.command {
+        let value = diagnostics_commands::run(&a.command, signals);
+        return (
+            CommandResult::resolve(
+                cli.command_name(),
+                value.coverage,
+                value.artifacts,
+                value.diagnostics,
+                value.result,
+            ),
+            cli.selected_output_format(),
+        );
+    }
+    if let Command::Mp4Delivery(a) = &cli.command {
+        let execution = mp4_commands::run(&a.command, signals);
+        return (
+            CommandResult::resolve(
+                cli.command_name(),
+                execution.coverage,
+                execution.artifacts,
+                execution.diagnostics,
+                execution.result,
+            ),
+            cli.selected_output_format(),
+        );
     }
     if matches!(&cli.command, Command::ReleaseContract) {
-        return (CommandResult::resolve("release-contract",None,Vec::new(),Vec::new(),Some(crate::release_contract::describe())),cli.selected_output_format());
+        return (
+            CommandResult::resolve(
+                "release-contract",
+                None,
+                Vec::new(),
+                Vec::new(),
+                Some(crate::release_contract::describe()),
+            ),
+            cli.selected_output_format(),
+        );
     }
-    if let Command::VideoFolder(a)=&cli.command {if matches!(&a.command,crate::cli::VideoFolderCommand::Profiles){return (CommandResult::resolve("video-folder profiles",None,Vec::new(),Vec::new(),Some(crate::video_folder::profiles())),cli.selected_output_format());}if let crate::cli::VideoFolderCommand::Preview(request)=&a.command {let execution=video_commands::preview(request,signals);return (CommandResult::resolve("video-folder preview",execution.coverage,execution.artifacts,execution.diagnostics,execution.result),cli.selected_output_format());}}
+    if let Command::VideoFolder(a) = &cli.command {
+        if matches!(&a.command, crate::cli::VideoFolderCommand::Profiles) {
+            return (
+                CommandResult::resolve(
+                    "video-folder profiles",
+                    None,
+                    Vec::new(),
+                    Vec::new(),
+                    Some(crate::video_folder::profiles()),
+                ),
+                cli.selected_output_format(),
+            );
+        }
+        if let crate::cli::VideoFolderCommand::Preview(request) = &a.command {
+            let execution = video_commands::preview(request, signals);
+            return (
+                CommandResult::resolve(
+                    "video-folder preview",
+                    execution.coverage,
+                    execution.artifacts,
+                    execution.diagnostics,
+                    execution.result,
+                ),
+                cli.selected_output_format(),
+            );
+        }
+    }
     let command_name = cli.command_name();
     let fallback_output_format = cli.selected_output_format();
     let resolution = match crate::configuration::resolve(&cli) {
@@ -91,14 +147,21 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
         );
     }
     let execution = match cli.command {
-        Command::Diagnostics(a)=>diagnostics_commands::run(&a.command,signals),
+        Command::Diagnostics(a) => diagnostics_commands::run(&a.command, signals),
         Command::ReleaseContract => Execution::success(&crate::release_contract::describe()),
-        Command::Mp4Delivery(a) => mp4_commands::run(&a.command,signals),
+        Command::Mp4Delivery(a) => mp4_commands::run(&a.command, signals),
         Command::Doctor => run_doctor(&state_directory),
-        Command::Explain(a) => explanation_commands::run(a.command,signals),
-        Command::VideoFolder(a) => video_commands::folder(a.command,signals),
-        Command::Optimize(arguments) => optimize_commands::run(arguments.command,&effective_policy,signals),
-        Command::Replacement(arguments) => replacement_commands::run(arguments.command,&state_directory,&effective_policy,signals),
+        Command::Explain(a) => explanation_commands::run(a.command, signals),
+        Command::VideoFolder(a) => video_commands::folder(a.command, signals),
+        Command::Optimize(arguments) => {
+            optimize_commands::run(arguments.command, &effective_policy, signals)
+        }
+        Command::Replacement(arguments) => replacement_commands::run(
+            arguments.command,
+            &state_directory,
+            &effective_policy,
+            signals,
+        ),
         Command::Scan(arguments) => scan::run(
             &state_directory,
             &arguments,

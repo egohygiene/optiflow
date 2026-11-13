@@ -15,7 +15,9 @@ fn prepare(value: &Value) -> Result<PreparedForReview, PlanRefusal> {
 }
 
 fn has_pair(plan: &PreparedForReview, flag: &str, value: &str) -> bool {
-    plan.arguments.windows(2).any(|pair| pair[0] == flag && pair[1] == value)
+    plan.arguments
+        .windows(2)
+        .any(|pair| pair[0] == flag && pair[1] == value)
 }
 
 #[test]
@@ -28,9 +30,18 @@ fn supplied_declarations_produce_only_a_review_recipe() {
     assert_eq!(plan.request_fingerprint, request_fingerprint(&request));
     assert_ne!(plan.preparation_fingerprint, plan.request_fingerprint);
     assert!(plan.preservation_claim.contains("not_verified"));
-    assert!(plan.outstanding_validation.contains(&"elementary_payload_and_timestamp_preservation"));
-    assert!(plan.outstanding_validation.contains(&"host_enforcement_of_requested_resource_limits"));
-    assert!(plan.outstanding_validation.contains(&"versioned_video_artifact_publication_and_recovery"));
+    assert!(
+        plan.outstanding_validation
+            .contains(&"elementary_payload_and_timestamp_preservation")
+    );
+    assert!(
+        plan.outstanding_validation
+            .contains(&"host_enforcement_of_requested_resource_limits")
+    );
+    assert!(
+        plan.outstanding_validation
+            .contains(&"versioned_video_artifact_publication_and_recovery")
+    );
     assert!(!plan.arguments.iter().any(|arg| arg.contains("/synthetic/")));
     assert!(has_pair(&plan, "-protocol_whitelist", "pipe"));
     assert!(has_pair(&plan, "-i", "pipe:0"));
@@ -39,9 +50,17 @@ fn supplied_declarations_produce_only_a_review_recipe() {
     assert!(has_pair(&plan, "-disposition:v:0", "default"));
     assert!(has_pair(&plan, "-avoid_negative_ts", "disabled"));
     assert_eq!(plan.arguments.last().map(String::as_str), Some("pipe:1"));
-    assert!(!plan.arguments.iter().any(|arg| ["-an", "-sn", "-dn", "-y"].contains(&arg.as_str())));
+    assert!(
+        !plan
+            .arguments
+            .iter()
+            .any(|arg| ["-an", "-sn", "-dn", "-y"].contains(&arg.as_str()))
+    );
     // The sample's invented provider paths need not exist: this API does no IO.
-    assert_eq!(prepare(&value).unwrap().preparation_fingerprint, plan.preparation_fingerprint);
+    assert_eq!(
+        prepare(&value).unwrap().preparation_fingerprint,
+        plan.preparation_fingerprint
+    );
 }
 
 #[test]
@@ -55,7 +74,10 @@ fn lossy_plan_requires_both_settings_and_never_claims_exactness() {
     assert!(has_pair(&plan, "-pix_fmt", "+yuv420p"));
     assert!(has_pair(&plan, "-fps_mode:v", "passthrough"));
     assert!(plan.preservation_claim.contains("no_exact_equivalence"));
-    assert!(plan.outstanding_validation.contains(&"declared_lossy_evidence_and_operator_quality_review"));
+    assert!(
+        plan.outstanding_validation
+            .contains(&"declared_lossy_evidence_and_operator_quality_review")
+    );
     for operation in [
         json!({"kind": "h264_lossy"}),
         json!({"kind": "h264_lossy", "crf": 23}),
@@ -72,34 +94,65 @@ fn lossy_plan_requires_both_settings_and_never_claims_exactness() {
 
 #[test]
 fn missing_unknown_and_malformed_nested_fields_cannot_be_normalized_away() {
-    for pointer in ["", "/source", "/source/media", "/policy", "/producer",
-        "/producer/executable", "/producer/binary_digest", "/source/media/frame_rate",
-        "/operation", "/limits"] {
-        let mut value = example();
-        value.pointer_mut(pointer).unwrap().as_object_mut().unwrap()
-            .insert("unexpected".to_owned(), json!(true));
-        assert_eq!(prepare(&value).err(), Some(PlanRefusal::InvalidShape), "{pointer}");
-    }
-    for (pointer, key) in [
-        ("", "operation"), ("", "probe_build_fingerprint"),
-        ("/source/media", "feature_observation_complete"),
-        ("/source/media", "disposition"), ("/policy", "metadata"),
+    for pointer in [
+        "",
+        "/source",
+        "/source/media",
+        "/policy",
+        "/producer",
+        "/producer/executable",
+        "/producer/binary_digest",
+        "/source/media/frame_rate",
+        "/operation",
+        "/limits",
     ] {
         let mut value = example();
-        value.pointer_mut(pointer).unwrap().as_object_mut().unwrap().remove(key);
+        value
+            .pointer_mut(pointer)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert("unexpected".to_owned(), json!(true));
+        assert_eq!(
+            prepare(&value).err(),
+            Some(PlanRefusal::InvalidShape),
+            "{pointer}"
+        );
+    }
+    for (pointer, key) in [
+        ("", "operation"),
+        ("", "probe_build_fingerprint"),
+        ("/source/media", "feature_observation_complete"),
+        ("/source/media", "disposition"),
+        ("/policy", "metadata"),
+    ] {
+        let mut value = example();
+        value
+            .pointer_mut(pointer)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .remove(key);
         assert_eq!(prepare(&value).err(), Some(PlanRefusal::InvalidShape));
     }
     for (pointer, replacement) in [
         ("/source/media/frame_rate/denominator", json!(0)),
         ("/source/media/color_transfer", Value::Null),
-        ("/source/content_digest/value", json!("not-a-content-digest")),
+        (
+            "/source/content_digest/value",
+            json!("not-a-content-digest"),
+        ),
         ("/policy/source_preserving", json!(false)),
         ("/policy/require_strictly_smaller", json!(false)),
         ("/policy/metadata", json!("strip_all")),
     ] {
         let mut value = example();
         *value.pointer_mut(pointer).unwrap() = replacement;
-        assert_eq!(prepare(&value).err(), Some(PlanRefusal::InvalidShape), "{pointer}");
+        assert_eq!(
+            prepare(&value).err(),
+            Some(PlanRefusal::InvalidShape),
+            "{pointer}"
+        );
     }
 }
 
@@ -107,33 +160,52 @@ fn missing_unknown_and_malformed_nested_fields_cannot_be_normalized_away() {
 fn absent_or_unsupported_media_features_refuse_before_a_recipe_exists() {
     let mut value = example();
     value["source"]["media"]["feature_observation_complete"] = json!(false);
-    assert_eq!(prepare(&value).err(), Some(PlanRefusal::IncompleteObservation));
+    assert_eq!(
+        prepare(&value).err(),
+        Some(PlanRefusal::IncompleteObservation)
+    );
     for (field, replacement) in [
-        ("container", json!("mp4")), ("codec", json!("h264")),
-        ("total_streams", json!(2)), ("stream_index", json!(1)),
-        ("width", json!(319)), ("pixel_format", json!("yuv420p10le")),
-        ("field_order", json!("tt")), ("color_transfer", json!("smpte2084")),
-        ("rotation_degrees", json!(90)), ("chapters", json!(1)),
-        ("side_data_entries", json!(1)), ("descriptive_metadata_entries", json!(1)),
-        ("unknown_metadata_entries", json!(1)), ("disposition", json!("attached_pic")),
+        ("container", json!("mp4")),
+        ("codec", json!("h264")),
+        ("total_streams", json!(2)),
+        ("stream_index", json!(1)),
+        ("width", json!(319)),
+        ("pixel_format", json!("yuv420p10le")),
+        ("field_order", json!("tt")),
+        ("color_transfer", json!("smpte2084")),
+        ("rotation_degrees", json!(90)),
+        ("chapters", json!(1)),
+        ("side_data_entries", json!(1)),
+        ("descriptive_metadata_entries", json!(1)),
+        ("unknown_metadata_entries", json!(1)),
+        ("disposition", json!("attached_pic")),
     ] {
         let mut value = example();
         value["source"]["media"][field] = replacement;
-        assert_eq!(prepare(&value).err(), Some(PlanRefusal::UnsupportedSource), "{field}");
+        assert_eq!(
+            prepare(&value).err(),
+            Some(PlanRefusal::UnsupportedSource),
+            "{field}"
+        );
     }
 }
 
 #[test]
 fn exact_declared_timing_and_disposition_are_preserved_in_intent() {
     for (field, replacement) in [
-        ("constant_frame_rate", json!(false)), ("start_pts", json!(1)),
+        ("constant_frame_rate", json!(false)),
+        ("start_pts", json!(1)),
         ("duration_ticks", json!(1999)),
         ("frame_rate", json!({"numerator": 24, "denominator": 1})),
         ("time_base", json!({"numerator": 1, "denominator": 90000})),
     ] {
         let mut value = example();
         value["source"]["media"][field] = replacement;
-        assert_eq!(prepare(&value).err(), Some(PlanRefusal::InvalidTiming), "{field}");
+        assert_eq!(
+            prepare(&value).err(),
+            Some(PlanRefusal::InvalidTiming),
+            "{field}"
+        );
     }
     let mut value = example();
     value["source"]["media"]["disposition"] = json!("none");
@@ -143,8 +215,10 @@ fn exact_declared_timing_and_disposition_are_preserved_in_intent() {
 #[test]
 fn provider_declarations_require_exact_names_version_and_normalized_absolute_paths() {
     for (pointer, replacement) in [
-        ("/producer/name", json!("wrapper")), ("/probe/name", json!("ffmpeg")),
-        ("/producer/version", json!("8.0.2")), ("/probe/version", json!("8.0")),
+        ("/producer/name", json!("wrapper")),
+        ("/probe/name", json!("ffmpeg")),
+        ("/producer/version", json!("8.0.2")),
+        ("/probe/version", json!("8.0")),
         ("/producer/executable/value", json!("ffmpeg")),
         ("/producer/executable/value", json!("/tools/../ffmpeg")),
         ("/probe/executable/value", json!("/tools//ffprobe")),
@@ -152,19 +226,29 @@ fn provider_declarations_require_exact_names_version_and_normalized_absolute_pat
     ] {
         let mut value = example();
         *value.pointer_mut(pointer).unwrap() = replacement;
-        assert_eq!(prepare(&value).err(), Some(PlanRefusal::ProviderMismatch), "{pointer}");
+        assert_eq!(
+            prepare(&value).err(),
+            Some(PlanRefusal::ProviderMismatch),
+            "{pointer}"
+        );
     }
 }
 
 #[test]
 fn requested_limits_are_consistent_but_are_not_claimed_enforced() {
     for (field, replacement) in [
-        ("input_bytes", json!(10)), ("decoded_bytes", json!(100)),
-        ("temporary_bytes", json!(100)), ("memory_bytes", json!(100)),
+        ("input_bytes", json!(10)),
+        ("decoded_bytes", json!(100)),
+        ("temporary_bytes", json!(100)),
+        ("memory_bytes", json!(100)),
     ] {
         let mut value = example();
         value["limits"][field] = replacement;
-        assert_eq!(prepare(&value).err(), Some(PlanRefusal::LimitExceeded), "{field}");
+        assert_eq!(
+            prepare(&value).err(),
+            Some(PlanRefusal::LimitExceeded),
+            "{field}"
+        );
     }
     let mut value = example();
     value["limits"]["elapsed_ms"] = json!(30001);
@@ -179,21 +263,39 @@ fn requested_limits_are_consistent_but_are_not_claimed_enforced() {
 fn fingerprints_bind_source_policy_provider_build_and_recipe_choices() {
     let original = prepare(&example()).unwrap();
     for (pointer, replacement) in [
-        ("/source/observation_id", json!("another-synthetic-observation")),
+        (
+            "/source/observation_id",
+            json!("another-synthetic-observation"),
+        ),
         ("/source/content_digest/value", json!("b".repeat(64))),
-        ("/source/probe_observation_fingerprint/value", json!("b".repeat(64))),
-        ("/policy/effective_policy_fingerprint/value", json!("b".repeat(64))),
+        (
+            "/source/probe_observation_fingerprint/value",
+            json!("b".repeat(64)),
+        ),
+        (
+            "/policy/effective_policy_fingerprint/value",
+            json!("b".repeat(64)),
+        ),
         ("/producer/binary_digest/value", json!("b".repeat(64))),
         ("/producer_build_fingerprint/value", json!("b".repeat(64))),
         ("/probe/invocation_fingerprint/value", json!("b".repeat(64))),
         ("/probe_build_fingerprint/value", json!("b".repeat(64))),
         ("/limits/elapsed_ms", json!(20000)),
-        ("/operation", json!({"kind": "h264_lossy", "crf": 23, "preset": "slow"})),
+        (
+            "/operation",
+            json!({"kind": "h264_lossy", "crf": 23, "preset": "slow"}),
+        ),
     ] {
         let mut value = example();
         *value.pointer_mut(pointer).unwrap() = replacement;
         let changed = prepare(&value).unwrap();
-        assert_ne!(changed.request_fingerprint, original.request_fingerprint, "{pointer}");
-        assert_ne!(changed.preparation_fingerprint, original.preparation_fingerprint, "{pointer}");
+        assert_ne!(
+            changed.request_fingerprint, original.request_fingerprint,
+            "{pointer}"
+        );
+        assert_ne!(
+            changed.preparation_fingerprint, original.preparation_fingerprint,
+            "{pointer}"
+        );
     }
 }

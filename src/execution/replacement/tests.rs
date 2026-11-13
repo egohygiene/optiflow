@@ -1,30 +1,243 @@
 use super::*;
 use crate::filesystem::identity::FilesystemIdentity;
-fn directory(path:&str)->DirectoryBinding {DirectoryBinding {path:NativePath::from_path(Path::new(path)),identity:FilesystemIdentity {platform:"linux".into(),filesystem_id:"1".into(),file_id:"9".into(),link_count:None},mode:0o40700,uid:1000,gid:1000}}
-fn file(path:&str,size:u64,inode:&str)->FileBinding {FileBinding {directory:directory(Path::new(path).parent().unwrap().to_str().unwrap()),path:NativePath::from_path(Path::new(path)),identity:FilesystemIdentity {platform:"linux".into(),filesystem_id:"1".into(),file_id:inode.into(),link_count:Some(1)},size_bytes:size,modified_unix_ns:0,changed_unix_ns:0,mode:0o100600,uid:1000,gid:1000,blake3:"a".repeat(64)}}
-fn plan()->ReplacementPlan {let body=PlanBody {operation:"replace_validated_png.v1".into(),source:file("/media/a.png",100,"1"),candidate:file("/state/set/candidate.png",80,"2"),candidate_set:NativePath::from_path(Path::new("/state/set")),marker_blake3:"a".repeat(64),evidence_blake3:"b".repeat(64),state:directory("/state"),retention:directory("/retained"),limits:Limits {maximum_file_bytes:1024,free_space_reserve_bytes:1024,journal_budget_bytes:65536},evidence_policy_fingerprint:"c".repeat(64),encoded_logical_reduction_bytes:20,original_disposition:"retain_for_restore".into(),qualification:"unqualified_source_checkpoint".into()};ReplacementPlan {schema:PLAN_SCHEMA.into(),fingerprint:hash(&body).unwrap(),body}}
-#[test] fn replacement_approval_cannot_authorize_disposal(){let p=plan();let mut a=approve(&p,"operator".into()).unwrap();a.authority="discard_original".into();a.authorization_id.clear();a.authorization_id=hash(&a).unwrap();assert!(a.validate(&p).is_err());}
-#[test] fn approval_is_bound_to_exact_plan_body(){let p=plan();let a=approve(&p,"operator".into()).unwrap();let mut changed=p.clone();changed.body.source.changed_unix_ns=1;changed.fingerprint=hash(&changed.body).unwrap();assert!(a.validate(&changed).is_err());}
-#[test] fn byte_identical_quarantine_operation_cannot_enter_replacement(){let mut p=plan();p.body.operation="quarantine_exact_duplicate.v1".into();p.fingerprint=hash(&p.body).unwrap();assert!(p.validate().is_err());}
-#[test] fn cross_volume_original_retention_refuses_even_with_recomputed_fingerprint(){let mut p=plan();p.body.retention.identity.filesystem_id="2".into();p.fingerprint=hash(&p.body).unwrap();assert!(p.validate().is_err());}
-#[test] fn non_smaller_candidate_never_becomes_a_savings_plan(){let mut p=plan();p.body.candidate.size_bytes=100;p.body.encoded_logical_reduction_bytes=0;p.fingerprint=hash(&p.body).unwrap();assert!(p.validate().is_err());}
-#[test] fn closed_saved_plan_refuses_unknown_fields_and_duplicate_identity(){let p=plan();let mut v=serde_json::to_value(&p).unwrap();v["body"]["source"]["identity"]["authority"]=serde_json::json!(true);assert!(ReplacementPlan::from_json_slice(&serde_json::to_vec(&v).unwrap()).is_err());let data=serde_json::to_string(&p).unwrap().replacen("\"schema\":","\"schema\":\"optiflow.replacement-plan.v1\",\"schema\":",1);assert!(ReplacementPlan::from_json_slice(data.as_bytes()).is_err());}
-#[test] fn unsupported_limits_and_empty_operator_are_not_implicit_defaults(){let p=plan();assert!(approve(&p," ".into()).is_err());let mut over=p.clone();over.body.limits.maximum_file_bytes=16_777_217;over.fingerprint=hash(&over.body).unwrap();assert!(over.validate().is_err());}
-
-#[test] fn native_qualification_gate_cannot_be_enabled_by_json_or_approval(){assert!(transaction::require_qualification().is_err());}
-#[test] fn journal_never_skips_retention_or_replays_a_pending_phase(){let p=plan();let a=approve(&p,"operator".into()).unwrap();let first=transaction::ReplacementEvent {schema:"optiflow.replacement-event.v1".into(),plan_fingerprint:p.fingerprint.clone(),authorization_id:a.authorization_id,sequence:0,phase:"planned".into(),original_disposal_authorization:None,video_action:None,media_validation:None,staged:None,retained:None,published:None};first.validate_after(&[]).unwrap();let mut forged=first.clone();forged.sequence=1;forged.phase="committed".into();assert!(forged.validate_after(&[first.clone()]).is_err());forged.phase="planned".into();assert!(forged.validate_after(&[first]).is_err());}
-#[test] fn replacement_cli_keeps_review_and_mutation_authority_separate(){use clap::Parser;let c=crate::cli::Cli::try_parse_from(["optiflow","replacement","review","--source","/media/a.png","--candidate-set","/state/set","--retention","/retained","--output","/records/plan.json"]).unwrap();assert_eq!(c.command_name(),"replacement review");assert!(crate::cli::Cli::try_parse_from(["optiflow","replacement","apply","--plan","/records/p.json","--approval","/records/a.json","--allow-unqualified"]).is_err());}
-#[test] fn replacement_restore_requires_explicit_approval_locator(){use clap::Parser;assert!(crate::cli::Cli::try_parse_from(["optiflow","replacement","restore","--plan","/records/p.json"]).is_err());}
-
-#[test] fn saved_png_approval_rejects_unknown_duplicate_and_disposal_authority(){
-    let p=plan();let approval=approve(&p,"explicit operator".into()).unwrap();let bytes=serde_json::to_vec(&approval).unwrap();assert!(Approval::from_json_slice(&bytes,&p).is_ok());
-    let mut value=serde_json::to_value(&approval).unwrap();value["discard_originals"]=serde_json::json!(true);assert!(Approval::from_json_slice(&serde_json::to_vec(&value).unwrap(),&p).is_err());
-    let duplicated=serde_json::to_string(&approval).unwrap().replacen("\"schema\":","\"schema\":\"optiflow.replacement-approval.v1\",\"schema\":",1);assert!(Approval::from_json_slice(duplicated.as_bytes(),&p).is_err());
-    let mut changed=approval;changed.authority="restorable_video_replacement_only".into();changed.authorization_id.clear();changed.authorization_id=hash(&changed).unwrap();assert!(Approval::from_json_slice(&serde_json::to_vec(&changed).unwrap(),&p).is_err());
+fn directory(path: &str) -> DirectoryBinding {
+    DirectoryBinding {
+        path: NativePath::from_path(Path::new(path)),
+        identity: FilesystemIdentity {
+            platform: "linux".into(),
+            filesystem_id: "1".into(),
+            file_id: "9".into(),
+            link_count: None,
+        },
+        mode: 0o40700,
+        uid: 1000,
+        gid: 1000,
+    }
 }
-#[test] fn valid_saved_png_declaration_still_cannot_bypass_native_qualification(){
-    let p=plan();let a=approve(&p,"operator".into()).unwrap();let loaded=Approval::from_json_slice(&serde_json::to_vec(&a).unwrap(),&p).unwrap();let signals=SignalState::default();assert!(transaction::apply(&p,&loaded,&signals).is_err());assert!(transaction::restore(&p,&loaded,&signals).is_err());
+fn file(path: &str, size: u64, inode: &str) -> FileBinding {
+    FileBinding {
+        directory: directory(Path::new(path).parent().unwrap().to_str().unwrap()),
+        path: NativePath::from_path(Path::new(path)),
+        identity: FilesystemIdentity {
+            platform: "linux".into(),
+            filesystem_id: "1".into(),
+            file_id: inode.into(),
+            link_count: Some(1),
+        },
+        size_bytes: size,
+        modified_unix_ns: 0,
+        changed_unix_ns: 0,
+        mode: 0o100600,
+        uid: 1000,
+        gid: 1000,
+        blake3: "a".repeat(64),
+    }
+}
+fn plan() -> ReplacementPlan {
+    let body = PlanBody {
+        operation: "replace_validated_png.v1".into(),
+        source: file("/media/a.png", 100, "1"),
+        candidate: file("/state/set/candidate.png", 80, "2"),
+        candidate_set: NativePath::from_path(Path::new("/state/set")),
+        marker_blake3: "a".repeat(64),
+        evidence_blake3: "b".repeat(64),
+        state: directory("/state"),
+        retention: directory("/retained"),
+        limits: Limits {
+            maximum_file_bytes: 1024,
+            free_space_reserve_bytes: 1024,
+            journal_budget_bytes: 65536,
+        },
+        evidence_policy_fingerprint: "c".repeat(64),
+        encoded_logical_reduction_bytes: 20,
+        original_disposition: "retain_for_restore".into(),
+        qualification: "unqualified_source_checkpoint".into(),
+    };
+    ReplacementPlan {
+        schema: PLAN_SCHEMA.into(),
+        fingerprint: hash(&body).unwrap(),
+        body,
+    }
+}
+#[test]
+fn replacement_approval_cannot_authorize_disposal() {
+    let p = plan();
+    let mut a = approve(&p, "operator".into()).unwrap();
+    a.authority = "discard_original".into();
+    a.authorization_id.clear();
+    a.authorization_id = hash(&a).unwrap();
+    assert!(a.validate(&p).is_err());
+}
+#[test]
+fn approval_is_bound_to_exact_plan_body() {
+    let p = plan();
+    let a = approve(&p, "operator".into()).unwrap();
+    let mut changed = p.clone();
+    changed.body.source.changed_unix_ns = 1;
+    changed.fingerprint = hash(&changed.body).unwrap();
+    assert!(a.validate(&changed).is_err());
+}
+#[test]
+fn byte_identical_quarantine_operation_cannot_enter_replacement() {
+    let mut p = plan();
+    p.body.operation = "quarantine_exact_duplicate.v1".into();
+    p.fingerprint = hash(&p.body).unwrap();
+    assert!(p.validate().is_err());
+}
+#[test]
+fn cross_volume_original_retention_refuses_even_with_recomputed_fingerprint() {
+    let mut p = plan();
+    p.body.retention.identity.filesystem_id = "2".into();
+    p.fingerprint = hash(&p.body).unwrap();
+    assert!(p.validate().is_err());
+}
+#[test]
+fn non_smaller_candidate_never_becomes_a_savings_plan() {
+    let mut p = plan();
+    p.body.candidate.size_bytes = 100;
+    p.body.encoded_logical_reduction_bytes = 0;
+    p.fingerprint = hash(&p.body).unwrap();
+    assert!(p.validate().is_err());
+}
+#[test]
+fn closed_saved_plan_refuses_unknown_fields_and_duplicate_identity() {
+    let p = plan();
+    let mut v = serde_json::to_value(&p).unwrap();
+    v["body"]["source"]["identity"]["authority"] = serde_json::json!(true);
+    assert!(ReplacementPlan::from_json_slice(&serde_json::to_vec(&v).unwrap()).is_err());
+    let data = serde_json::to_string(&p).unwrap().replacen(
+        "\"schema\":",
+        "\"schema\":\"optiflow.replacement-plan.v1\",\"schema\":",
+        1,
+    );
+    assert!(ReplacementPlan::from_json_slice(data.as_bytes()).is_err());
+}
+#[test]
+fn unsupported_limits_and_empty_operator_are_not_implicit_defaults() {
+    let p = plan();
+    assert!(approve(&p, " ".into()).is_err());
+    let mut over = p.clone();
+    over.body.limits.maximum_file_bytes = 16_777_217;
+    over.fingerprint = hash(&over.body).unwrap();
+    assert!(over.validate().is_err());
+}
+
+#[test]
+fn native_qualification_gate_cannot_be_enabled_by_json_or_approval() {
+    assert!(transaction::require_qualification().is_err());
+}
+#[test]
+fn journal_never_skips_retention_or_replays_a_pending_phase() {
+    let p = plan();
+    let a = approve(&p, "operator".into()).unwrap();
+    let first = transaction::ReplacementEvent {
+        schema: "optiflow.replacement-event.v1".into(),
+        plan_fingerprint: p.fingerprint.clone(),
+        authorization_id: a.authorization_id,
+        sequence: 0,
+        phase: "planned".into(),
+        original_disposal_authorization: None,
+        video_action: None,
+        media_validation: None,
+        staged: None,
+        retained: None,
+        published: None,
+    };
+    first.validate_after(&[]).unwrap();
+    let mut forged = first.clone();
+    forged.sequence = 1;
+    forged.phase = "committed".into();
+    assert!(forged.validate_after(&[first.clone()]).is_err());
+    forged.phase = "planned".into();
+    assert!(forged.validate_after(&[first]).is_err());
+}
+#[test]
+fn replacement_cli_keeps_review_and_mutation_authority_separate() {
+    use clap::Parser;
+    let c = crate::cli::Cli::try_parse_from([
+        "optiflow",
+        "replacement",
+        "review",
+        "--source",
+        "/media/a.png",
+        "--candidate-set",
+        "/state/set",
+        "--retention",
+        "/retained",
+        "--output",
+        "/records/plan.json",
+    ])
+    .unwrap();
+    assert_eq!(c.command_name(), "replacement review");
+    assert!(
+        crate::cli::Cli::try_parse_from([
+            "optiflow",
+            "replacement",
+            "apply",
+            "--plan",
+            "/records/p.json",
+            "--approval",
+            "/records/a.json",
+            "--allow-unqualified"
+        ])
+        .is_err()
+    );
+}
+#[test]
+fn replacement_restore_requires_explicit_approval_locator() {
+    use clap::Parser;
+    assert!(
+        crate::cli::Cli::try_parse_from([
+            "optiflow",
+            "replacement",
+            "restore",
+            "--plan",
+            "/records/p.json"
+        ])
+        .is_err()
+    );
+}
+
+#[test]
+fn saved_png_approval_rejects_unknown_duplicate_and_disposal_authority() {
+    let p = plan();
+    let approval = approve(&p, "explicit operator".into()).unwrap();
+    let bytes = serde_json::to_vec(&approval).unwrap();
+    assert!(Approval::from_json_slice(&bytes, &p).is_ok());
+    let mut value = serde_json::to_value(&approval).unwrap();
+    value["discard_originals"] = serde_json::json!(true);
+    assert!(Approval::from_json_slice(&serde_json::to_vec(&value).unwrap(), &p).is_err());
+    let duplicated = serde_json::to_string(&approval).unwrap().replacen(
+        "\"schema\":",
+        "\"schema\":\"optiflow.replacement-approval.v1\",\"schema\":",
+        1,
+    );
+    assert!(Approval::from_json_slice(duplicated.as_bytes(), &p).is_err());
+    let mut changed = approval;
+    changed.authority = "restorable_video_replacement_only".into();
+    changed.authorization_id.clear();
+    changed.authorization_id = hash(&changed).unwrap();
+    assert!(Approval::from_json_slice(&serde_json::to_vec(&changed).unwrap(), &p).is_err());
+}
+#[test]
+fn valid_saved_png_declaration_still_cannot_bypass_native_qualification() {
+    let p = plan();
+    let a = approve(&p, "operator".into()).unwrap();
+    let loaded = Approval::from_json_slice(&serde_json::to_vec(&a).unwrap(), &p).unwrap();
+    let signals = SignalState::default();
+    assert!(transaction::apply(&p, &loaded, &signals).is_err());
+    assert!(transaction::restore(&p, &loaded, &signals).is_err());
 }
 
 #[cfg(unix)]
-#[test] fn read_only_status_on_an_unused_private_state_directory_creates_nothing(){use std::os::unix::fs::PermissionsExt;let temp=tempfile::tempdir().unwrap();std::fs::set_permissions(temp.path(),std::fs::Permissions::from_mode(0o700)).unwrap();let mut p=plan();p.body.state=diag(fs::directory(temp.path())).unwrap();p.fingerprint=hash(&p.body).unwrap();assert!(transaction::status(&p).unwrap().is_empty());assert!(std::fs::read_dir(temp.path()).unwrap().next().is_none());}
+#[test]
+fn read_only_status_on_an_unused_private_state_directory_creates_nothing() {
+    use std::os::unix::fs::PermissionsExt;
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let mut p = plan();
+    p.body.state = diag(fs::directory(temp.path())).unwrap();
+    p.fingerprint = hash(&p.body).unwrap();
+    assert!(transaction::status(&p).unwrap().is_empty());
+    assert!(std::fs::read_dir(temp.path()).unwrap().next().is_none());
+}

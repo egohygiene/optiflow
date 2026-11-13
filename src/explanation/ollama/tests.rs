@@ -1,25 +1,278 @@
 use super::*;
-fn configuration()->Configuration {let sha="a".repeat(64);let template="Return cited review suggestions and questions from only the supplied facts.".to_string();let mut profile=Profile {schema:runtime::PROFILE_SCHEMA.into(),fingerprint:Digest::blake3(b""),provider_id:"optiflow.local-ollama-sdk-v1".into(),model_id:format!("selected:tag/sha256:{sha}"),runtime_revision:"ollama/0.12.3/ctx8192/out512".into(),template_fingerprint:Digest::blake3(template.as_bytes()),template,output_schema_digest:Digest::blake3(include_bytes!("../../../schemas/explanation-candidate-v1.schema.json")),backend:"local_process_sdk_v1".into(),local_only:true};profile.fingerprint=fingerprint(&profile).unwrap();Configuration {enabled:true,profile,deployment:Deployment {endpoint:"127.0.0.1:11434".parse().unwrap(),runtime_version:"0.12.3".into(),model_name:"selected:tag".into(),model_sha256:sha,service_egress_disabled_declared:true,context_tokens:8192,output_tokens:512}}}
-#[test] fn local_configuration_binds_model_digest_runtime_and_literal_loopback(){let c=configuration();c.validate().unwrap();let mut changed=c.clone();changed.deployment.model_sha256="b".repeat(64);assert!(changed.validate().is_err());changed=c.clone();changed.deployment.runtime_version="next".into();assert!(changed.validate().is_err());changed=c;changed.deployment.endpoint="192.0.2.1:11434".parse().unwrap();assert!(changed.validate().is_err());}
-#[test] fn private_local_configuration_accepts_no_credentials_or_fallback(){let c=configuration();for field in ["api_key","remote_fallback","environment"]{let mut raw=serde_json::to_value(&c).unwrap();raw[field]=serde_json::json!("not allowed");assert!(contracts::validate(Contract::ExplanationOllamaConfig,&raw).is_err());}}
-#[test] fn request_allowlist_refuses_model_install_and_remote_socket_before_connect(){let deadline=Instant::now()+Duration::from_secs(1);assert!(http::request("127.0.0.1:9".parse().unwrap(),"POST","/api/pull",b"{}",1024,deadline,&||false).is_err());assert!(http::request("192.0.2.1:9".parse().unwrap(),"GET","/api/version",b"",1024,deadline,&||false).is_err());}
-#[test] fn cancelled_local_request_never_connects(){assert!(http::request("127.0.0.1:9".parse().unwrap(),"GET","/api/version",b"",1024,Instant::now()+Duration::from_secs(1),&||true).is_err());}
-fn server(reply:&'static [u8])->(std::net::SocketAddr,std::thread::JoinHandle<()>) {let listener=std::net::TcpListener::bind("127.0.0.1:0").unwrap();let addr=listener.local_addr().unwrap();let handle=std::thread::spawn(move||{use std::io::{Read,Write};let (mut stream,_)=listener.accept().unwrap();stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();let mut header=Vec::new();while !header.ends_with(b"\r\n\r\n"){let mut b=[0];stream.read_exact(&mut b).unwrap();header.push(b[0]);assert!(header.len()<=4096);}stream.write_all(reply).unwrap();});(addr,handle)}
-#[test] fn bounded_chunked_local_json_is_accepted_without_content_length(){let (addr,handle)=server(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n");let data=http::request(addr,"GET","/api/version",b"",16,Instant::now()+Duration::from_secs(3),&||false).unwrap();assert_eq!(data,b"{}");handle.join().unwrap();}
-#[test] fn ambiguous_response_framing_is_refused(){let (addr,handle)=server(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 2\r\n\r\n{}");assert!(http::request(addr,"GET","/api/version",b"",16,Instant::now()+Duration::from_secs(3),&||false).is_err());handle.join().unwrap();}
-#[test] fn local_http_body_limit_refuses_larger_declared_response(){let (addr,handle)=server(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 999\r\n\r\n");assert!(http::request(addr,"GET","/api/version",b"",16,Instant::now()+Duration::from_secs(3),&||false).is_err());handle.join().unwrap();}
+fn configuration() -> Configuration {
+    let sha = "a".repeat(64);
+    let template =
+        "Return cited review suggestions and questions from only the supplied facts.".to_string();
+    let mut profile = Profile {
+        schema: runtime::PROFILE_SCHEMA.into(),
+        fingerprint: Digest::blake3(b""),
+        provider_id: "optiflow.local-ollama-sdk-v1".into(),
+        model_id: format!("selected:tag/sha256:{sha}"),
+        runtime_revision: "ollama/0.12.3/ctx8192/out512".into(),
+        template_fingerprint: Digest::blake3(template.as_bytes()),
+        template,
+        output_schema_digest: Digest::blake3(include_bytes!(
+            "../../../schemas/explanation-candidate-v1.schema.json"
+        )),
+        backend: "local_process_sdk_v1".into(),
+        local_only: true,
+    };
+    profile.fingerprint = fingerprint(&profile).unwrap();
+    Configuration {
+        enabled: true,
+        profile,
+        deployment: Deployment {
+            endpoint: "127.0.0.1:11434".parse().unwrap(),
+            runtime_version: "0.12.3".into(),
+            model_name: "selected:tag".into(),
+            model_sha256: sha,
+            service_egress_disabled_declared: true,
+            context_tokens: 8192,
+            output_tokens: 512,
+        },
+    }
+}
+#[test]
+fn local_configuration_binds_model_digest_runtime_and_literal_loopback() {
+    let c = configuration();
+    c.validate().unwrap();
+    let mut changed = c.clone();
+    changed.deployment.model_sha256 = "b".repeat(64);
+    assert!(changed.validate().is_err());
+    changed = c.clone();
+    changed.deployment.runtime_version = "next".into();
+    assert!(changed.validate().is_err());
+    changed = c;
+    changed.deployment.endpoint = "192.0.2.1:11434".parse().unwrap();
+    assert!(changed.validate().is_err());
+}
+#[test]
+fn private_local_configuration_accepts_no_credentials_or_fallback() {
+    let c = configuration();
+    for field in ["api_key", "remote_fallback", "environment"] {
+        let mut raw = serde_json::to_value(&c).unwrap();
+        raw[field] = serde_json::json!("not allowed");
+        assert!(contracts::validate(Contract::ExplanationOllamaConfig, &raw).is_err());
+    }
+}
+#[test]
+fn request_allowlist_refuses_model_install_and_remote_socket_before_connect() {
+    let deadline = Instant::now() + Duration::from_secs(1);
+    assert!(
+        http::request(
+            "127.0.0.1:9".parse().unwrap(),
+            "POST",
+            "/api/pull",
+            b"{}",
+            1024,
+            deadline,
+            &|| false
+        )
+        .is_err()
+    );
+    assert!(
+        http::request(
+            "192.0.2.1:9".parse().unwrap(),
+            "GET",
+            "/api/version",
+            b"",
+            1024,
+            deadline,
+            &|| false
+        )
+        .is_err()
+    );
+}
+#[test]
+fn cancelled_local_request_never_connects() {
+    assert!(
+        http::request(
+            "127.0.0.1:9".parse().unwrap(),
+            "GET",
+            "/api/version",
+            b"",
+            1024,
+            Instant::now() + Duration::from_secs(1),
+            &|| true
+        )
+        .is_err()
+    );
+}
+fn server(reply: &'static [u8]) -> (std::net::SocketAddr, std::thread::JoinHandle<()>) {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let handle = std::thread::spawn(move || {
+        use std::io::{Read, Write};
+        let (mut stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let mut header = Vec::new();
+        while !header.ends_with(b"\r\n\r\n") {
+            let mut b = [0];
+            stream.read_exact(&mut b).unwrap();
+            header.push(b[0]);
+            assert!(header.len() <= 4096);
+        }
+        stream.write_all(reply).unwrap();
+    });
+    (addr, handle)
+}
+#[test]
+fn bounded_chunked_local_json_is_accepted_without_content_length() {
+    let (addr,handle)=server(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n");
+    let data = http::request(
+        addr,
+        "GET",
+        "/api/version",
+        b"",
+        16,
+        Instant::now() + Duration::from_secs(3),
+        &|| false,
+    )
+    .unwrap();
+    assert_eq!(data, b"{}");
+    handle.join().unwrap();
+}
+#[test]
+fn ambiguous_response_framing_is_refused() {
+    let (addr,handle)=server(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nContent-Length: 2\r\n\r\n{}");
+    assert!(
+        http::request(
+            addr,
+            "GET",
+            "/api/version",
+            b"",
+            16,
+            Instant::now() + Duration::from_secs(3),
+            &|| false
+        )
+        .is_err()
+    );
+    handle.join().unwrap();
+}
+#[test]
+fn local_http_body_limit_refuses_larger_declared_response() {
+    let (addr, handle) =
+        server(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 999\r\n\r\n");
+    assert!(
+        http::request(
+            addr,
+            "GET",
+            "/api/version",
+            b"",
+            16,
+            Instant::now() + Duration::from_secs(3),
+            &|| false
+        )
+        .is_err()
+    );
+    handle.join().unwrap();
+}
 #[cfg(unix)]
-fn setup_fixture()->(tempfile::TempDir,setup::Request,std::path::PathBuf){use std::os::unix::fs::PermissionsExt;let temp=tempfile::tempdir().unwrap();let root=temp.path();let binary=root.join("inert-provider");std::fs::write(&binary,b"inert bytes; never executed").unwrap();std::fs::set_permissions(&binary,std::fs::Permissions::from_mode(0o700)).unwrap();let work=root.join("work");let output=root.join("output");for p in [&work,&output]{std::fs::create_dir(p).unwrap();std::fs::set_permissions(p,std::fs::Permissions::from_mode(0o700)).unwrap();}let c=configuration();let r=setup::Request {schema:"optiflow.local-explanation-setup-request.v1".into(),enabled:false,executable:binary,working_directory:work,deployment:c.deployment,template:c.profile.template};(temp,r,output)}
+fn setup_fixture() -> (tempfile::TempDir, setup::Request, std::path::PathBuf) {
+    use std::os::unix::fs::PermissionsExt;
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let binary = root.join("inert-provider");
+    std::fs::write(&binary, b"inert bytes; never executed").unwrap();
+    std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o700)).unwrap();
+    let work = root.join("work");
+    let output = root.join("output");
+    for p in [&work, &output] {
+        std::fs::create_dir(p).unwrap();
+        std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    let c = configuration();
+    let r = setup::Request {
+        schema: "optiflow.local-explanation-setup-request.v1".into(),
+        enabled: false,
+        executable: binary,
+        working_directory: work,
+        deployment: c.deployment,
+        template: c.profile.template,
+    };
+    (temp, r, output)
+}
 #[cfg(unix)]
-#[test] fn local_setup_writes_disabled_reviewable_sdk_bundle_without_network_or_process(){let (_temp,r,out)=setup_fixture();let report=setup::write(&r,&out,&crate::signals::SignalState::default()).unwrap();assert!(!report.enabled&&!report.process_invocation_observed&&!report.model_execution_qualified);let catalog=ExtensionCatalog::load(&[out.join("manifest.json")],&[out.join("lock.json")]).unwrap();assert!(!catalog.extensions()[0].lock().enabled);assert_eq!(catalog.extensions()[0].manifest().capabilities[0].locality.network_hosts,vec!["127.0.0.1:11434"]);assert!(!catalog.extensions()[0].manifest().capabilities[0].locality.local_only);}
+#[test]
+fn local_setup_writes_disabled_reviewable_sdk_bundle_without_network_or_process() {
+    let (_temp, r, out) = setup_fixture();
+    let report = setup::write(&r, &out, &crate::signals::SignalState::default()).unwrap();
+    assert!(
+        !report.enabled && !report.process_invocation_observed && !report.model_execution_qualified
+    );
+    let catalog =
+        ExtensionCatalog::load(&[out.join("manifest.json")], &[out.join("lock.json")]).unwrap();
+    assert!(!catalog.extensions()[0].lock().enabled);
+    assert_eq!(
+        catalog.extensions()[0].manifest().capabilities[0]
+            .locality
+            .network_hosts,
+        vec!["127.0.0.1:11434"]
+    );
+    assert!(
+        !catalog.extensions()[0].manifest().capabilities[0]
+            .locality
+            .local_only
+    );
+}
 #[cfg(unix)]
-#[test] fn setup_inspection_rejects_changed_executable_even_when_model_profile_is_unchanged(){let (_temp,r,out)=setup_fixture();setup::write(&r,&out,&crate::signals::SignalState::default()).unwrap();std::fs::write(&r.executable,b"changed inert executable").unwrap();assert!(setup::inspect(&out,&crate::signals::SignalState::default()).is_err());}
+#[test]
+fn setup_inspection_rejects_changed_executable_even_when_model_profile_is_unchanged() {
+    let (_temp, r, out) = setup_fixture();
+    setup::write(&r, &out, &crate::signals::SignalState::default()).unwrap();
+    std::fs::write(&r.executable, b"changed inert executable").unwrap();
+    assert!(setup::inspect(&out, &crate::signals::SignalState::default()).is_err());
+}
 #[cfg(unix)]
-#[test] fn setup_refuses_nonempty_output_without_replacing_any_record(){let (_temp,r,out)=setup_fixture();std::fs::write(out.join("keep.json"),b"preserve").unwrap();assert!(setup::write(&r,&out,&crate::signals::SignalState::default()).is_err());assert_eq!(std::fs::read(out.join("keep.json")).unwrap(),b"preserve");}
-#[test] fn setup_cli_requires_explicit_request_and_private_output(){use clap::Parser;assert!(crate::cli::Cli::try_parse_from(["optiflow","explain","setup-local","--request","r.json"]).is_err());assert!(crate::cli::Cli::try_parse_from(["optiflow","explain","setup-local","--request","r.json","--output-directory","/private/setup","--download-model"]).is_err());}
+#[test]
+fn setup_refuses_nonempty_output_without_replacing_any_record() {
+    let (_temp, r, out) = setup_fixture();
+    std::fs::write(out.join("keep.json"), b"preserve").unwrap();
+    assert!(setup::write(&r, &out, &crate::signals::SignalState::default()).is_err());
+    assert_eq!(std::fs::read(out.join("keep.json")).unwrap(), b"preserve");
+}
+#[test]
+fn setup_cli_requires_explicit_request_and_private_output() {
+    use clap::Parser;
+    assert!(
+        crate::cli::Cli::try_parse_from([
+            "optiflow",
+            "explain",
+            "setup-local",
+            "--request",
+            "r.json"
+        ])
+        .is_err()
+    );
+    assert!(
+        crate::cli::Cli::try_parse_from([
+            "optiflow",
+            "explain",
+            "setup-local",
+            "--request",
+            "r.json",
+            "--output-directory",
+            "/private/setup",
+            "--download-model"
+        ])
+        .is_err()
+    );
+}
 
-#[test] fn changed_generation_limits_invalidate_the_declared_profile(){
-    let original=configuration();let mut changed=original.clone();changed.deployment.context_tokens+=1;assert!(changed.validate().is_err());
-    changed.profile.runtime_revision=changed.deployment.profile_runtime_revision();changed.profile.fingerprint=Digest::blake3(b"");changed.profile.fingerprint=fingerprint(&changed.profile).unwrap();changed.validate().unwrap();assert_ne!(changed.profile.fingerprint,original.profile.fingerprint);
-    let mut changed=original;changed.deployment.output_tokens+=1;assert!(changed.validate().is_err());
+#[test]
+fn changed_generation_limits_invalidate_the_declared_profile() {
+    let original = configuration();
+    let mut changed = original.clone();
+    changed.deployment.context_tokens += 1;
+    assert!(changed.validate().is_err());
+    changed.profile.runtime_revision = changed.deployment.profile_runtime_revision();
+    changed.profile.fingerprint = Digest::blake3(b"");
+    changed.profile.fingerprint = fingerprint(&changed.profile).unwrap();
+    changed.validate().unwrap();
+    assert_ne!(changed.profile.fingerprint, original.profile.fingerprint);
+    let mut changed = original;
+    changed.deployment.output_tokens += 1;
+    assert!(changed.validate().is_err());
 }

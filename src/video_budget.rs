@@ -30,7 +30,11 @@ impl OperationBudget {
         let deadline = started
             .checked_add(limit)
             .context("video workflow deadline is outside the monotonic clock range")?;
-        Ok(Self { started, deadline, limit })
+        Ok(Self {
+            started,
+            deadline,
+            limit,
+        })
     }
 
     pub(crate) fn check(&self, cancel: &impl Fn() -> bool) -> Result<()> {
@@ -73,8 +77,14 @@ mod tests {
     #[test]
     fn cancellation_refuses_both_checkpoint_and_child_time_allocation() {
         let budget = OperationBudget::new(MAX_ELAPSED_MS).unwrap();
-        assert_eq!(budget.check(&|| true).unwrap_err().to_string(), "video workflow cancelled");
-        assert_eq!(budget.remaining(&|| true).unwrap_err().to_string(), "video workflow cancelled");
+        assert_eq!(
+            budget.check(&|| true).unwrap_err().to_string(),
+            "video workflow cancelled"
+        );
+        assert_eq!(
+            budget.remaining(&|| true).unwrap_err().to_string(),
+            "video workflow cancelled"
+        );
         // The budget is still the same clock; checking it never consumes or
         // resets it, and a caller owns its cancellation signal.
         assert!(budget.check(&|| false).is_ok());

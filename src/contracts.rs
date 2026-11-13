@@ -115,33 +115,73 @@ pub fn validate<T: Serialize>(contract: Contract, value: &T) -> Result<()> {
 
 pub fn schema(contract: Contract) -> Result<Value> {
     let source = match contract {
-        Contract::ExplanationLocalSetupRequest => include_str!("../schemas/local-explanation-setup-request-v1.schema.json"),
-        Contract::ExplanationLocalSetupReport => include_str!("../schemas/local-explanation-setup-report-v1.schema.json"),
-        Contract::ExplanationOllamaConfig => include_str!("../schemas/evidence-explanation-runtime-config-v2.schema.json"),
-        Contract::ExplanationLocalNotes => include_str!("../schemas/explanation-local-notes-v1.schema.json"),
-        Contract::VideoReplacementValidationRecord => include_str!("../schemas/video-replacement-validation-record-v1.schema.json"),
-        Contract::VideoReplacementPlan => include_str!("../schemas/video-replacement-plan-v1.schema.json"),
-        Contract::VideoReplacementApproval => include_str!("../schemas/video-replacement-approval-v1.schema.json"),
+        Contract::ExplanationLocalSetupRequest => {
+            include_str!("../schemas/local-explanation-setup-request-v1.schema.json")
+        }
+        Contract::ExplanationLocalSetupReport => {
+            include_str!("../schemas/local-explanation-setup-report-v1.schema.json")
+        }
+        Contract::ExplanationOllamaConfig => {
+            include_str!("../schemas/evidence-explanation-runtime-config-v2.schema.json")
+        }
+        Contract::ExplanationLocalNotes => {
+            include_str!("../schemas/explanation-local-notes-v1.schema.json")
+        }
+        Contract::VideoReplacementValidationRecord => {
+            include_str!("../schemas/video-replacement-validation-record-v1.schema.json")
+        }
+        Contract::VideoReplacementPlan => {
+            include_str!("../schemas/video-replacement-plan-v1.schema.json")
+        }
+        Contract::VideoReplacementApproval => {
+            include_str!("../schemas/video-replacement-approval-v1.schema.json")
+        }
         Contract::ReplacementEventV2 => include_str!("../schemas/replacement-event-v2.schema.json"),
 
-        Contract::VideoReplacementValidation => include_str!("../schemas/video-replacement-validation-v1.schema.json"),
-        Contract::ExplanationRuntimeProfile => include_str!("../schemas/evidence-explanation-runtime-profile-v1.schema.json"),
-        Contract::ExplanationRuntimeConfig => include_str!("../schemas/evidence-explanation-runtime-config-v1.schema.json"),
-        Contract::StagedVideoReplacement => include_str!("../schemas/staged-video-replacement-review-v1.schema.json"),
+        Contract::VideoReplacementValidation => {
+            include_str!("../schemas/video-replacement-validation-v1.schema.json")
+        }
+        Contract::ExplanationRuntimeProfile => {
+            include_str!("../schemas/evidence-explanation-runtime-profile-v1.schema.json")
+        }
+        Contract::ExplanationRuntimeConfig => {
+            include_str!("../schemas/evidence-explanation-runtime-config-v1.schema.json")
+        }
+        Contract::StagedVideoReplacement => {
+            include_str!("../schemas/staged-video-replacement-review-v1.schema.json")
+        }
         Contract::VideoFolderProtocolV2 => include_str!("../schemas/video-folder-v2.schema.json"),
         Contract::PngFolderProtocol => include_str!("../schemas/png-folder-v1.schema.json"),
         Contract::ReplacementEvent => include_str!("../schemas/replacement-event-v1.schema.json"),
         Contract::ReplacementPlan => include_str!("../schemas/replacement-plan-v1.schema.json"),
-        Contract::ReplacementApproval => include_str!("../schemas/replacement-approval-v1.schema.json"),
-        Contract::StrongPropertyCopyReceipt => include_str!("../schemas/strong-property-copy-receipt-v1.schema.json"),
-        Contract::DescriptorPropertyObservation => include_str!("../schemas/descriptor-property-observation-v1.schema.json"),
-        Contract::VideoCandidateRequestV2 => include_str!("../schemas/video-candidate-request-v2.schema.json"),
-        Contract::VideoProductionRequestV2 => include_str!("../schemas/video-production-request-v2.schema.json"),
-        Contract::VideoCandidateEvidenceV2 => include_str!("../schemas/video-candidate-evidence-v2.schema.json"),
-        Contract::VideoCandidateArtifactSetV2 => include_str!("../schemas/video-candidate-artifact-set-v2.schema.json"),
+        Contract::ReplacementApproval => {
+            include_str!("../schemas/replacement-approval-v1.schema.json")
+        }
+        Contract::StrongPropertyCopyReceipt => {
+            include_str!("../schemas/strong-property-copy-receipt-v1.schema.json")
+        }
+        Contract::DescriptorPropertyObservation => {
+            include_str!("../schemas/descriptor-property-observation-v1.schema.json")
+        }
+        Contract::VideoCandidateRequestV2 => {
+            include_str!("../schemas/video-candidate-request-v2.schema.json")
+        }
+        Contract::VideoProductionRequestV2 => {
+            include_str!("../schemas/video-production-request-v2.schema.json")
+        }
+        Contract::VideoCandidateEvidenceV2 => {
+            include_str!("../schemas/video-candidate-evidence-v2.schema.json")
+        }
+        Contract::VideoCandidateArtifactSetV2 => {
+            include_str!("../schemas/video-candidate-artifact-set-v2.schema.json")
+        }
         Contract::ExplanationPacket => include_str!("../schemas/explanation-packet-v1.schema.json"),
-        Contract::ExplanationCandidate => include_str!("../schemas/explanation-candidate-v1.schema.json"),
-        Contract::ExplanationSidecar => include_str!("../schemas/explanation-sidecar-v1.schema.json"),
+        Contract::ExplanationCandidate => {
+            include_str!("../schemas/explanation-candidate-v1.schema.json")
+        }
+        Contract::ExplanationSidecar => {
+            include_str!("../schemas/explanation-sidecar-v1.schema.json")
+        }
         Contract::Execution => include_str!("../schemas/execution-v1.schema.json"),
         Contract::ExecutionMutation => include_str!("../schemas/execution-mutation-v2.schema.json"),
         Contract::ExecutionRecoveryEvent => {
@@ -181,10 +221,16 @@ pub fn schema(contract: Contract) -> Result<Value> {
         Contract::PngCandidateEvidence => {
             include_str!("../schemas/png-candidate-evidence-v1.schema.json")
         }
-        Contract::VideoProductionRequest => include_str!("../schemas/video-production-request-v1.schema.json"),
+        Contract::VideoProductionRequest => {
+            include_str!("../schemas/video-production-request-v1.schema.json")
+        }
         Contract::VideoFolderProtocol => include_str!("../schemas/video-folder-v1.schema.json"),
-        Contract::VideoCandidateEvidence => include_str!("../schemas/video-candidate-evidence-v1.schema.json"),
-        Contract::VideoCandidateArtifactSet => include_str!("../schemas/video-candidate-artifact-set-v1.schema.json"),
+        Contract::VideoCandidateEvidence => {
+            include_str!("../schemas/video-candidate-evidence-v1.schema.json")
+        }
+        Contract::VideoCandidateArtifactSet => {
+            include_str!("../schemas/video-candidate-artifact-set-v1.schema.json")
+        }
         Contract::VideoCandidateRequest => {
             include_str!("../schemas/video-candidate-request-v1.schema.json")
         }

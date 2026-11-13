@@ -951,8 +951,16 @@ mod tests {
 }
 
 fn apply_migration_0010(connection: &mut Connection) -> Result<()> {
-    if connection.query_row("SELECT COUNT(*) FROM schema_migrations WHERE version=10",[],|r|r.get::<_,i64>(0))?>0 {return Ok(());}
-    let transaction=connection.transaction()?;
+    if connection.query_row(
+        "SELECT COUNT(*) FROM schema_migrations WHERE version=10",
+        [],
+        |r| r.get::<_, i64>(0),
+    )? > 0
+    {
+        return Ok(());
+    }
+    let transaction = connection.transaction()?;
     transaction.execute_batch(include_str!("../migrations/0010_replacement.sql"))?;
-    transaction.commit()?;Ok(())
+    transaction.commit()?;
+    Ok(())
 }

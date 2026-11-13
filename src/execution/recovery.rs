@@ -323,7 +323,11 @@ fn record(
             action.ok_or_else(|| failure(Code::StoredStateIncompatible, "commit has no action"))?;
         let file = fs::open(&run.namespace.to_path_buf().join(&action.action_id), false)?;
         let observed = identity(&file)?;
-        if evidence.observed_identity.as_ref().is_some_and(|expected| expected != &observed) {
+        if evidence
+            .observed_identity
+            .as_ref()
+            .is_some_and(|expected| expected != &observed)
+        {
             return Err(failure(
                 Code::ExecutionSourceStale,
                 "quarantine object identity changed before committed evidence",
@@ -620,11 +624,16 @@ fn check_committed_quarantine_identity(
     if action.topology != Topology::CrossFilesystem {
         return Ok(());
     }
-    let expected = report.events.iter().rev().find(|event| {
-        event.action_id.as_deref() == Some(&action.action_id)
-            && event.phase == "committed"
-            && matches!(event.operation.as_str(), "apply" | "resume")
-    }).and_then(|event| event.observed_identity.as_ref());
+    let expected = report
+        .events
+        .iter()
+        .rev()
+        .find(|event| {
+            event.action_id.as_deref() == Some(&action.action_id)
+                && event.phase == "committed"
+                && matches!(event.operation.as_str(), "apply" | "resume")
+        })
+        .and_then(|event| event.observed_identity.as_ref());
     // Historical apply events did not bind the copied inode. Keep their
     // content/property-only authority without backfilling identity evidence.
     if let Some(expected) = expected {
@@ -1067,7 +1076,12 @@ fn restore_cross(
         Mode::empty(),
     )
     .map(File::from)
-    .map_err(|error| failure(Code::ExecutionSourceStale, format!("restore temporary entry changed: {error}")))?;
+    .map_err(|error| {
+        failure(
+            Code::ExecutionSourceStale,
+            format!("restore temporary entry changed: {error}"),
+        )
+    })?;
     let temporary_identity = identity(&current_temporary)?;
     let temporary_metadata = fs::metadata(&current_temporary)?;
     if temporary_identity != identity(&output)?
@@ -1771,7 +1785,12 @@ mod tests {
         assert_eq!(recorded.actions[0].state, "ambiguous");
         assert!(run.namespace.to_path_buf().join(&action.action_id).exists());
         assert!(
-            action.candidate.path.to_path_buf().parent().unwrap()
+            action
+                .candidate
+                .path
+                .to_path_buf()
+                .parent()
+                .unwrap()
                 .join(format!(
                     ".optiflow-{}-{}.restore.part",
                     run.run_id, action.action_id
@@ -1792,42 +1811,85 @@ mod tests {
             let original_identity = identity(&original).unwrap();
             let original_properties = mutation::properties(&original).unwrap();
             let current = if already_restored {
-                restore(&f.plan, &f.approval, &f.state, &f.policy, &f.run.run_id,
-                    &action.action_id, &SignalState::default()).unwrap()
+                restore(
+                    &f.plan,
+                    &f.approval,
+                    &f.state,
+                    &f.policy,
+                    &f.run.run_id,
+                    &action.action_id,
+                    &SignalState::default(),
+                )
+                .unwrap()
             } else {
                 status(&f.state, &f.run.run_id).unwrap()
             };
-            let committed = current.events.iter().find(|event| event.phase == "committed").unwrap();
-            assert_eq!(committed.observed_identity.as_ref(), Some(&original_identity));
+            let committed = current
+                .events
+                .iter()
+                .find(|event| event.phase == "committed")
+                .unwrap();
+            assert_eq!(
+                committed.observed_identity.as_ref(),
+                Some(&original_identity)
+            );
             if already_restored {
                 assert_ne!(
-                    identity(&fs::open(&action.candidate.path.to_path_buf(), false).unwrap()).unwrap(),
+                    identity(&fs::open(&action.candidate.path.to_path_buf(), false).unwrap())
+                        .unwrap(),
                     original_identity,
                     "restored source has its own identity, distinct from retained quarantine",
                 );
             }
-            std::fs::rename(&quarantine_path, f.quarantine.path().join("original-retained")).unwrap();
+            std::fs::rename(
+                &quarantine_path,
+                f.quarantine.path().join("original-retained"),
+            )
+            .unwrap();
             std::fs::write(&quarantine_path, b"synthetic duplicate").unwrap();
             let replacement = fs::open(&quarantine_path, false).unwrap();
             mutation::set_properties(&replacement, &original_properties).unwrap();
             check_properties(action, &replacement, &current).unwrap();
             assert_ne!(identity(&replacement).unwrap(), original_identity);
-            let error = restore(&f.plan, &f.approval, &f.state, &f.policy, &f.run.run_id,
-                &action.action_id, &SignalState::default()).unwrap_err();
+            let error = restore(
+                &f.plan,
+                &f.approval,
+                &f.state,
+                &f.policy,
+                &f.run.run_id,
+                &action.action_id,
+                &SignalState::default(),
+            )
+            .unwrap_err();
             assert_eq!(error.code, Code::ExecutionSourceStale);
-            assert_eq!(status(&f.state, &f.run.run_id).unwrap().events.len(), current.events.len());
-            assert_eq!(action.candidate.path.to_path_buf().exists(), already_restored);
+            assert_eq!(
+                status(&f.state, &f.run.run_id).unwrap().events.len(),
+                current.events.len()
+            );
+            assert_eq!(
+                action.candidate.path.to_path_buf().exists(),
+                already_restored
+            );
             assert!(quarantine_path.exists());
 
             // Model a historical report only in memory. Persisted events stay untouched.
             let mut legacy = current.clone();
             for event in &mut legacy.events {
-                if event.phase == "committed" { event.observed_identity = None; }
+                if event.phase == "committed" {
+                    event.observed_identity = None;
+                }
             }
             if already_restored {
                 restored_source(action, &f.run, &legacy, &SignalState::default()).unwrap();
             } else {
-                verify_quarantined(&f.plan, &f.run, action, Some(&legacy), &SignalState::default()).unwrap();
+                verify_quarantined(
+                    &f.plan,
+                    &f.run,
+                    action,
+                    Some(&legacy),
+                    &SignalState::default(),
+                )
+                .unwrap();
             }
         }
     }
@@ -1843,15 +1905,28 @@ mod tests {
             let action = &f.plan.body.actions[0];
             let source = action.candidate.path.to_path_buf();
             let temporary = source.parent().unwrap().join(format!(
-                ".optiflow-{}-{}.restore.part", run.run_id, action.action_id,
+                ".optiflow-{}-{}.restore.part",
+                run.run_id, action.action_id,
             ));
-            let displaced = source.parent().unwrap().join("displaced-verified-temporary");
+            let displaced = source
+                .parent()
+                .unwrap()
+                .join("displaced-verified-temporary");
             let quarantine_path = run.namespace.to_path_buf().join(&action.action_id);
             let destination = fs::open(&quarantine_path, false).unwrap();
             let mut synchronizations = 0;
             let error = restore_cross(
-                &f.plan, &run, action, &current, &destination, &SignalState::default(),
-                &mut journal, &f.approval, &f.policy, &Uuid::now_v7().to_string(), Vec::new(),
+                &f.plan,
+                &run,
+                action,
+                &current,
+                &destination,
+                &SignalState::default(),
+                &mut journal,
+                &f.approval,
+                &f.policy,
+                &Uuid::now_v7().to_string(),
+                Vec::new(),
                 &mut |file| {
                     file.sync_all().map_err(journal_error)?;
                     synchronizations += 1;
@@ -1860,24 +1935,44 @@ mod tests {
                             std::fs::rename(&temporary, &displaced).unwrap();
                             std::fs::write(&temporary, b"synthetic duplicate").unwrap();
                         } else {
-                            let changed = if fault == "temporary_xattr" { file } else { &destination };
-                            rustix::fs::fsetxattr(changed, "user.optiflow-recovery-fault", b"changed",
-                                rustix::fs::XattrFlags::empty()).unwrap();
+                            let changed = if fault == "temporary_xattr" {
+                                file
+                            } else {
+                                &destination
+                            };
+                            rustix::fs::fsetxattr(
+                                changed,
+                                "user.optiflow-recovery-fault",
+                                b"changed",
+                                rustix::fs::XattrFlags::empty(),
+                            )
+                            .unwrap();
                         }
                     }
                     Ok(())
                 },
-            ).unwrap_err();
+            )
+            .unwrap_err();
             assert_eq!(error.code, Code::ExecutionSourceStale, "{fault}");
             let recorded = status(&f.state, &run.run_id).unwrap();
             assert_eq!(recorded.status, "attention_required");
             assert_eq!(recorded.actions[0].state, "ambiguous");
-            assert!(!recorded.events.iter().any(|event| event.operation == "restore"
-                && matches!(event.phase.as_str(), "source_pending" | "restored_retained")));
-            assert!(!source.exists(), "{fault} must be refused before source rename");
+            assert!(
+                !recorded
+                    .events
+                    .iter()
+                    .any(|event| event.operation == "restore"
+                        && matches!(event.phase.as_str(), "source_pending" | "restored_retained"))
+            );
+            assert!(
+                !source.exists(),
+                "{fault} must be refused before source rename"
+            );
             assert!(quarantine_path.exists());
             assert!(temporary.exists());
-            if fault == "temporary_replaced" { assert!(displaced.exists()); }
+            if fault == "temporary_replaced" {
+                assert!(displaced.exists());
+            }
         }
     }
 }

@@ -25,8 +25,8 @@ fn main() -> Result<()> {
         bail!("review request exceeds 128 KiB");
     }
     let value = serde_json::from_slice(&bytes).context("invalid request JSON")?;
-    let request = parse_request(&value)
-        .map_err(|reason| anyhow::anyhow!("request refused: {reason:?}"))?;
+    let request =
+        parse_request(&value).map_err(|reason| anyhow::anyhow!("request refused: {reason:?}"))?;
     let review = prepare_candidate(&request)
         .map_err(|reason| anyhow::anyhow!("preparation refused: {reason:?}"))?;
     println!("{}", serde_json::to_string_pretty(&review)?);

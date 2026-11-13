@@ -8,8 +8,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::contracts::{self};
-use crate::video_profile::Profile;
 use crate::domain::{EvidenceDigest, MediaProviderEvidence, NativePath};
+use crate::video_profile::Profile;
 
 pub const SCHEMA: &str = "optiflow.video-candidate-request.v1";
 pub const PROFILE: &str = "optiflow.matroska-ffv1-sdr-candidate.v1";
@@ -173,7 +173,11 @@ impl std::error::Error for PlanRefusal {}
 
 /// Validate nested shape before deserialization of legacy shared domain types.
 pub fn parse_request(value: &serde_json::Value) -> Result<VideoCandidateRequest, PlanRefusal> {
-    let profile=Profile::candidate(value["schema"].as_str().unwrap_or(""),value["profile"].as_str().unwrap_or("")).map_err(|_|PlanRefusal::InvalidShape)?;
+    let profile = Profile::candidate(
+        value["schema"].as_str().unwrap_or(""),
+        value["profile"].as_str().unwrap_or(""),
+    )
+    .map_err(|_| PlanRefusal::InvalidShape)?;
     contracts::validate(profile.request_contract(), value)
         .map_err(|_| PlanRefusal::InvalidShape)?;
     serde_json::from_value(value.clone()).map_err(|_| PlanRefusal::InvalidShape)
@@ -182,7 +186,11 @@ pub fn parse_request(value: &serde_json::Value) -> Result<VideoCandidateRequest,
 /// Fingerprint the typed request with a separate domain; not arbitrary JSON.
 pub fn request_fingerprint(request: &VideoCandidateRequest) -> EvidenceDigest {
     let mut hasher = blake3::Hasher::new();
-    hasher.update(if request.schema==SCHEMA_V2{b"optiflow.video-candidate-request.v2\0"}else{b"optiflow.video-candidate-request.v1\0"});
+    hasher.update(if request.schema == SCHEMA_V2 {
+        b"optiflow.video-candidate-request.v2\0"
+    } else {
+        b"optiflow.video-candidate-request.v1\0"
+    });
     hasher.update(&serde_json::to_vec(request).expect("typed request serialization"));
     EvidenceDigest {
         algorithm: "blake3-256".to_owned(),
@@ -190,8 +198,11 @@ pub fn request_fingerprint(request: &VideoCandidateRequest) -> EvidenceDigest {
     }
 }
 
-pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForReview, PlanRefusal> {
-    let profile=Profile::candidate(&request.schema,&request.profile).map_err(|_|PlanRefusal::InvalidShape)?;
+pub fn prepare_candidate(
+    request: &VideoCandidateRequest,
+) -> Result<PreparedForReview, PlanRefusal> {
+    let profile = Profile::candidate(&request.schema, &request.profile)
+        .map_err(|_| PlanRefusal::InvalidShape)?;
     contracts::validate(profile.request_contract(), request)
         .map_err(|_| PlanRefusal::InvalidShape)?;
     check_provider(&request.producer, "ffmpeg")?;
@@ -205,7 +216,12 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
         || media.stream_index != 0
         || media.total_streams != 1
         || !matches!(media.disposition.as_str(), "none" | "default")
-        || media.width<2||media.width>profile.width()||media.height<2||media.height>profile.height()||media.frame_count==0||media.frame_count>profile.frames() as u64
+        || media.width < 2
+        || media.width > profile.width()
+        || media.height < 2
+        || media.height > profile.height()
+        || media.frame_count == 0
+        || media.frame_count > profile.frames() as u64
         || media.width % 2 != 0
         || media.height % 2 != 0
         || media.pixel_format != "yuv420p"
@@ -214,7 +230,11 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
         || media.color_space != "bt709"
         || media.color_transfer != "bt709"
         || media.color_primaries != "bt709"
-        || media.sample_aspect_ratio != (Rational { numerator: 1, denominator: 1 })
+        || media.sample_aspect_ratio
+            != (Rational {
+                numerator: 1,
+                denominator: 1,
+            })
         || media.rotation_degrees != 0
         || media.chapters != 0
         || media.side_data_entries != 0
@@ -226,8 +246,16 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
     // Deliberately small CFR subset: exact integer ticks avoid rounding or
     // duration tolerances being invented by this preparation checkpoint.
     if !media.constant_frame_rate
-        || media.frame_rate != (Rational { numerator: 25, denominator: 1 })
-        || media.time_base != (Rational { numerator: 1, denominator: 1000 })
+        || media.frame_rate
+            != (Rational {
+                numerator: 25,
+                denominator: 1,
+            })
+        || media.time_base
+            != (Rational {
+                numerator: 1,
+                denominator: 1000,
+            })
         || media.start_pts != 0
         || media.frame_count.checked_mul(40) != Some(media.duration_ticks)
     {
@@ -238,7 +266,8 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
         .and_then(|pixels| pixels.checked_mul(3))
         .map(|bytes| bytes / 2)
         .ok_or(PlanRefusal::LimitExceeded)?;
-    let decoded_bytes = frame_bytes.checked_mul(media.frame_count)
+    let decoded_bytes = frame_bytes
+        .checked_mul(media.frame_count)
         .ok_or(PlanRefusal::LimitExceeded)?;
     if request.source.logical_bytes > request.limits.input_bytes
         || decoded_bytes > request.limits.decoded_bytes
@@ -264,11 +293,23 @@ pub fn prepare_candidate(request: &VideoCandidateRequest) -> Result<PreparedForR
     });
     let request_fingerprint = request_fingerprint(request);
     let mut hasher = blake3::Hasher::new();
-    hasher.update(if profile==Profile::BoundedV2{b"optiflow.video-candidate-preparation.v2\0"}else{b"optiflow.video-candidate-preparation.v1\0"});
-    hasher.update(&serde_json::to_vec(&(
-        &request_fingerprint, &arguments, INPUT_BINDING, OUTPUT_BINDING,
-        ENVIRONMENT, preservation_claim, &outstanding_validation,
-    )).expect("typed preparation serialization"));
+    hasher.update(if profile == Profile::BoundedV2 {
+        b"optiflow.video-candidate-preparation.v2\0"
+    } else {
+        b"optiflow.video-candidate-preparation.v1\0"
+    });
+    hasher.update(
+        &serde_json::to_vec(&(
+            &request_fingerprint,
+            &arguments,
+            INPUT_BINDING,
+            OUTPUT_BINDING,
+            ENVIRONMENT,
+            preservation_claim,
+            &outstanding_validation,
+        ))
+        .expect("typed preparation serialization"),
+    );
     let preparation_fingerprint = EvidenceDigest {
         algorithm: "blake3-256".to_owned(),
         value: hasher.finalize().to_hex().to_string(),
@@ -302,16 +343,42 @@ pub(crate) fn invocation_recipe(
     // Only fixed tokens and bounded enum/integer policy values enter argv.
     // Source paths never enter the provider command.
     let mut arguments: Vec<String> = [
-        "-hide_banner", "-nostdin", "-loglevel", "error", "-xerror",
-        "-copyts", "-protocol_whitelist", "pipe", "-threads", "1",
-        "-f", "matroska", "-i", "pipe:0", "-map", "0:0",
-        "-map_metadata", "0", "-map_metadata:s:v:0", "0:s:0",
-        "-map_chapters", "-1",
-    ].into_iter().map(str::to_owned).collect();
+        "-hide_banner",
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-xerror",
+        "-copyts",
+        "-protocol_whitelist",
+        "pipe",
+        "-threads",
+        "1",
+        "-f",
+        "matroska",
+        "-i",
+        "pipe:0",
+        "-map",
+        "0:0",
+        "-map_metadata",
+        "0",
+        "-map_metadata:s:v:0",
+        "0:s:0",
+        "-map_chapters",
+        "-1",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
     arguments.extend([
         "-disposition:v:0".to_owned(),
-        if disposition == "default" { "default" } else { "0" }.to_owned(),
-        "-avoid_negative_ts".to_owned(), "disabled".to_owned(),
+        if disposition == "default" {
+            "default"
+        } else {
+            "0"
+        }
+        .to_owned(),
+        "-avoid_negative_ts".to_owned(),
+        "disabled".to_owned(),
     ]);
     let preservation_claim = match operation {
         VideoOperation::StreamCopy => {
@@ -320,16 +387,26 @@ pub(crate) fn invocation_recipe(
         }
         VideoOperation::H264Lossy { crf, preset } => {
             arguments.extend([
-                "-c:v".to_owned(), "libx264".to_owned(),
-                "-crf".to_owned(), crf.to_string(),
-                "-preset".to_owned(), preset.argument().to_owned(),
-                "-threads:v".to_owned(), "1".to_owned(),
-                "-pix_fmt".to_owned(), "+yuv420p".to_owned(),
-                "-fps_mode:v".to_owned(), "passthrough".to_owned(),
-                "-color_range".to_owned(), "tv".to_owned(),
-                "-colorspace".to_owned(), "bt709".to_owned(),
-                "-color_trc".to_owned(), "bt709".to_owned(),
-                "-color_primaries".to_owned(), "bt709".to_owned(),
+                "-c:v".to_owned(),
+                "libx264".to_owned(),
+                "-crf".to_owned(),
+                crf.to_string(),
+                "-preset".to_owned(),
+                preset.argument().to_owned(),
+                "-threads:v".to_owned(),
+                "1".to_owned(),
+                "-pix_fmt".to_owned(),
+                "+yuv420p".to_owned(),
+                "-fps_mode:v".to_owned(),
+                "passthrough".to_owned(),
+                "-color_range".to_owned(),
+                "tv".to_owned(),
+                "-colorspace".to_owned(),
+                "bt709".to_owned(),
+                "-color_trc".to_owned(),
+                "bt709".to_owned(),
+                "-color_primaries".to_owned(),
+                "bt709".to_owned(),
             ]);
             "explicit_lossy_preview_no_exact_equivalence_or_quality_acceptance"
         }
@@ -346,7 +423,10 @@ fn check_provider(provider: &MediaProviderEvidence, name: &str) -> Result<(), Pl
         || provider.version != PROVIDER_VERSION
         || !value.starts_with('/')
         || value.contains('\0')
-        || value.split('/').skip(1).any(|part| part.is_empty() || part == "." || part == "..")
+        || value
+            .split('/')
+            .skip(1)
+            .any(|part| part.is_empty() || part == "." || part == "..")
     {
         return Err(PlanRefusal::ProviderMismatch);
     }

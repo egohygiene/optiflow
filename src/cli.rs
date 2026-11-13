@@ -57,14 +57,36 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::ReleaseContract => "release-contract",
-            Command::Diagnostics(a)=>match &a.command{DiagnosticsCommand::Preview{..}=>"diagnostics preview",DiagnosticsCommand::Bundle{..}=>"diagnostics bundle",DiagnosticsCommand::Inspect{..}=>"diagnostics inspect",DiagnosticsCommand::Doctor=>"diagnostics doctor"},
+            Command::Diagnostics(a) => match &a.command {
+                DiagnosticsCommand::Preview { .. } => "diagnostics preview",
+                DiagnosticsCommand::Bundle { .. } => "diagnostics bundle",
+                DiagnosticsCommand::Inspect { .. } => "diagnostics inspect",
+                DiagnosticsCommand::Doctor => "diagnostics doctor",
+            },
             Command::Mp4Delivery(a) => a.command.name(),
             Command::Doctor => "doctor",
-            Command::Explain(a) => match &a.command {ExplainCommand::SetupLocal(_)=>"explain setup-local",ExplainCommand::SetupStatus(_)=>"explain setup-status",ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
-            Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Profiles=>"video-folder profiles",VideoFolderCommand::Preview(_)=>"video-folder preview",VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
+            Command::Explain(a) => match &a.command {
+                ExplainCommand::SetupLocal(_) => "explain setup-local",
+                ExplainCommand::SetupStatus(_) => "explain setup-status",
+                ExplainCommand::Invoke(_) => "explain invoke",
+                ExplainCommand::Prepare(_) => "explain prepare",
+                ExplainCommand::Accept(_) => "explain accept",
+                ExplainCommand::Inspect(_) => "explain inspect",
+            },
+            Command::VideoFolder(a) => match &a.command {
+                VideoFolderCommand::Profiles => "video-folder profiles",
+                VideoFolderCommand::Preview(_) => "video-folder preview",
+                VideoFolderCommand::Discover(_) => "video-folder discover",
+                VideoFolderCommand::Run(_) => "video-folder run",
+                VideoFolderCommand::Resume(_) => "video-folder resume",
+                VideoFolderCommand::Status(_) => "video-folder status",
+            },
             Command::Optimize(arguments) => match &arguments.command {
-                OptimizeCommand::Discover(_) => "optimize discover",OptimizeCommand::Approve(_) => "optimize approve",
-                OptimizeCommand::Run(_) => "optimize run",OptimizeCommand::Resume(_) => "optimize resume",OptimizeCommand::Status(_) => "optimize status",
+                OptimizeCommand::Discover(_) => "optimize discover",
+                OptimizeCommand::Approve(_) => "optimize approve",
+                OptimizeCommand::Run(_) => "optimize run",
+                OptimizeCommand::Resume(_) => "optimize resume",
+                OptimizeCommand::Status(_) => "optimize status",
             },
             Command::Replacement(arguments) => match &arguments.command {
                 ReplacementCommand::Review(_) => "replacement review",
@@ -160,13 +182,27 @@ pub enum Command {
     Extensions(ExtensionsArgs),
 }
 
-#[derive(Debug,Args)]
-pub struct DiagnosticsArgs{#[command(subcommand)]pub command:DiagnosticsCommand}
-#[derive(Debug,Subcommand)]
-pub enum DiagnosticsCommand{
-    Preview{#[arg(long)]request:PathBuf},
-    Bundle{#[arg(long)]request:PathBuf,#[arg(long)]output:PathBuf},
-    Inspect{#[arg(long)]bundle:PathBuf},
+#[derive(Debug, Args)]
+pub struct DiagnosticsArgs {
+    #[command(subcommand)]
+    pub command: DiagnosticsCommand,
+}
+#[derive(Debug, Subcommand)]
+pub enum DiagnosticsCommand {
+    Preview {
+        #[arg(long)]
+        request: PathBuf,
+    },
+    Bundle {
+        #[arg(long)]
+        request: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    Inspect {
+        #[arg(long)]
+        bundle: PathBuf,
+    },
     Doctor,
 }
 
@@ -520,52 +556,115 @@ pub struct ExtensionInspectArgs {
     pub sources: ExtensionSourcesArgs,
 }
 
-#[derive(Debug,Args)]
-pub struct ReplacementArgs {#[command(subcommand)] pub command:ReplacementCommand}
-#[derive(Debug,Subcommand)]
+#[derive(Debug, Args)]
+pub struct ReplacementArgs {
+    #[command(subcommand)]
+    pub command: ReplacementCommand,
+}
+#[derive(Debug, Subcommand)]
 pub enum ReplacementCommand {
-    Review(ReplacementReviewArgs),ReviewVideo(VideoReplacementReviewArgs),ValidateVideo(VideoValidationArgs),PlanVideo(VideoPlanArgs),ApproveVideo(ReplacementApproveArgs),ApplyVideo(ReplacementMutationArgs),RestoreVideo(ReplacementMutationArgs),StatusVideo(ReplacementPlanArgs),Approve(ReplacementApproveArgs),
-    Apply(ReplacementMutationArgs),Status(ReplacementPlanArgs),Restore(ReplacementMutationArgs),
+    Review(ReplacementReviewArgs),
+    ReviewVideo(VideoReplacementReviewArgs),
+    ValidateVideo(VideoValidationArgs),
+    PlanVideo(VideoPlanArgs),
+    ApproveVideo(ReplacementApproveArgs),
+    ApplyVideo(ReplacementMutationArgs),
+    RestoreVideo(ReplacementMutationArgs),
+    StatusVideo(ReplacementPlanArgs),
+    Approve(ReplacementApproveArgs),
+    Apply(ReplacementMutationArgs),
+    Status(ReplacementPlanArgs),
+    Restore(ReplacementMutationArgs),
 }
-#[derive(Debug,Args)]
+#[derive(Debug, Args)]
 pub struct ReplacementReviewArgs {
-    #[arg(long)] pub source:PathBuf,
-    #[arg(long)] pub candidate_set:PathBuf,
-    #[arg(long)] pub retention:PathBuf,
-    #[arg(long)] pub output:PathBuf,
-    #[arg(long,default_value_t=16_777_216)] pub maximum_file_bytes:u64,
-    #[arg(long,default_value_t=67_108_864)] pub reserve_bytes:u64,
+    #[arg(long)]
+    pub source: PathBuf,
+    #[arg(long)]
+    pub candidate_set: PathBuf,
+    #[arg(long)]
+    pub retention: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
+    #[arg(long, default_value_t = 16_777_216)]
+    pub maximum_file_bytes: u64,
+    #[arg(long, default_value_t = 67_108_864)]
+    pub reserve_bytes: u64,
 }
-#[derive(Debug,Args)]
-pub struct ReplacementPlanArgs {#[arg(long)] pub plan:PathBuf}
-#[derive(Debug,Args)]
+#[derive(Debug, Args)]
+pub struct ReplacementPlanArgs {
+    #[arg(long)]
+    pub plan: PathBuf,
+}
+#[derive(Debug, Args)]
 pub struct ReplacementApproveArgs {
-    #[arg(long)] pub plan:PathBuf,
-    #[arg(long)] pub approved_by:String,
-    #[arg(long)] pub output:PathBuf,
+    #[arg(long)]
+    pub plan: PathBuf,
+    #[arg(long)]
+    pub approved_by: String,
+    #[arg(long)]
+    pub output: PathBuf,
 }
-#[derive(Debug,Args)]
+#[derive(Debug, Args)]
 pub struct ReplacementMutationArgs {
-    #[arg(long)] pub plan:PathBuf,
-    #[arg(long)] pub approval:PathBuf,
+    #[arg(long)]
+    pub plan: PathBuf,
+    #[arg(long)]
+    pub approval: PathBuf,
 }
 
-#[derive(Debug,Args)]
-pub struct OptimizeArgs {#[command(subcommand)] pub command:OptimizeCommand}
-#[derive(Debug,Subcommand)]
-pub enum OptimizeCommand {Discover(OptimizeDiscoverArgs),Approve(OptimizeApproveArgs),Run(OptimizeRunArgs),Resume(OptimizeRunArgs),Status(OptimizeRunArgs)}
-#[derive(Debug,Args)]
-pub struct OptimizeDiscoverArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf}
-#[derive(Debug,Args)]
-pub struct OptimizeApproveArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub inventory:PathBuf,#[arg(long)] pub approved_by:String,#[arg(long)] pub output:PathBuf}
-#[derive(Debug,Args)]
-pub struct OptimizeRunArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub inventory:PathBuf,#[arg(long)] pub approval:PathBuf}
+#[derive(Debug, Args)]
+pub struct OptimizeArgs {
+    #[command(subcommand)]
+    pub command: OptimizeCommand,
+}
+#[derive(Debug, Subcommand)]
+pub enum OptimizeCommand {
+    Discover(OptimizeDiscoverArgs),
+    Approve(OptimizeApproveArgs),
+    Run(OptimizeRunArgs),
+    Resume(OptimizeRunArgs),
+    Status(OptimizeRunArgs),
+}
+#[derive(Debug, Args)]
+pub struct OptimizeDiscoverArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct OptimizeApproveArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+    #[arg(long)]
+    pub inventory: PathBuf,
+    #[arg(long)]
+    pub approved_by: String,
+    #[arg(long)]
+    pub output: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct OptimizeRunArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+    #[arg(long)]
+    pub inventory: PathBuf,
+    #[arg(long)]
+    pub approval: PathBuf,
+}
 
-#[derive(Debug,Args)]
-pub struct VideoRequestArgs {#[arg(long)] pub request:PathBuf}
-#[derive(Debug,Args)]
-pub struct Mp4DeliveryArgs {#[command(subcommand)] pub command:Mp4DeliveryCommand}
-#[derive(Debug,Subcommand)]
+#[derive(Debug, Args)]
+pub struct VideoRequestArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct Mp4DeliveryArgs {
+    #[command(subcommand)]
+    pub command: Mp4DeliveryCommand,
+}
+#[derive(Debug, Subcommand)]
 pub enum Mp4DeliveryCommand {
     /// Describe the compiled, unqualified source profile without tool observation.
     Profiles,
@@ -586,65 +685,167 @@ pub enum Mp4DeliveryCommand {
     /// Read retained folder results without replay or original/tool observation.
     FolderStatus(VideoFolderStatusArgs),
 }
-impl Mp4DeliveryCommand {pub fn name(&self)->&'static str {match self {
-    Self::Profiles=>"mp4-delivery profiles",Self::Inspect(_)=>"mp4-delivery inspect",Self::Plan(_)=>"mp4-delivery plan",Self::Run(_)=>"mp4-delivery run",Self::Status(_)=>"mp4-delivery status",Self::FolderPreview(_)=>"mp4-delivery folder-preview",Self::FolderRun(_)=>"mp4-delivery folder-run",Self::FolderResume(_)=>"mp4-delivery folder-resume",Self::FolderStatus(_)=>"mp4-delivery folder-status",
-}}}
-#[derive(Debug,Args)]
-pub struct Mp4InspectArgs {#[arg(long)] pub source:PathBuf,#[arg(long)] pub maximum_input_bytes:u64}
-#[derive(Debug,Args)]
-pub struct Mp4PinArgs {#[arg(long)] pub pin:PathBuf}
-#[derive(Debug,Args)]
-pub struct VideoFolderArgs {#[command(subcommand)] pub command:VideoFolderCommand}
-#[derive(Debug,Subcommand)]
-pub enum VideoFolderCommand {Profiles,Preview(VideoRequestArgs),Discover(VideoRequestArgs),Run(VideoRequestArgs),Resume(VideoRequestArgs),Status(VideoFolderStatusArgs)}
-#[derive(Debug,Args)]
-pub struct VideoFolderStatusArgs {#[arg(long)] pub run_directory:PathBuf}
+impl Mp4DeliveryCommand {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Profiles => "mp4-delivery profiles",
+            Self::Inspect(_) => "mp4-delivery inspect",
+            Self::Plan(_) => "mp4-delivery plan",
+            Self::Run(_) => "mp4-delivery run",
+            Self::Status(_) => "mp4-delivery status",
+            Self::FolderPreview(_) => "mp4-delivery folder-preview",
+            Self::FolderRun(_) => "mp4-delivery folder-run",
+            Self::FolderResume(_) => "mp4-delivery folder-resume",
+            Self::FolderStatus(_) => "mp4-delivery folder-status",
+        }
+    }
+}
+#[derive(Debug, Args)]
+pub struct Mp4InspectArgs {
+    #[arg(long)]
+    pub source: PathBuf,
+    #[arg(long)]
+    pub maximum_input_bytes: u64,
+}
+#[derive(Debug, Args)]
+pub struct Mp4PinArgs {
+    #[arg(long)]
+    pub pin: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct VideoFolderArgs {
+    #[command(subcommand)]
+    pub command: VideoFolderCommand,
+}
+#[derive(Debug, Subcommand)]
+pub enum VideoFolderCommand {
+    Profiles,
+    Preview(VideoRequestArgs),
+    Discover(VideoRequestArgs),
+    Run(VideoRequestArgs),
+    Resume(VideoRequestArgs),
+    Status(VideoFolderStatusArgs),
+}
+#[derive(Debug, Args)]
+pub struct VideoFolderStatusArgs {
+    #[arg(long)]
+    pub run_directory: PathBuf,
+}
 
-#[derive(Debug,Args)]
+#[derive(Debug, Args)]
 pub struct VideoReplacementReviewArgs {
-    #[arg(long)] pub source:PathBuf,
-    #[arg(long)] pub candidate_set:PathBuf,
-    #[arg(long)] pub artifact_schema:String,
-    #[arg(long)] pub video_policy:String,
-    #[arg(long)] pub retention:PathBuf,
-    #[arg(long)] pub output:PathBuf,
+    #[arg(long)]
+    pub source: PathBuf,
+    #[arg(long)]
+    pub candidate_set: PathBuf,
+    #[arg(long)]
+    pub artifact_schema: String,
+    #[arg(long)]
+    pub video_policy: String,
+    #[arg(long)]
+    pub retention: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
 }
 
-#[derive(Debug,Args)]
-pub struct ExplainArgs {#[command(subcommand)] pub command:ExplainCommand}
-#[derive(Debug,Subcommand)]
-pub enum ExplainCommand {SetupLocal(ExplanationSetupArgs),SetupStatus(ExplanationSetupStatusArgs),Invoke(ExplanationInvokeArgs),Prepare(ExplanationPrepareArgs),Accept(ExplanationAcceptArgs),Inspect(ExplanationInspectArgs)}
-#[derive(Debug,Args)]
+#[derive(Debug, Args)]
+pub struct ExplainArgs {
+    #[command(subcommand)]
+    pub command: ExplainCommand,
+}
+#[derive(Debug, Subcommand)]
+pub enum ExplainCommand {
+    SetupLocal(ExplanationSetupArgs),
+    SetupStatus(ExplanationSetupStatusArgs),
+    Invoke(ExplanationInvokeArgs),
+    Prepare(ExplanationPrepareArgs),
+    Accept(ExplanationAcceptArgs),
+    Inspect(ExplanationInspectArgs),
+}
+#[derive(Debug, Args)]
 pub struct ExplanationInputs {
-    #[arg(long)] pub report:PathBuf,
-    #[arg(long)] pub report_blake3:String,
-    #[arg(long,requires="plan_blake3")] pub plan:Option<PathBuf>,
-    #[arg(long,requires="plan")] pub plan_blake3:Option<String>,
+    #[arg(long)]
+    pub report: PathBuf,
+    #[arg(long)]
+    pub report_blake3: String,
+    #[arg(long, requires = "plan_blake3")]
+    pub plan: Option<PathBuf>,
+    #[arg(long, requires = "plan")]
+    pub plan_blake3: Option<String>,
 }
-#[derive(Debug,Args)]
-pub struct ExplanationPrepareArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub output:PathBuf}
-#[derive(Debug,Args)]
-pub struct ExplanationAcceptArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub packet:PathBuf,#[arg(long)] pub candidate:PathBuf,#[arg(long)] pub output:PathBuf}
-#[derive(Debug,Args)]
-pub struct ExplanationInspectArgs {#[command(flatten)] pub inputs:ExplanationInputs,#[arg(long)] pub packet:PathBuf,#[arg(long)] pub candidate:PathBuf,#[arg(long)] pub sidecar:PathBuf}
+#[derive(Debug, Args)]
+pub struct ExplanationPrepareArgs {
+    #[command(flatten)]
+    pub inputs: ExplanationInputs,
+    #[arg(long)]
+    pub output: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct ExplanationAcceptArgs {
+    #[command(flatten)]
+    pub inputs: ExplanationInputs,
+    #[arg(long)]
+    pub packet: PathBuf,
+    #[arg(long)]
+    pub candidate: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct ExplanationInspectArgs {
+    #[command(flatten)]
+    pub inputs: ExplanationInputs,
+    #[arg(long)]
+    pub packet: PathBuf,
+    #[arg(long)]
+    pub candidate: PathBuf,
+    #[arg(long)]
+    pub sidecar: PathBuf,
+}
 
-#[derive(Debug,Args)]
+#[derive(Debug, Args)]
 pub struct ExplanationInvokeArgs {
-    #[arg(long)] pub manifest:PathBuf,
-    #[arg(long)] pub lock:PathBuf,
-    #[arg(long)] pub profile:PathBuf,
-    #[arg(long)] pub packet:PathBuf,
-    #[arg(long)] pub output:PathBuf,
-    #[arg(long)] pub sdk_result_output:PathBuf,
+    #[arg(long)]
+    pub manifest: PathBuf,
+    #[arg(long)]
+    pub lock: PathBuf,
+    #[arg(long)]
+    pub profile: PathBuf,
+    #[arg(long)]
+    pub packet: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
+    #[arg(long)]
+    pub sdk_result_output: PathBuf,
 }
 
-#[derive(Debug,Args)]
-pub struct VideoValidationArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf}
+#[derive(Debug, Args)]
+pub struct VideoValidationArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
+}
 
-#[derive(Debug,Args)]
-pub struct VideoPlanArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output:PathBuf,#[arg(long,default_value_t=134_217_728)] pub reserve_bytes:u64}
+#[derive(Debug, Args)]
+pub struct VideoPlanArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+    #[arg(long)]
+    pub output: PathBuf,
+    #[arg(long, default_value_t = 134_217_728)]
+    pub reserve_bytes: u64,
+}
 
-#[derive(Debug,Args)]
-pub struct ExplanationSetupArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub output_directory:PathBuf}
-#[derive(Debug,Args)]
-pub struct ExplanationSetupStatusArgs {#[arg(long)] pub directory:PathBuf}
+#[derive(Debug, Args)]
+pub struct ExplanationSetupArgs {
+    #[arg(long)]
+    pub request: PathBuf,
+    #[arg(long)]
+    pub output_directory: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct ExplanationSetupStatusArgs {
+    #[arg(long)]
+    pub directory: PathBuf,
+}

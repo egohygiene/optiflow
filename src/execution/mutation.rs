@@ -360,7 +360,10 @@ fn copy_cross_filesystem(
     _signals: &SignalState,
     _checkpoint: &mut impl FnMut(Phase) -> Result<()>,
 ) -> Result<Vec<CapacityEvidence>> {
-    Err(failure(Code::ExecutionUnsupported, "macOS cross-volume quarantine copying is unsupported"))
+    Err(failure(
+        Code::ExecutionUnsupported,
+        "macOS cross-volume quarantine copying is unsupported",
+    ))
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -638,52 +641,99 @@ pub(super) struct Properties {
 pub(super) fn properties(file: &File) -> Result<Properties> {
     use rustix::fs::{fgetxattr, flistxattr, fstat};
     use std::os::unix::ffi::OsStrExt;
-    let before = fstat(file).map_err(|error| failure(
-        Code::ExecutionSourceUnavailable, format!("cannot inspect macOS file properties: {error}"),
-    ))?;
+    let before = fstat(file).map_err(|error| {
+        failure(
+            Code::ExecutionSourceUnavailable,
+            format!("cannot inspect macOS file properties: {error}"),
+        )
+    })?;
     if before.st_flags & 0x0006_0006 != 0 {
-        return Err(failure(Code::ExecutionReadOnly, "immutable or append-only macOS inode"));
+        return Err(failure(
+            Code::ExecutionReadOnly,
+            "immutable or append-only macOS inode",
+        ));
     }
     let mut names_buffer = vec![0u8; 65_536];
-    let names = flistxattr(file, &mut names_buffer).map_err(|error| failure(
-        Code::ExecutionUnsupported, format!("cannot enumerate macOS extended attributes: {error}"),
-    ))?;
+    let names = flistxattr(file, &mut names_buffer).map_err(|error| {
+        failure(
+            Code::ExecutionUnsupported,
+            format!("cannot enumerate macOS extended attributes: {error}"),
+        )
+    })?;
     if names > 0 && names_buffer[names - 1] != 0 {
-        return Err(failure(Code::ExecutionUnsupported, "macOS extended-attribute names are not terminated"));
+        return Err(failure(
+            Code::ExecutionUnsupported,
+            "macOS extended-attribute names are not terminated",
+        ));
     }
     let mut xattrs = Vec::new();
     let mut total = 0usize;
-    for name in names_buffer[..names].split(|byte| *byte == 0).filter(|name| !name.is_empty()) {
+    for name in names_buffer[..names]
+        .split(|byte| *byte == 0)
+        .filter(|name| !name.is_empty())
+    {
         if name.len() > 255 || xattrs.len() >= 128 {
-            return Err(failure(Code::ExecutionBoundsExceeded, "macOS extended-attribute count or name bound exceeded"));
+            return Err(failure(
+                Code::ExecutionBoundsExceeded,
+                "macOS extended-attribute count or name bound exceeded",
+            ));
         }
         let mut value_buffer = vec![0u8; 65_536];
         let length = fgetxattr(file, std::ffi::OsStr::from_bytes(name), &mut value_buffer)
-            .map_err(|error| failure(Code::ExecutionUnsupported, format!("cannot read macOS extended attribute: {error}")))?;
-        total = total.checked_add(length)
+            .map_err(|error| {
+                failure(
+                    Code::ExecutionUnsupported,
+                    format!("cannot read macOS extended attribute: {error}"),
+                )
+            })?;
+        total = total
+            .checked_add(length)
             .ok_or_else(|| failure(Code::ExecutionBoundsExceeded, "macOS xattr size overflow"))?;
         if total > 1_048_576 {
-            return Err(failure(Code::ExecutionBoundsExceeded, "macOS extended attributes exceed one MiB"));
+            return Err(failure(
+                Code::ExecutionBoundsExceeded,
+                "macOS extended attributes exceed one MiB",
+            ));
         }
         xattrs.push((name.to_vec(), value_buffer[..length].to_vec()));
     }
     xattrs.sort();
     if xattrs.windows(2).any(|pair| pair[0].0 == pair[1].0) {
-        return Err(failure(Code::ExecutionSourceStale, "macOS extended-attribute names are ambiguous"));
+        return Err(failure(
+            Code::ExecutionSourceStale,
+            "macOS extended-attribute names are ambiguous",
+        ));
     }
-    let after = fstat(file).map_err(|error| failure(Code::ExecutionSourceUnavailable, error.to_string()))?;
-    let signature = |stat: &rustix::fs::Stat| (
-        stat.st_dev, stat.st_ino, stat.st_size, stat.st_mode, stat.st_uid, stat.st_gid,
-        (stat.st_mtime, stat.st_mtime_nsec), (stat.st_ctime, stat.st_ctime_nsec),
-        (stat.st_birthtime, stat.st_birthtime_nsec), stat.st_flags, stat.st_nlink,
-    );
+    let after = fstat(file)
+        .map_err(|error| failure(Code::ExecutionSourceUnavailable, error.to_string()))?;
+    let signature = |stat: &rustix::fs::Stat| {
+        (
+            stat.st_dev,
+            stat.st_ino,
+            stat.st_size,
+            stat.st_mode,
+            stat.st_uid,
+            stat.st_gid,
+            (stat.st_mtime, stat.st_mtime_nsec),
+            (stat.st_ctime, stat.st_ctime_nsec),
+            (stat.st_birthtime, stat.st_birthtime_nsec),
+            stat.st_flags,
+            stat.st_nlink,
+        )
+    };
     if signature(&before) != signature(&after) {
-        return Err(failure(Code::ExecutionSourceStale, "macOS properties changed during observation"));
+        return Err(failure(
+            Code::ExecutionSourceStale,
+            "macOS properties changed during observation",
+        ));
     }
     Ok(Properties {
-        uid: before.st_uid, gid: before.st_gid, mode: u32::from(before.st_mode),
+        uid: before.st_uid,
+        gid: before.st_gid,
+        mode: u32::from(before.st_mode),
         mtime: (before.st_mtime, before.st_mtime_nsec),
-        xattrs, flags: before.st_flags,
+        xattrs,
+        flags: before.st_flags,
         birthtime: (before.st_birthtime, before.st_birthtime_nsec),
     })
 }
@@ -691,11 +741,18 @@ pub(super) fn properties(file: &File) -> Result<Properties> {
 #[cfg(target_os = "macos")]
 pub(super) fn check_preserved_properties(expected: &Properties, actual: &Properties) -> Result<()> {
     // Content verification may advance atime; rename itself updates ctime.
-    if expected.uid != actual.uid || expected.gid != actual.gid || expected.mode != actual.mode
-        || expected.mtime != actual.mtime || expected.xattrs != actual.xattrs
-        || expected.flags != actual.flags || expected.birthtime != actual.birthtime
+    if expected.uid != actual.uid
+        || expected.gid != actual.gid
+        || expected.mode != actual.mode
+        || expected.mtime != actual.mtime
+        || expected.xattrs != actual.xattrs
+        || expected.flags != actual.flags
+        || expected.birthtime != actual.birthtime
     {
-        return Err(failure(Code::ExecutionSourceStale, "macOS inode properties differ before or after rename"));
+        return Err(failure(
+            Code::ExecutionSourceStale,
+            "macOS inode properties differ before or after rename",
+        ));
     }
     Ok(())
 }

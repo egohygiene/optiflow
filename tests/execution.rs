@@ -855,22 +855,12 @@ fn live_cli_requires_approval_and_reports_same_versioned_result() {
 }
 
 #[cfg(target_os = "macos")]
-fn assert_macos_cross_filesystem_mutation_refused(
-    f: &Fixture,
-    p: &ExecutionPlan,
-    run_id: &str,
-) {
+fn assert_macos_cross_filesystem_mutation_refused(f: &Fixture, p: &ExecutionPlan, run_id: &str) {
     let approval = f.approval(p);
     assert_eq!(
-        execution::apply_quarantine(
-            p,
-            &approval,
-            &f.state,
-            &f.policy,
-            &SignalState::default()
-        )
-        .unwrap_err()
-        .code,
+        execution::apply_quarantine(p, &approval, &f.state, &f.policy, &SignalState::default())
+            .unwrap_err()
+            .code,
         Code::ExecutionUnsupported
     );
     for result in [
@@ -963,7 +953,10 @@ fn macos_mixed_topology_refusal_preserves_existing_journal_and_retained_bytes() 
     connection
         .execute(
             "UPDATE execution_runs SET status = 'validating', document_json = ?2 WHERE run_id = ?1",
-            rusqlite::params![unfinished.run_id, serde_json::to_string(&unfinished).unwrap()],
+            rusqlite::params![
+                unfinished.run_id,
+                serde_json::to_string(&unfinished).unwrap()
+            ],
         )
         .unwrap();
     drop(connection);
