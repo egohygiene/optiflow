@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.21
+version: 0.1.22
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,16 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Native mutation release-review evidence (#93)
+
+The existing offline owner-report adapter may assemble a separate unsigned
+mutation review from explicitly pinned native three-target archives, disposable
+volume claims and bounded actual command captures. Read-only/synthetic receipts
+cannot stand for mutation, restore, finalization or physical interruption evidence.
+The adapter verifies bytes/structure and surfaces unresolved reclamation/coverage;
+it does not manufacture native facts, activate runtime gates, attest, sign or
+publish. The historical read-only release pipeline and source pins remain intact.
 
 ## Native metadata and bounded private staging (#111)
 

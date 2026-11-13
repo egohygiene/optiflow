@@ -2,6 +2,16 @@
 version: "3"
 
 tasks:
+  release:report:mutation-review:
+    desc: Assemble an unsigned native mutation evidence review without executing or publishing
+    requires:
+      vars: [REQUEST, OUTPUT_DIRECTORY]
+    env:
+      OPTIFLOW_MUTATION_REVIEW_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_MUTATION_REVIEW_OUTPUT: '{{.OUTPUT_DIRECTORY}}'
+    cmds:
+      - python3 scripts/owner_reports.py mutation-review --request "$OPTIFLOW_MUTATION_REVIEW_REQUEST" --output-directory "$OPTIFLOW_MUTATION_REVIEW_OUTPUT"
+
   mp4:capabilities:
     desc: Describe source-only MP4 compatibility and preservation requirements
     cmds:
