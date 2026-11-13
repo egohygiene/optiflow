@@ -23,6 +23,13 @@ and frames actual child/job/output/resource evidence. Captured bytes remain
 unaccepted until independent validation. There is no legacy-profile widening,
 source write, generic process framework or native/quality qualification claim.
 
+Complete source/candidate native decode and host-owned MP4/audio/clock/metadata
+comparison precede strict-size private commitment. New markers carry retained
+digest pins and reuse existing no-follow/fsync/no-replace primitives. Readback
+checks current candidate structure and captured relations without observing
+original tools or claiming fresh native qualification. Lossy pixel equivalence,
+human quality review, replacement/disposal and public upload stay separate.
+
 November 12 proposed source extension: tool-free profile-aware folder preview
 reuses the same discovery owner with an explicit v1/v2 selection, separate request
 fingerprint and inventory schema. Pure profile description and preview bypass

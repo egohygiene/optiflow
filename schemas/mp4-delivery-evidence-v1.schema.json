@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-delivery-evidence-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "plan",
+    "candidate_digest",
+    "candidate_bytes",
+    "candidate",
+    "source_probe",
+    "candidate_probe",
+    "source_video",
+    "source_audio",
+    "candidate_video",
+    "candidate_audio",
+    "invocations",
+    "encoded_bytes_saved",
+    "full_native_decode_observed",
+    "video_pixel_equivalence",
+    "quality_review",
+    "native_qualified",
+    "source_unchanged_at_precommit",
+    "physical_space_reclaimed",
+    "replacement_authority",
+    "upload_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-delivery-evidence.v1"
+    },
+    "plan": {
+      "$ref": "mp4-delivery-plan-v1.schema.json"
+    },
+    "candidate_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    },
+    "candidate_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 268435456
+    },
+    "candidate": {
+      "type": "object"
+    },
+    "source_probe": {
+      "type": "string",
+      "maxLength": 2097152
+    },
+    "candidate_probe": {
+      "type": "string",
+      "maxLength": 2097152
+    },
+    "source_video": {
+      "type": "object"
+    },
+    "source_audio": {
+      "type": "object"
+    },
+    "candidate_video": {
+      "type": "object"
+    },
+    "candidate_audio": {
+      "type": "object"
+    },
+    "invocations": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object"
+      }
+    },
+    "encoded_bytes_saved": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 536870912
+    },
+    "full_native_decode_observed": {
+      "const": true
+    },
+    "video_pixel_equivalence": {
+      "const": false
+    },
+    "quality_review": {
+      "const": "required; explicitly lossy video"
+    },
+    "native_qualified": {
+      "const": false
+    },
+    "source_unchanged_at_precommit": {
+      "const": true
+    },
+    "physical_space_reclaimed": {
+      "const": false
+    },
+    "replacement_authority": {
+      "const": false
+    },
+    "upload_authority": {
+      "const": false
+    }
+  }
+}

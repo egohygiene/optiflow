@@ -13,6 +13,7 @@ pub(crate) const TRACE_BYTES:usize=12_582_912;
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Serialize,Deserialize)]
 #[serde(rename_all="snake_case")]
 pub(crate) enum Operation {Probe,Encode,DecodeVideo,DecodeAudio}
+impl Operation {pub(crate) fn name(self)->&'static str{match self{Self::Probe=>"probe",Self::Encode=>"encode",Self::DecodeVideo=>"decode_video",Self::DecodeAudio=>"decode_audio"}}}
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Job {
@@ -26,12 +27,17 @@ pub(crate) struct Child {pub tool:String,pub argv:Vec<String>,pub stdout_digest:
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Report {pub schema:String,pub job_digest:EvidenceDigest,pub output_digest:EvidenceDigest,pub output_bytes:u64,pub children:Vec<Child>,pub pass_log_digests:BTreeMap<String,EvidenceDigest>,pub runtime_qualified:bool,pub source_mutation:bool}
-impl Job {fn validate(&self)->Result<()> {
+impl Job {pub(crate) fn validate(&self)->Result<()> {
     ensure!(self.schema=="optiflow.mp4-worker-job.v1"&&(1..=INPUT_BYTES).contains(&self.input_bytes)&&(1..=MAX_ELAPSED_MS).contains(&self.elapsed_ms)&&(1..=OUTPUT_BYTES).contains(&self.allocation.maximum_candidate_bytes),"bounded explicit MP4 worker job required");planning::valid_digest(&self.input_digest)?;
     for p in [&self.ffmpeg,&self.ffprobe]{normalized(&p.path)?;planning::valid_digest(&p.digest)?;}ensure!(self.ffmpeg.path!=self.ffprobe.path,"distinct worker tools required");Ok(())
 }}
-fn decoder_args(audio:bool)->Vec<String>{let mut args=["-hide_banner","-nostdin","-loglevel","error","-xerror","-err_detect","explode","-copyts","-i",INPUT_FILE,"-map",if audio{"0:a:0"}else{"0:v:0"}].into_iter().map(str::to_owned).collect::<Vec<_>>();
-    args.extend(if audio{vec!["-vn","-c:a","pcm_f32le"]}else{vec!["-an","-c:v","rawvideo","-pix_fmt","+yuv420p","-fps_mode:v","passthrough"]}.into_iter().map(str::to_owned));args.extend(["-f","framehash","-hash","sha256","-"].into_iter().map(str::to_owned));args}
+fn decoder_args(audio:bool,scale:u32)->Vec<String>{let mut args=["-hide_banner","-nostdin","-loglevel","error","-xerror","-err_detect","explode","-copyts","-i",INPUT_FILE,"-map",if audio{"0:a:0"}else{"0:v:0"}].into_iter().map(str::to_owned).collect::<Vec<_>>();
+    args.extend(if audio{vec!["-vn","-c:a","pcm_f32le"]}else{vec!["-an","-c:v","rawvideo","-pix_fmt","+yuv420p","-fps_mode:v","passthrough"]}.into_iter().map(str::to_owned));if !audio{args.extend(["-enc_time_base:v".into(),format!("1/{scale}")]);}args.extend(["-f","framehash","-hash","sha256","-"].into_iter().map(str::to_owned));args}
+pub(crate) fn expected_argv(job:&Job)->Result<Vec<Vec<String>>>{match job.operation {
+    Operation::Probe=>Ok(vec![["-v","error","-show_streams","-show_format","-of","json",INPUT_FILE].into_iter().map(str::to_owned).collect()]),
+    Operation::DecodeVideo=>Ok(vec![decoder_args(false,job.media.video.timescale)]),Operation::DecodeAudio=>Ok(vec![decoder_args(true,job.media.video.timescale)]),
+    Operation::Encode=>encode_argv(&job.control,&job.allocation,job.media.video.timescale,job.media.movie_timescale),
+}}
 fn operate(job:&Job)->Result<()> {
     job.validate()?;
     #[cfg(target_os="linux")] {crate::video_sandbox::observe_guard(job.provider_memory_bytes,job.scratch_bytes)?;}
@@ -55,8 +61,8 @@ fn operate(job:&Job)->Result<()> {
     };
     let mut logs=BTreeMap::new();let bytes=match job.operation {
         Operation::Probe=>invoke(&job.ffprobe.path,["-v","error","-show_streams","-show_format","-of","json",INPUT_FILE].into_iter().map(str::to_owned).collect(),2_097_152)?,
-        Operation::DecodeVideo=>invoke(&job.ffmpeg.path,decoder_args(false),TRACE_BYTES)?,
-        Operation::DecodeAudio=>invoke(&job.ffmpeg.path,decoder_args(true),TRACE_BYTES)?,
+        Operation::DecodeVideo=>invoke(&job.ffmpeg.path,decoder_args(false,job.media.video.timescale),TRACE_BYTES)?,
+        Operation::DecodeAudio=>invoke(&job.ffmpeg.path,decoder_args(true,job.media.video.timescale),TRACE_BYTES)?,
         Operation::Encode=>{
             for args in encode_argv(&job.control,&job.allocation,job.media.video.timescale,job.media.movie_timescale)? {ensure!(invoke(&job.ffmpeg.path,args,4096)?.is_empty(),"encoder emitted unexpected stdout");}
             let mut used=0u64;for e in fs::read_dir("/tmp")?{let e=e?;let name=e.file_name().into_string().map_err(|_|anyhow::anyhow!("unexpected worker member encoding"))?;if name.starts_with("delivery-pass"){
@@ -83,5 +89,5 @@ pub(crate) fn unpack(mut bytes:Vec<u8>,job:&Job)->Result<(Report,Vec<u8>)>{
 
 #[cfg(test)]mod tests {
     use super::*;
-    #[test]fn worker_is_not_a_normal_cli_action_and_decoder_never_trims_or_resamples(){assert!(internal_worker(&["optiflow".into(),"--help".into()]).is_none());for audio in [false,true]{let a=decoder_args(audio);for forbidden in ["-t","-shortest","-ar","-ac","-vf","-af"]{assert!(!a.iter().any(|v|v==forbidden));}}}
+    #[test]fn worker_is_not_a_normal_cli_action_and_decoder_never_trims_or_resamples(){assert!(internal_worker(&["optiflow".into(),"--help".into()]).is_none());for audio in [false,true]{let a=decoder_args(audio,30000);for forbidden in ["-t","-shortest","-ar","-ac","-vf","-af"]{assert!(!a.iter().any(|v|v==forbidden));}}}
 }

@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.13
+version: 0.1.14
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,17 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Independently validated MP4 artifacts
+
+An independent container/payload/clock comparison and complete selected native
+decode precede private artifact commitment. AAC packets/configuration, supported
+metadata and exact presentation/edit clocks must remain equal; changed video
+pixels remain explicitly lossy and need human quality review. Actual byte caps
+and strict reduction govern publication. Versioned private markers reuse existing
+no-follow, fsync and no-replace primitives. Digest-pinned readback checks current
+candidate structure and retained evidence without refreshing original/native or
+release qualification. No replacement/disposal or public upload follows.
 
 ## Guarded MP4 encoding
 
