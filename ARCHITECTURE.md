@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.23
+version: 0.1.24
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,16 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Generated APFS image fault trials (#93)
+
+A separate explicitly invoked native test utility owns a fresh private image
+workspace and generated fixtures. Current hdiutil image/mount association and
+external record pins constrain detach/reattach; no arbitrary device or existing
+volume is accepted. Immutable intents preserve uncertain operations without
+replay or automatic cleanup. Captures describe simulated image faults and
+observed descriptor reads only. They cannot replace physical removable-volume
+evidence, mutation acceptance, durable recovery proof or release qualification.
 
 ## Held replacement subjects at namespace transitions (#95)
 
