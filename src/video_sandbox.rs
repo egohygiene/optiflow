@@ -90,8 +90,8 @@ impl SandboxSession {
     }
     pub(crate) fn receipts(&self) -> Result<Vec<SandboxReceipt>> { Ok(self.receipts.lock().map_err(|_| anyhow::anyhow!("video resource receipts poisoned"))?.clone()) }
     pub(crate) fn policy(&self) -> &LinuxVideoSandbox { &self.policy }
-    fn controller(&self,path: &Path,args: impl IntoIterator<Item=OsString>,cwd: &Path) -> SubprocessCommand {
-        SubprocessCommand::new(path.as_os_str().to_owned()).args(args).clear_environment().current_directory(cwd)
+    fn controller(&self,launcher: &PinnedLauncher,args: impl IntoIterator<Item=OsString>,cwd: &Path) -> SubprocessCommand {
+        SubprocessCommand::new(launcher.path.as_os_str().to_owned()).args(args).clear_environment().current_directory(cwd)
             .env("XDG_RUNTIME_DIR",self.policy.user_bus.parent().expect("validated runtime parent").as_os_str().to_owned())
             .env("DBUS_SESSION_BUS_ADDRESS",format!("unix:path={}",self.policy.user_bus.display()))
     }
@@ -147,7 +147,7 @@ fn launch_arguments(policy: &LinuxVideoSandbox,unit: &str,tool: &Path,args: &[St
         format!("TemporaryFileSystem=/tmp:rw,size={},mode=0700",policy.provider_scratch_bytes),
         "WorkingDirectory=/tmp".to_owned(),"UMask=0077".to_owned(),
     ] { values.push(format!("--property={property}").into()); }
-    values.extend(["--".into(),policy.helper.as_os_str().to_owned(),GUARD.into(),policy.provider_subtree_memory_bytes.to_string().into(),policy.provider_scratch_bytes.to_string().into(),tool.as_os_str().to_owned()]);
+    values.extend(["--".into(),policy.helper.path.as_os_str().to_owned(),GUARD.into(),policy.provider_subtree_memory_bytes.to_string().into(),policy.provider_scratch_bytes.to_string().into(),tool.as_os_str().to_owned()]);
     values.extend(args.iter().map(OsString::from)); Ok(values)
 }
 
@@ -224,12 +224,17 @@ mod tests {
     }
     #[test]
     fn service_argv_sets_subtree_scratch_network_and_cleanup_policies_without_shell_expansion(){
-        let args=launch_arguments(&policy(),"optiflow-video-synthetic.service",Path::new("/pinned/ffmpeg"),&["-version".to_owned()],Duration::from_millis(1234)).unwrap();
+        let mut selected = policy();
+        selected.helper.path = "/synthetic/guard worker $(literal) 作品".into();
+        let args=launch_arguments(&selected,"optiflow-video-synthetic.service",Path::new("/pinned/ffmpeg"),&["-version".to_owned()],Duration::from_millis(1234)).unwrap();
         let args:Vec<_>=args.iter().map(|v|v.to_str().unwrap()).collect();
         for arg in ["--user","--pipe","--wait","--expand-environment=no","--property=MemoryMax=134217728","--property=MemorySwapMax=0","--property=TasksMax=8",
             "--property=ExitType=cgroup","--property=KillMode=control-group","--property=ReadOnlyPaths=/","--property=ReadWritePaths=/tmp",
             "--property=TemporaryFileSystem=/tmp:rw,size=8388608,mode=0700","--property=RuntimeMaxSec=1234ms",GUARD] {assert!(args.contains(&arg),"{arg}");}
         assert!(!args.contains(&"sh"));assert!(!args.contains(&"--scope"));
+        let boundary = args.iter().position(|arg| *arg == "--").unwrap();
+        assert_eq!(args[boundary + 1], "/synthetic/guard worker $(literal) 作品");
+        assert_eq!(args[boundary + 2], GUARD);
     }
     #[test]
     fn requested_limits_cannot_stand_in_for_observed_kernel_boundaries(){

@@ -2,6 +2,7 @@
 mod filesystem;
 pub mod finalization;
 mod journal;
+mod sqlite_integer;
 pub mod model;
 pub mod property_evidence;
 pub mod descriptor_properties;

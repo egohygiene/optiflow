@@ -3,6 +3,7 @@
 use super::*;
 use std::fs::File;
 use super::super::journal::Journal;
+use super::super::sqlite_integer::read_nonnegative;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -164,7 +165,7 @@ pub(in crate::execution) fn status_for(bound_state:&DirectoryBinding,fingerprint
     let version:i64=connection.query_row("SELECT COALESCE(MAX(version),0) FROM schema_migrations",[],|r|r.get(0))?;
     ensure!(version<=10,"replacement journal was migrated by a newer implementation");
     if version<10 {return Ok(Vec::new());}
-    let (count,total):(u64,u64)=connection.query_row("SELECT COUNT(*),COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",[fingerprint],|r|Ok((r.get(0)?,r.get(1)?)))?;
+    let (count,total):(u64,u64)=connection.query_row("SELECT COUNT(*),COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",[fingerprint],|r|Ok((read_nonnegative(r,0)?,read_nonnegative(r,1)?)))?;
     ensure!(count<=32&&total<=budget,"replacement journal exceeds count/byte bounds");
     let records:Vec<String>=connection.prepare("SELECT document_json FROM execution_replacement_events WHERE plan_fingerprint=?1 ORDER BY sequence")?.query_map([fingerprint],|r|r.get(0))?.collect::<std::result::Result<_,_>>()?;
     let mut out=Vec::new();let mut total=0u64;
