@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.18
+version: 0.1.19
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,17 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## MP4 folder comparisons and stopping reasons
+
+A separate read-only comparison view derives counts, per-entry outcomes and
+accepted-subset encoded-byte reduction from reconciled inventory/results and
+pinned artifacts. It never infers whole-collection or physical-space savings,
+selects an unchanged original for downstream use, or refreshes native/human
+qualification. New versioned folder reports record actual bounded-window stop
+causes with validated result-prefix/accounting witnesses; legacy reports retain
+their original meaning and an unknown stop cause. Cumulative budget exhaustion,
+uncertain work and report-history limits remain distinct continuation barriers.
 
 ## MP4 operational progress
 

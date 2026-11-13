@@ -18,6 +18,8 @@ pub fn describe() -> Value {
         "native_packaging_targets":["x86_64-unknown-linux-gnu","aarch64-apple-darwin","x86_64-apple-darwin"],
         "retained_target_objectives":["x86_64-pc-windows-msvc"],
         "schemas":[
+            {"name":"mp4-folder-comparison-v1.schema.json","document":include_str!("../schemas/mp4-folder-comparison-v1.schema.json")},
+            {"name":"mp4-folder-report-v2.schema.json","document":include_str!("../schemas/mp4-folder-report-v2.schema.json")},
             {"name":"mp4-progress-v1.schema.json","document":include_str!("../schemas/mp4-progress-v1.schema.json")},
             {"name":"mp4-preflight-v1.schema.json","document":include_str!("../schemas/mp4-preflight-v1.schema.json")},
             {"name":"mp4-delivery-selection-v1.schema.json","document":include_str!("../schemas/mp4-delivery-selection-v1.schema.json")},

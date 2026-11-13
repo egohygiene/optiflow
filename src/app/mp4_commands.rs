@@ -47,6 +47,7 @@ pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&Configuratio
             },
             Mp4DeliveryCommand::FolderResolve(a)=>Ok(serde_json::to_value(resolve_folder(a,configuration,signals)?)?),
             Mp4DeliveryCommand::FolderStatus(a)=>Ok(serde_json::to_value(mp4::folder::status(&a.run_directory)?)?),
+            Mp4DeliveryCommand::FolderSummary(a)=>Ok(serde_json::to_value(mp4::folder::comparison(&a.run_directory)?)?),
         }
     })();
     let mut execution=match result {Ok(value)=>Execution::success(&value),Err(error)=>Execution::failure(Diagnostic::new(DiagnosticCode::ExecutionUnsupported,DiagnosticSeverity::Error,DiagnosticClassification::Capability,DiagnosticImpact::BlocksCommand,error.to_string()))};
