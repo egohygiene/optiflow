@@ -1,5 +1,10 @@
 # #111 — macOS/APFS mutation port
 
+Current source continuation: [November 13 native metadata/staging](NATIVE-20261113.md).
+The dated draft/merge and stop statements below remain historical. Re-query the
+live PR/issue/source before continuing; native/backend/namespace/finalization
+and #93 release gates remain open.
+
 ## Resume and checkpoint boundary — 2026-10-06
 
 The owner resumed the paused fifth checkpoint at 13:27 America/New_York and

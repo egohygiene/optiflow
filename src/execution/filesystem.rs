@@ -165,7 +165,7 @@ pub fn check_mutation_platform(_plan: &ExecutionPlan) -> Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-fn require_apfs(file: &File) -> Result<()> {
+pub(super) fn require_apfs(file: &File) -> Result<()> {
     let filesystem = rustix::fs::fstatfs(file).map_err(|error| failure(
         Code::ExecutionUnsupported, format!("cannot identify mutation filesystem: {error}"),
     ))?;
