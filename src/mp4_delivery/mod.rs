@@ -6,6 +6,8 @@ use serde::{Deserialize,Serialize};
 use crate::domain::EvidenceDigest;
 use crate::video_io::{BoundedFileObservation,FileSnapshot};
 pub mod container;
+pub mod planning;
+pub use planning::{Request,Plan,RateControl,Preset,Limits,plan};
 
 pub const PROFILE:&str="optiflow.mp4-h264-aac-delivery.v1";
 pub const INPUT_BYTES:u64=536_870_912;

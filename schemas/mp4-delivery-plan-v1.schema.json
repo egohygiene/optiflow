@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-delivery-plan-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "payload",
+    "plan_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-delivery-plan.v1"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request",
+        "source",
+        "tools",
+        "allocation",
+        "encoder_argv",
+        "projected_host_payload_bytes",
+        "projected_scratch_bytes",
+        "runtime_qualified",
+        "quality_review",
+        "source_mutation"
+      ],
+      "properties": {
+        "request": {
+          "$ref": "mp4-delivery-request-v1.schema.json"
+        },
+        "source": {
+          "type": "object"
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object"
+          }
+        },
+        "allocation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_candidate_bytes",
+            "copied_audio_bytes",
+            "reserved_mux_bytes",
+            "video_bitrate_bps",
+            "guarantee"
+          ],
+          "properties": {
+            "maximum_candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 268435456
+            },
+            "copied_audio_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912
+            },
+            "reserved_mux_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 268435455
+            },
+            "video_bitrate_bps": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 10000,
+              "maximum": 120000000
+            },
+            "guarantee": {
+              "const": "planning_estimate_only; final_actual_bytes_must_pass_cap_and_strictly_smaller_validation"
+            }
+          }
+        },
+        "encoder_argv": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          }
+        },
+        "projected_host_payload_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483648
+        },
+        "projected_scratch_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483648
+        },
+        "runtime_qualified": {
+          "const": false
+        },
+        "quality_review": {
+          "const": "required; lossy video has no exact visual equivalence claim"
+        },
+        "source_mutation": {
+          "const": false
+        }
+      }
+    },
+    "plan_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    }
+  }
+}

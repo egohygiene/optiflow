@@ -10,6 +10,12 @@ decode, human review and release/native qualification. No source replacement,
 disposal, second orchestration engine or automatic Flow placement is authorized.
 This remains proposed and unqualified.
 
+The MP4 read-only plan binds explicit CRF/preset or target-byte choices to exact
+source/provider identities and whole-work admission. Target allocation preserves
+copied audio and an explicit metadata/mux budget; two-pass bitrate is intent,
+not a guaranteed size or quality claim. Invalid budgets refuse without silent
+trimming, resizing or audio re-encoding. This source extension remains proposed.
+
 November 12 proposed source extension: tool-free profile-aware folder preview
 reuses the same discovery owner with an explicit v1/v2 selection, separate request
 fingerprint and inventory schema. Pure profile description and preview bypass
