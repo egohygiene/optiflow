@@ -16,6 +16,13 @@ copied audio and an explicit metadata/mux budget; two-pass bitrate is intent,
 not a guaranteed size or quality claim. Invalid budgets refuse without silent
 trimming, resizing or audio re-encoding. This source extension remains proposed.
 
+MP4's separately named sandbox policy reuses the same launch, cgroup/tmpfs
+observation and bounded subprocess owner, with explicit longer elapsed/larger
+scratch admission. A closed internal worker keeps two-pass logs in one session
+and frames actual child/job/output/resource evidence. Captured bytes remain
+unaccepted until independent validation. There is no legacy-profile widening,
+source write, generic process framework or native/quality qualification claim.
+
 November 12 proposed source extension: tool-free profile-aware folder preview
 reuses the same discovery owner with an explicit v1/v2 selection, separate request
 fingerprint and inventory schema. Pure profile description and preview bypass
