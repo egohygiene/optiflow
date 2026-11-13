@@ -2,6 +2,35 @@
 version: "3"
 
 tasks:
+  mp4:capabilities:
+    desc: Describe source-only MP4 compatibility and preservation requirements
+    cmds:
+      - optiflow --json mp4-delivery capabilities
+
+  mp4:handoff:prepare:
+    desc: Bind an explicit input reference and consumer policy without encoding
+    requires:
+      vars: [REQUEST, INPUT_REFERENCE, CONSUMER, UNCHANGED_POLICY]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_MP4_INPUT: '{{.INPUT_REFERENCE}}'
+      OPTIFLOW_MP4_CONSUMER: '{{.CONSUMER}}'
+      OPTIFLOW_MP4_UNCHANGED: '{{.UNCHANGED_POLICY}}'
+    cmds:
+      - >-
+        optiflow --json mp4-delivery prepare-handoff
+        --request "$OPTIFLOW_MP4_REQUEST" --input-reference "$OPTIFLOW_MP4_INPUT"
+        --consumer "$OPTIFLOW_MP4_CONSUMER" --unchanged-policy "$OPTIFLOW_MP4_UNCHANGED"
+
+  mp4:handoff:run:
+    desc: Execute a frozen prepared handoff through the existing MP4 owner
+    requires:
+      vars: [PREPARED]
+    env:
+      OPTIFLOW_MP4_PREPARED: '{{.PREPARED}}'
+    cmds:
+      - optiflow --json mp4-delivery run-handoff --request "$OPTIFLOW_MP4_PREPARED"
+
   mp4:folder:summary:
     desc: Compare retained MP4 outcomes and explain continuation barriers
     requires:

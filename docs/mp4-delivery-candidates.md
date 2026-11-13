@@ -20,6 +20,9 @@ private JSONL events without changing domain evidence or final stdout results.
 [Folder comparisons](mp4-folder-comparisons.md) expose reconciled counts, retained
 byte comparisons and explicit continuation barriers through a separate view.
 
+[Typed input/output handoff](mp4-artifact-handoff.md) binds explicit input bytes,
+consumer limits and unchanged policy for future released pipeline composition.
+
 The public `mp4_delivery::inspect` API hashes the entire no-follow, singly-linked
 source and reads only bounded container/sample ranges. It independently maps
 finite unfragmented MP4 sample sizes/chunks/timestamps, supported leading/media
@@ -184,7 +187,9 @@ publication admission caps do not reset. It cannot raise request budgets or
 recover failed work by retrying it. The existing FFV1 v1/v2 folder defaults,
 fingerprints and profile ceilings remain unchanged.
 
-Eleven clock/container/budget/argv/worker/guard/preservation/folder/CLI cases are authored, uncompiled/unrun. All builds,
+The foundation sprint authored eleven clock/container/budget/argv/worker/guard/
+preservation/folder/CLI cases. The product configuration/preflight/progress/
+comparison/handoff sprint adds nine cases; all twenty are uncompiled/unrun. All builds,
 tests/dependencies/lint/format/schema/docs/drift/native/provider/media/CLI/SDK/CI
 execution remains deferred. No actual private media, review, native/macOS
 qualification, signing, release or posting occurred. Flow #88 remains last and

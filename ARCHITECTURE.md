@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.19
+version: 0.1.20
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,19 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Typed MP4 input and delivery handoff
+
+Explicit input references bind selected path, complete bytes and caller-declared
+origin. Preparation binds the existing source/tool/plan identity, consumer byte
+cap and explicit lossy/unchanged policy before native work. Execution rechecks
+the prepared plan and delegates to the same producer; pinned candidates join
+that exact retained plan before output selection. Unchanged originals are never
+selected without the recorded policy and a fresh exact input observation.
+Typed handoff readback requires an externally retained semantic digest and
+reobserves selected output while leaving upstream origin, native qualification
+and human quality approval unverified. Machine capability metadata describes
+the existing profile without enabling a released Flow route or sibling dependency.
 
 ## MP4 folder comparisons and stopping reasons
 

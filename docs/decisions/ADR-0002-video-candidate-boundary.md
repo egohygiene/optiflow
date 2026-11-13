@@ -38,6 +38,16 @@ physical-reclamation authority. No new codec or implicit profile upgrade is adde
 
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
 
+November 12 product-source extension: typed source references, explicit consumer
+size/lossy/unchanged policy and a digest-bound preparation compose the same MP4
+producer. Current plan/source/tool bindings must match before native work; final
+pinned artifacts must join the same prepared plan. Unchanged-original selection
+requires explicit policy and fresh exact bytes. Handoff readback requires an
+externally retained semantic digest. Upstream origin remains caller-declared,
+and native/quality/release approval is never inferred. Pure machine capability
+metadata prepares Flow's public boundary without enabling an unreleased route,
+importing sibling source or adding an execution engine.
+
 November 12 product-source extension: reconciled folder comparison is a separate
 read-only view with outcome counts and accepted-subset logical byte differences.
 New report v2 wraps the original validated prefix/accounting record with actual

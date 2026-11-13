@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-delivery-capabilities-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile",
+    "input_container",
+    "output_container",
+    "video_codec",
+    "audio_codec",
+    "pixel_format",
+    "color",
+    "channels",
+    "audio_rates",
+    "maximum_input_bytes",
+    "maximum_candidate_bytes",
+    "maximum_width",
+    "maximum_height",
+    "maximum_frames",
+    "maximum_duration_seconds",
+    "frame_rate",
+    "video_pixels",
+    "audio_payload",
+    "presentation_clocks",
+    "metadata",
+    "unchanged_selection",
+    "provider_execution",
+    "source_mutation",
+    "release_route_available",
+    "native_qualified",
+    "quality_review"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-delivery-capabilities.v1"
+    },
+    "profile": {
+      "const": "optiflow.mp4-h264-aac-delivery.v1"
+    },
+    "input_container": {
+      "const": "unfragmented_self_contained_mp4"
+    },
+    "output_container": {
+      "const": "unfragmented_self_contained_mp4"
+    },
+    "video_codec": {
+      "const": "h264"
+    },
+    "audio_codec": {
+      "const": "aac_lc"
+    },
+    "pixel_format": {
+      "const": "yuv420p"
+    },
+    "color": {
+      "const": "bt709_limited_sdr_progressive"
+    },
+    "channels": {
+      "const": [
+        1,
+        2
+      ]
+    },
+    "audio_rates": {
+      "const": [
+        44100,
+        48000
+      ]
+    },
+    "maximum_input_bytes": {
+      "const": 536870912
+    },
+    "maximum_candidate_bytes": {
+      "const": 268435456
+    },
+    "maximum_width": {
+      "const": 4096
+    },
+    "maximum_height": {
+      "const": 2160
+    },
+    "maximum_frames": {
+      "const": 36000
+    },
+    "maximum_duration_seconds": {
+      "const": 900
+    },
+    "frame_rate": {
+      "const": "constant_1_to_120_fps"
+    },
+    "video_pixels": {
+      "const": "explicitly_lossy; exact_pixel_equivalence_unavailable"
+    },
+    "audio_payload": {
+      "const": "exact_copied_aac_configuration_payload_and_edit_scope_required"
+    },
+    "presentation_clocks": {
+      "const": "exact_rational_video_audio_clock_and_edit_preservation_required"
+    },
+    "metadata": {
+      "const": "supported_utf8_fields_preserved; technical_encoder_field_may_change; unknown_features_refuse"
+    },
+    "unchanged_selection": {
+      "const": "refuse_unless_explicit_keep_original_and_current_exact_input_match"
+    },
+    "provider_execution": {
+      "const": "selected_linux_guard_only; exact_ffmpeg_ffprobe_8.0.1; native_qualification_unverified"
+    },
+    "source_mutation": {
+      "const": false
+    },
+    "release_route_available": {
+      "const": false
+    },
+    "native_qualified": {
+      "const": false
+    },
+    "quality_review": {
+      "const": "human_review_required; never_automatically_approved"
+    }
+  }
+}

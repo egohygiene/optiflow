@@ -14,6 +14,7 @@ pub mod artifact;
 pub mod folder;
 pub mod preflight;
 pub mod progress;
+pub mod handoff;
 pub use validation::{produce,produce_with_progress,Outcome};
 pub use worker::internal_worker;
 pub use planning::{Request,Plan,RateControl,Preset,Limits,plan};

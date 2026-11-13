@@ -53,6 +53,9 @@ impl Execution {
 
 pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
     if let Command::Mp4Delivery(a)=&cli.command {
+        if matches!(&a.command,crate::cli::Mp4DeliveryCommand::RunHandoff(_))&&cli.config.is_some(){
+            return (CommandResult::failure(cli.command_name(),Diagnostic::new(DiagnosticCode::ConfigurationSelectorConflict,DiagnosticSeverity::Error,DiagnosticClassification::Input,DiagnosticImpact::BlocksCommand,"run-handoff consumes a frozen request and cannot select a configuration override")),cli.selected_output_format());
+        }
         let configuration=if a.command.uses_configuration(){match crate::configuration::resolve(&cli){Ok(value)=>Some(value),Err(error)=>return (CommandResult::failure(cli.command_name(),*error),cli.selected_output_format())}}else{None};
         let format=configuration.as_ref().map(|v|v.runtime.output_format).unwrap_or_else(||cli.selected_output_format());
         let execution=mp4_commands::run(&a.command,configuration.as_ref(),signals);

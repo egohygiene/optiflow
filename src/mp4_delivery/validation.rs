@@ -67,15 +67,16 @@ fn store_trace(directory:&File,name:&str,bytes:&[u8])->Result<()>{runtime::write
 pub fn produce(request:&Request,cancel:impl Fn()->bool)->Result<Outcome>{
     produce_with_progress(request,cancel,&Observer::silent())
 }
-pub fn produce_with_progress(request:&Request,cancel:impl Fn()->bool,observer:&Observer<'_>)->Result<Outcome>{produce_bound(request,None,None,cancel,observer,None)}
-pub(crate) fn produce_bound(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool,observer:&Observer<'_>,entry:Option<usize>)->Result<Outcome>{
-    observer.phase(Phase::Operation,Transition::Started,entry);let result=produce_inner(request,expected,tools,cancel,observer,entry);observer.phase(Phase::Operation,if result.is_ok(){Transition::Finished}else{Transition::Failed},entry);result
+pub fn produce_with_progress(request:&Request,cancel:impl Fn()->bool,observer:&Observer<'_>)->Result<Outcome>{produce_bound(request,None,None,None,cancel,observer,None)}
+pub(crate) fn produce_bound(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,expected_plan:Option<&EvidenceDigest>,cancel:impl Fn()->bool,observer:&Observer<'_>,entry:Option<usize>)->Result<Outcome>{
+    observer.phase(Phase::Operation,Transition::Started,entry);let result=produce_inner(request,expected,tools,expected_plan,cancel,observer,entry);observer.phase(Phase::Operation,if result.is_ok(){Transition::Finished}else{Transition::Failed},entry);result
 }
-fn produce_inner(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool,observer:&Observer<'_>,entry:Option<usize>)->Result<Outcome>{
+fn produce_inner(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,expected_plan:Option<&EvidenceDigest>,cancel:impl Fn()->bool,observer:&Observer<'_>,entry:Option<usize>)->Result<Outcome>{
     observer.phase(Phase::Planning,Transition::Started,entry);
     let started=Instant::now();let stop=||cancel()||started.elapsed()>=Duration::from_millis(request.limits.elapsed_ms);let planned=planning::plan(request,&stop)?;
     if let Some(expected)=expected{ensure!(planned.payload.source.snapshot==expected.snapshot&&planned.payload.source.content_digest==expected.digest,"MP4 input differs from frozen folder selection");}
     if let Some(tools)=tools{ensure!(planned.payload.tools.as_slice()==tools,"MP4 tools differ from frozen folder baseline");}
+    if let Some(expected)=expected_plan{ensure!(planned.plan_digest==*expected,"MP4 current source/tool/policy plan differs from prepared binding");}
     observer.phase(Phase::Planning,Transition::Finished,entry);
     if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes){return Ok(Outcome::Unchanged {reason:"original already fits the explicit target; no encoding performed".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:None,candidate_digest:None,attempt_directory:None});}
     observer.phase(Phase::RuntimePreparation,Transition::Started,entry);
