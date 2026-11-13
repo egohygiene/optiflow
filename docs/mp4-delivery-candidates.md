@@ -11,6 +11,9 @@ selected media edits to fifteen minutes. Requested limits may be smaller.
 partial selections and final CLI settings patches through the existing owner.
 Complete producer request semantics and original byte preservation remain intact.
 
+[Read-only preflight](mp4-preflight.md) reports source/tool/root/storage and host
+prerequisites while leaving actual native guard and decode behavior unverified.
+
 The public `mp4_delivery::inspect` API hashes the entire no-follow, singly-linked
 source and reads only bounded container/sample ranges. It independently maps
 finite unfragmented MP4 sample sizes/chunks/timestamps, supported leading/media

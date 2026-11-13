@@ -100,9 +100,13 @@ pub struct Plan {pub schema:String,pub payload:Payload,pub plan_digest:EvidenceD
 pub(crate) fn bind_tools(request:&Request,guard:&impl Fn()->Result<()>)->Result<Vec<Tool>>{
     let mut tools=vec![];
     for (name,pin) in [("ffmpeg",&request.ffmpeg),("ffprobe",&request.ffprobe),("systemd_run",&request.sandbox.systemd_run),("systemctl",&request.sandbox.systemctl),("worker",&request.sandbox.helper)] {
-        let observed=BoundedFileObservation::open_guarded(&pin.path,134_217_728,guard)?;
-        ensure!(observed.digest()==&pin.digest&&observed.snapshot().mode&0o111!=0&&observed.snapshot().mode&0o6000==0,"selected MP4 executable differs from exact safe pin");tools.push(Tool {name:name.into(),path:pin.path.clone(),content_digest:pin.digest.clone(),snapshot:observed.snapshot().clone()});
+        tools.push(observe_tool(name,pin,guard)?);
     }Ok(tools)
+}
+pub(crate) fn observe_tool(name:&str,pin:&PinnedLauncher,guard:&impl Fn()->Result<()>)->Result<Tool>{
+    let observed=BoundedFileObservation::open_guarded(&pin.path,134_217_728,guard)?;
+    ensure!(observed.digest()==&pin.digest&&observed.snapshot().mode&0o111!=0&&observed.snapshot().mode&0o6000==0,"selected MP4 executable differs from exact safe pin");
+    Ok(Tool {name:name.into(),path:pin.path.clone(),content_digest:pin.digest.clone(),snapshot:observed.snapshot().clone()})
 }
 pub(crate) fn retained(plan:&Plan)->Result<()> {
     let p=&plan.payload;let r=&p.request;r.validate()?;
@@ -115,6 +119,10 @@ pub fn plan(request:&Request,cancel:impl Fn()->bool)->Result<Plan>{
     request.validate()?;let guard=||{ensure!(!cancel(),"MP4 planning cancelled");Ok(())};
     let source=super::inspect(&request.source,request.limits.input_bytes,&cancel)?;
     let tools=bind_tools(request,&guard)?;
+    let plan=assemble(request,source,tools)?;guard()?;Ok(plan)
+}
+pub(crate) fn assemble(request:&Request,source:Source,tools:Vec<Tool>)->Result<Plan>{
+    request.validate()?;
     let allocation=allocation(&request.control,&source.media,request.limits.candidate_bytes)?;
     let out=allocation.maximum_candidate_bytes;
     let projected_scratch_bytes=request.limits.input_bytes.checked_add(out.checked_mul(2).context("faststart scratch overflow")?).and_then(|n|n.checked_add(83_886_080)).context("MP4 whole scratch admission overflow")?;
@@ -123,7 +131,7 @@ pub fn plan(request:&Request,cancel:impl Fn()->bool)->Result<Plan>{
     ensure!(projected_host_payload_bytes.checked_add(request.sandbox.provider_subtree_memory_bytes).is_some_and(|n|n<=request.limits.memory_admission_bytes),"host payload buffers plus provider quota exceed selected memory admission; total host RSS is not guaranteed");
     let encoder_argv=encode_argv(&request.control,&allocation,source.media.video.timescale,source.media.movie_timescale)?;
     let payload=Payload {request:request.clone(),source,tools,allocation,encoder_argv,projected_host_payload_bytes,projected_scratch_bytes,runtime_qualified:false,quality_review:"required; lossy video has no exact visual equivalence claim".into(),source_mutation:false};
-    let plan=Plan {schema:PLAN_SCHEMA.into(),plan_digest:digest(&payload)?,payload};ensure!(serde_json::to_vec(&plan)?.len()<=METADATA_BYTES,"MP4 plan exceeds bound");guard()?;Ok(plan)
+    let plan=Plan {schema:PLAN_SCHEMA.into(),plan_digest:digest(&payload)?,payload};ensure!(serde_json::to_vec(&plan)?.len()<=METADATA_BYTES,"MP4 plan exceeds bound");retained(&plan)?;Ok(plan)
 }
 
 #[cfg(test)]mod tests {

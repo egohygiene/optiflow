@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.16
+version: 0.1.17
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,15 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Read-only MP4 preflight
+
+The MP4 owner independently observes selected source/tool pins, private output
+roots, free-space admission and the explicit local user-manager socket without
+starting a process or connecting to a service. It reuses planning/resource
+arithmetic and reports each missing prerequisite. Host/space observations are
+not reservations, actual confinement, delegation or native qualification. The
+existing runtime rechecks all execution prerequisites and actual guard receipts.
 
 ## MP4 configuration resolution
 

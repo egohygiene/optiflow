@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-preflight-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile",
+    "request_digest",
+    "state",
+    "checks",
+    "plan",
+    "observation_scope",
+    "provider_invoked",
+    "service_connected",
+    "space_reserved",
+    "runtime_guard_verified",
+    "native_qualified",
+    "source_mutation",
+    "replacement_authority",
+    "upload_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-preflight.v1"
+    },
+    "profile": {
+      "const": "optiflow.mp4-h264-aac-delivery.v1"
+    },
+    "request_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "state": {
+      "enum": [
+        "prerequisites_unavailable",
+        "prerequisites_observed_guard_unverified"
+      ]
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "state",
+          "detail",
+          "available_bytes",
+          "required_bytes"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "host",
+              "source",
+              "ffmpeg",
+              "ffprobe",
+              "systemd_run",
+              "systemctl",
+              "worker",
+              "private_workdir",
+              "artifact_root",
+              "user_bus",
+              "admission",
+              "runtime_guard"
+            ]
+          },
+          "state": {
+            "enum": [
+              "observed",
+              "unavailable",
+              "unverified"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "available_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "required_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "plan": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "mp4-delivery-plan-v1.schema.json"
+        }
+      ]
+    },
+    "observation_scope": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "provider_invoked": {
+      "const": false
+    },
+    "service_connected": {
+      "const": false
+    },
+    "space_reserved": {
+      "const": false
+    },
+    "runtime_guard_verified": {
+      "const": false
+    },
+    "native_qualified": {
+      "const": false
+    },
+    "source_mutation": {
+      "const": false
+    },
+    "replacement_authority": {
+      "const": false
+    },
+    "upload_authority": {
+      "const": false
+    }
+  }
+}

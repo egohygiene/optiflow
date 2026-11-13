@@ -20,6 +20,7 @@ pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&Configuratio
             Mp4DeliveryCommand::Profiles=>Ok(mp4::profiles()),
             Mp4DeliveryCommand::Inspect(a)=>Ok(serde_json::to_value(mp4::inspect(&a.source,a.maximum_input_bytes,cancel)?)?),
             Mp4DeliveryCommand::Resolve(a)=>Ok(serde_json::to_value(resolve(a,configuration,signals)?)?),
+            Mp4DeliveryCommand::Preflight(a)=>Ok(serde_json::to_value(mp4::preflight::observe(&resolve(a,configuration,signals)?.request,cancel)?)?),
             Mp4DeliveryCommand::Plan(a)|Mp4DeliveryCommand::Run(a)=>{
                 let request=resolve(a,configuration,signals)?.request;
                 if matches!(command,Mp4DeliveryCommand::Plan(_)){Ok(serde_json::to_value(mp4::plan(&request,cancel)?)?)}else{Ok(serde_json::to_value(mp4::produce(&request,cancel)?)?)}
