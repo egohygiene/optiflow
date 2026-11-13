@@ -37,7 +37,23 @@ quota. Source, private work and artifact namespaces remain disjoint. Provider
 memory, actual scratch/host support and full native decode are not established
 by these numbers. No default lossy setting, automatic retry or shell is added.
 
-Four clock/container/budget/argv cases are authored, uncompiled/unrun. All builds,
+Explicit `runtime::capture_unaccepted` uses the existing Linux service guard.
+The separate MP4 policy admits up to two hours of caller-selected elapsed time
+and larger private tmpfs scratch; legacy video policy still refuses these values.
+The bounded worker receives pinned tools, exact source bytes and a closed job,
+checks actual guard conditions and native codec/pixel/channel scope, and runs
+both passes in the same private tmpfs so statistics cannot disappear between
+passes. Source files and inherited environments never become arbitrary shell
+commands. Version/build observations, job/output hashes, pass-log digests and
+actual kernel resource receipts remain separately recorded.
+
+Captured MP4 bytes are **unaccepted** and retained in a fresh private attempt.
+No committed candidate or savings claim follows without the next independent
+validation/publication step. Unsupported/degraded native guards, non-Linux hosts,
+codec diagnostics, quota overflow and unknown partial state refuse. Total host
+RSS, syscall preemption and physical reclamation are not claimed.
+
+Six clock/container/budget/argv/worker/guard cases are authored, uncompiled/unrun. All builds,
 tests/dependencies/lint/format/schema/docs/drift/native/provider/media/CLI/SDK/CI
 execution remains deferred. No actual private media, review, native/macOS
 qualification, signing, release or posting occurred. Flow #88 remains last and

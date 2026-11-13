@@ -35,9 +35,10 @@ pub struct LinuxVideoSandbox {
 }
 impl LinuxVideoSandbox {
     pub fn validate(&self) -> Result<()> {
-        ensure!(self.schema == "optiflow.linux-video-sandbox.v1","unsupported video launch policy");
+        let delivery=self.schema==crate::mp4_delivery::planning::SANDBOX_SCHEMA;
+        ensure!(self.schema == "optiflow.linux-video-sandbox.v1"||delivery,"unsupported video launch policy");
         ensure!((67_108_864..=2_147_483_648).contains(&self.provider_subtree_memory_bytes),"unsupported provider subtree memory limit");
-        ensure!((1_048_576..=134_217_728).contains(&self.provider_scratch_bytes) && self.provider_scratch_bytes % 4096 == 0,"unsupported aggregate scratch limit");
+        if delivery{crate::mp4_delivery::planning::validate_sandbox(self)?;}else{ensure!((1_048_576..=134_217_728).contains(&self.provider_scratch_bytes) && self.provider_scratch_bytes % 4096 == 0,"unsupported aggregate scratch limit");}
         for pin in [&self.systemd_run,&self.systemctl,&self.helper] {
             ensure!(pin.path.to_str().is_some_and(|v| v.starts_with('/') && !v.contains('%') && !v.chars().any(char::is_control)) && pin.digest.algorithm == "blake3-256" && pin.digest.value.len() == 64
                 && pin.digest.value.bytes().all(|v| v.is_ascii_hexdigit() && !v.is_ascii_uppercase()),"launcher requires a complete pinned executable identity");
@@ -131,7 +132,8 @@ impl SandboxSession {
 
 fn launch_arguments(policy: &LinuxVideoSandbox,unit: &str,tool: &Path,args: &[String],remaining: Duration) -> Result<Vec<OsString>> {
     policy.validate()?;
-    ensure!(!remaining.is_zero() && remaining <= Duration::from_secs(30),"invalid video child time allowance");
+    let maximum=if policy.schema==crate::mp4_delivery::planning::SANDBOX_SCHEMA{Duration::from_millis(crate::mp4_delivery::MAX_ELAPSED_MS)}else{Duration::from_secs(30)};
+    ensure!(!remaining.is_zero() && remaining <= maximum,"invalid video child time allowance");
     let mut values:Vec<OsString> = ["--user","--quiet","--wait","--pipe","--service-type=exec","--expand-environment=no"].into_iter().map(OsString::from).collect();
     values.push(format!("--unit={unit}").into());
     for property in [
@@ -162,7 +164,7 @@ fn bounded_text(path: &Path) -> Result<String> {
 }
 
 #[cfg(target_os="linux")]
-fn observe_guard(memory: u64,scratch: u64) -> Result<SandboxReceipt> {
+pub(crate) fn observe_guard(memory: u64,scratch: u64) -> Result<SandboxReceipt> {
     let text = bounded_text(Path::new("/proc/self/cgroup"))?;
     let path = text.lines().find_map(|v| v.strip_prefix("0::")).context("unified cgroup membership is unavailable")?;
     ensure!(path.starts_with('/') && !path.split('/').any(|v| v == "." || v == ".."),"invalid unified cgroup membership");
@@ -243,5 +245,17 @@ mod tests {
         let mut value=policy();value.provider_scratch_bytes=8_388_609;assert!(value.validate().is_err());
         value=policy();value.provider_subtree_memory_bytes=u64::MAX;assert!(value.validate().is_err());
         assert!(launch_arguments(&policy(),"synthetic.service",Path::new("/pinned/ffmpeg"),&[],Duration::ZERO).is_err());
+    }
+}
+
+#[cfg(test)]mod mp4_scope_tests {
+    use super::*;
+    #[test]fn longer_delivery_allowance_requires_its_distinct_explicit_policy() {
+        let pin=|path:&str|PinnedLauncher {path:path.into(),digest:EvidenceDigest {algorithm:"blake3-256".into(),value:"a".repeat(64)}};
+        let mut p=LinuxVideoSandbox {schema:"optiflow.linux-video-sandbox.v1".into(),systemd_run:pin("/pinned/systemd-run"),systemctl:pin("/pinned/systemctl"),helper:pin("/pinned/optiflow"),user_bus:"/run/user/1/bus".into(),provider_subtree_memory_bytes:1_073_741_824,provider_scratch_bytes:8_388_608,minimum_free_bytes:0};
+        assert!(launch_arguments(&p,"synthetic.service",Path::new("/pinned/ffmpeg"),&[],Duration::from_secs(45)).is_err());
+        p.schema=crate::mp4_delivery::planning::SANDBOX_SCHEMA.into();p.provider_scratch_bytes=536_870_912;
+        assert!(launch_arguments(&p,"synthetic.service",Path::new("/pinned/ffmpeg"),&[],Duration::from_secs(45)).is_ok());
+        p.schema="optiflow.linux-video-sandbox.v1".into();assert!(p.validate().is_err());
     }
 }

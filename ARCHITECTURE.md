@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.12
+version: 0.1.13
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,18 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Guarded MP4 encoding
+
+The existing user-manager/cgroup/tmpfs guard admits a separately versioned MP4
+resource policy and longer explicit deadline. Legacy launch limits stay intact.
+A closed internal worker keeps both encoder passes and bounded statistics in
+one private scratch namespace, verifies input/tool pins and compiles fixed argv.
+Framed worker reports, native resource receipts and exact returned byte hashes
+remain evidence rather than acceptance. Unaccepted candidates are retained only
+in private attempts until independent validation/publication. No source mutation,
+shell, generic process engine, implicit installation or native qualification is
+introduced; unsupported guards/hosts fail closed.
 
 ## Explicit MP4 quality and size planning
 
