@@ -839,15 +839,70 @@ mod tests {
     }
 
     fn private_root() -> TempDir {
+        private_root_in(&std::env::temp_dir())
+    }
+
+    fn private_root_in(parent: &Path) -> TempDir {
         // macOS commonly exposes its temporary directory through the /var
         // symlink. Resolve the fixture parent before creating our private root;
         // production paths and deliberate symlink cases must still be refused.
         let root = tempfile::Builder::new()
             .prefix("optiflow-candidate-artifact-")
-            .tempdir_in(std::env::temp_dir().canonicalize().unwrap())
+            .tempdir_in(parent.canonicalize().unwrap())
             .unwrap();
         fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700)).unwrap();
         root
+    }
+
+    #[test]
+    fn fixture_parent_alias_is_resolved_before_creation_but_runtime_alias_is_refused() {
+        use std::os::unix::fs::symlink;
+
+        let outer = private_root();
+        let physical_parent = outer.path().join("physical-temp-parent");
+        fs::create_dir(&physical_parent).unwrap();
+        let aliased_parent = outer.path().join("var-like-alias");
+        symlink(&physical_parent, &aliased_parent).unwrap();
+
+        let root = private_root_in(&aliased_parent);
+        let canonical_path = root.path().to_path_buf();
+        assert_eq!(canonical_path.parent(), Some(physical_parent.as_path()));
+        require_private_root(&open_directory(&canonical_path).unwrap()).unwrap();
+
+        // Only test-owned parent selection is normalized. The same directory
+        // selected through an alias must still fail production admission.
+        let alias_path = aliased_parent.join(canonical_path.file_name().unwrap());
+        assert!(open_directory(&alias_path).is_err());
+        let id = Uuid::now_v7();
+        let candidate = b"synthetic candidate";
+        assert!(
+            publish(
+                &alias_path,
+                id,
+                candidate,
+                &evidence(id, candidate),
+                limits(),
+                || Ok(())
+            )
+            .is_err()
+        );
+        assert!(!canonical_path.join(staging_name(id)).exists());
+        assert!(!canonical_path.join(id.to_string()).exists());
+
+        let published = publish(
+            &canonical_path,
+            id,
+            candidate,
+            &evidence(id, candidate),
+            limits(),
+            || Ok(()),
+        )
+        .unwrap();
+        assert_eq!(inspect(&published).status, Status::Committed);
+        drop(root);
+        assert!(!canonical_path.exists());
+        assert!(aliased_parent.is_symlink());
+        assert!(physical_parent.is_dir());
     }
 
     #[test]
