@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-settings-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "settings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-settings.v1"
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "control": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "crf",
+                "preset"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "quality"
+                },
+                "crf": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 51
+                },
+                "preset": {
+                  "enum": [
+                    "fast",
+                    "medium",
+                    "slow",
+                    "very_slow"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "maximum_bytes",
+                "mux_reserve_bytes",
+                "preset"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "target_size"
+                },
+                "maximum_bytes": {
+                  "type": "integer",
+                  "minimum": 1048576,
+                  "maximum": 268435456
+                },
+                "mux_reserve_bytes": {
+                  "type": "integer",
+                  "minimum": 1048576,
+                  "maximum": 268435455
+                },
+                "preset": {
+                  "enum": [
+                    "fast",
+                    "medium",
+                    "slow",
+                    "very_slow"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912
+            },
+            "candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 268435456
+            },
+            "elapsed_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7200000
+            },
+            "memory_admission_bytes": {
+              "type": "integer",
+              "minimum": 134217728,
+              "maximum": 8589934592
+            },
+            "working_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967296
+            },
+            "minimum_free_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1099511627776
+            }
+          }
+        }
+      }
+    }
+  }
+}

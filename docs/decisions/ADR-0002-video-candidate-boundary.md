@@ -37,6 +37,16 @@ mutable application state. They grant no native, replay, candidate, mutation or
 physical-reclamation authority. No new codec or implicit profile upgrade is added.
 
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
+
+November 12 product-source extension: MP4 settings resolution belongs to the
+existing configuration owner. Distinct partial-selection documents inherit
+only explicit quality/control and resource values. Full v1 requests retain all
+explicit values; a separately selected CLI settings patch has final precedence.
+Sources/tool pins, output locations, preservation and safety permissions cannot
+come from settings patches. Resolution exposes provenance and produces the same
+closed producer request. Existing plan identity records the complete effective
+request; presentation/provenance metadata is not native acceptance. No lossy or
+resource defaults, provider execution, mutable state or ADR ratification follows.
 - **Date:** 2026-11-06
 - **Issue:** #146
 

@@ -2,6 +2,24 @@
 version: "3"
 
 tasks:
+  mp4:resolve:
+    desc: Show effective MP4 settings and provenance without media/tool observation
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery resolve --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:folder:resolve:
+    desc: Show the resolved frozen folder policy without traversal or providers
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-resolve --request "$OPTIFLOW_MP4_REQUEST"
+
   mp4:profiles:
     desc: Describe the explicit unqualified MP4 delivery source profile
     cmds:
