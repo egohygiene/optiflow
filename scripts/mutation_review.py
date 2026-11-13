@@ -84,13 +84,19 @@ def command_result(value, allowed, scenario=None):
             owner.require(isinstance(result, dict) and result.get("schema_version") == "optiflow.release-contract/v1"
                           and result.get("tool") == "optiflow" and result.get("version") == "0.2.0",
                           "installed candidate version/contract identity differs")
-        if scenario in ["dry_run", "quarantine"]:
+        if scenario == "dry_run":
+            owner.require(isinstance(result, dict) and result.get("schema") == "optiflow.execution-run.v1"
+                          and result.get("dry_run") is True and result.get("status") == "validated",
+                          "actual successful dry-run result required")
+            commit = result.get("commit")
+            owner.require(isinstance(commit, dict) and commit.get("schema") == "optiflow.execution-commit.v1"
+                          and commit.get("source_mutated") is False and type(commit.get("committed_actions")) is int
+                          and commit["committed_actions"] == 0, "dry-run cannot claim mutation")
+        if scenario == "quarantine":
             owner.require(isinstance(result, dict) and result.get("schema") == "optiflow.execution-mutation.v2"
-                          and result.get("dry_run") is (scenario == "dry_run"),
-                          "dry-run and mutation captures cannot substitute for one another")
-            if scenario == "quarantine":
-                owner.require(type(result.get("committed_actions")) is int and result["committed_actions"] > 0
-                              and result.get("status") == "completed", "actual committed quarantine result required")
+                          and result.get("dry_run") is False and type(result.get("committed_actions")) is int
+                          and result["committed_actions"] > 0 and result.get("status") == "completed",
+                          "actual committed quarantine result required")
 
 
 def validate_receipt(receipt, target, version, revision, archive_sha256, binary_sha256, budget):

@@ -30,7 +30,9 @@ upgrade/rollback, scan/plan/dry-run, quarantine/status/resume/restore, separatel
 authorized finalization and cleanup, interruption, physical reconnect, collisions,
 capacity and stale-source refusal. Cases may be explicitly unavailable with
 reasons. A successful read-only scan cannot stand for quarantine; a dry-run cannot
-stand for committed mutation; success cannot stand for a refusal. Selected
+stand for committed mutation; success cannot stand for a refusal. The existing
+`execution-run.v1` dry-run and `execution-mutation.v2` quarantine results retain
+their distinct meanings. Selected
 capture identities and asserted outcomes are reviewed, not inferred from a
 receipt filename or a generic `passed` flag.
 
@@ -55,7 +57,7 @@ Authored future invocation, not run:
 task release:report:mutation-review REQUEST=/private/review.json OUTPUT_DIRECTORY=/private/fresh-review
 ```
 
-Three negative cases are authored, uncompiled/unrun. No tests/compiler/build,
+Four contract/refusal cases are authored, uncompiled/unrun. No tests/compiler/build,
 dependencies/lint/format/schema/docs/drift, native/product/CLI/SDK/provider/media
 or CI execution/polling occurred. No signed v0.2 assets, install/upgrade result,
 native gate, finalization or physical-space claim was created. #93 remains open.

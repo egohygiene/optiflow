@@ -23,3 +23,15 @@ class NativeMutationReviewTests(unittest.TestCase):
         value = {"schema": "optiflow.command-result.v1", "command": "scan", "outcome": {"class": "success", "exit_code": 0}, "result": {}}
         with self.assertRaises(ValueError):
             review.command_result(value, review.CASES["quarantine"], "quarantine")
+
+    def test_current_dry_run_and_committed_mutation_use_distinct_contracts(self):
+        value = {"schema": "optiflow.command-result.v1", "command": "apply", "outcome": {"class": "success", "exit_code": 0},
+                 "result": {"schema": "optiflow.execution-run.v1", "dry_run": True, "status": "validated",
+                            "commit": {"schema": "optiflow.execution-commit.v1", "source_mutated": False, "committed_actions": 0}}}
+        review.command_result(value, review.CASES["dry_run"], "dry_run")
+        with self.assertRaises(ValueError):
+            review.command_result(value, review.CASES["quarantine"], "quarantine")
+        value["result"] = {"schema": "optiflow.execution-mutation.v2", "dry_run": False, "status": "completed", "committed_actions": 1}
+        review.command_result(value, review.CASES["quarantine"], "quarantine")
+        with self.assertRaises(ValueError):
+            review.command_result(value, review.CASES["dry_run"], "dry_run")
