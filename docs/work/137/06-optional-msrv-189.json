@@ -1,0 +1,204 @@
+{
+  "schema_version": "egohygiene.optional-sqlite-compatibility-candidate/v1",
+  "status": "OPTIONAL PROPOSAL \u2014 requires maintainer compatibility decision, not adopted",
+  "base": "1100e7b2c613deca7b7ad75dd32f1faca83c4185",
+  "primary_repair_modified": false,
+  "proposed_product_msrv": "1.89",
+  "canonical_formatter": "1.85.0",
+  "root_development_channel": "stable (unchanged)",
+  "targeted_refresh_commands": [
+    "cargo +1.89.0 update --package rusqlite --precise 0.41.1",
+    "cargo +1.89.0 update --manifest-path fuzz/Cargo.toml --package rusqlite --precise 0.41.1"
+  ],
+  "graph_diff": [
+    {
+      "manifest": "Cargo.toml",
+      "package_count_before": 191,
+      "package_count_after": 191,
+      "changes": [
+        {
+          "package": "libsqlite3-sys",
+          "before": {
+            "name": "libsqlite3-sys",
+            "version": "0.38.2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8",
+            "dependencies": [
+              "cc",
+              "pkg-config",
+              "vcpkg"
+            ]
+          },
+          "after": {
+            "name": "libsqlite3-sys",
+            "version": "0.39.1",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "14a5f01b87b92705d07b433c06f96cbc764637d81a0bffb5734ce17cf0f9a2b3",
+            "dependencies": [
+              "cc",
+              "pkg-config",
+              "vcpkg"
+            ]
+          }
+        },
+        {
+          "package": "rusqlite",
+          "before": {
+            "name": "rusqlite",
+            "version": "0.40.2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3",
+            "dependencies": [
+              "bitflags",
+              "fallible-iterator",
+              "fallible-streaming-iterator",
+              "hashlink",
+              "libsqlite3-sys",
+              "smallvec",
+              "sqlite-wasm-rs"
+            ]
+          },
+          "after": {
+            "name": "rusqlite",
+            "version": "0.41.1",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "da9bba6f3506135e120a6586df05be18b48d18896600646a4bec8f993d91a594",
+            "dependencies": [
+              "bitflags",
+              "fallible-iterator",
+              "fallible-streaming-iterator",
+              "hashlink",
+              "libsqlite3-sys",
+              "smallvec",
+              "sqlite-wasm-rs"
+            ]
+          }
+        }
+      ],
+      "all_other_package_records_identical": true
+    },
+    {
+      "manifest": "fuzz/Cargo.toml",
+      "package_count_before": 176,
+      "package_count_after": 176,
+      "changes": [
+        {
+          "package": "libsqlite3-sys",
+          "before": {
+            "name": "libsqlite3-sys",
+            "version": "0.38.2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8",
+            "dependencies": [
+              "cc",
+              "pkg-config",
+              "vcpkg"
+            ]
+          },
+          "after": {
+            "name": "libsqlite3-sys",
+            "version": "0.39.1",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "14a5f01b87b92705d07b433c06f96cbc764637d81a0bffb5734ce17cf0f9a2b3",
+            "dependencies": [
+              "cc",
+              "pkg-config",
+              "vcpkg"
+            ]
+          }
+        },
+        {
+          "package": "rusqlite",
+          "before": {
+            "name": "rusqlite",
+            "version": "0.40.2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3",
+            "dependencies": [
+              "bitflags",
+              "fallible-iterator",
+              "fallible-streaming-iterator",
+              "hashlink",
+              "libsqlite3-sys",
+              "smallvec",
+              "sqlite-wasm-rs"
+            ]
+          },
+          "after": {
+            "name": "rusqlite",
+            "version": "0.41.1",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "checksum": "da9bba6f3506135e120a6586df05be18b48d18896600646a4bec8f993d91a594",
+            "dependencies": [
+              "bitflags",
+              "fallible-iterator",
+              "fallible-streaming-iterator",
+              "hashlink",
+              "libsqlite3-sys",
+              "smallvec",
+              "sqlite-wasm-rs"
+            ]
+          }
+        }
+      ],
+      "all_other_package_records_identical": true
+    }
+  ],
+  "locked_metadata_observations": [
+    {
+      "manifest": "Cargo.toml",
+      "command": [
+        "+1.89.0",
+        "update",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit": 0,
+      "lock_sha256": "a514fd4ef1f26c67ad62b6de8ce09b5165343f3d916b6bf9bd6589f0f2f3d509",
+      "lock_unchanged": true,
+      "scope": "dependency metadata only; no build scripts, compiler product checks, tests or policy execution"
+    },
+    {
+      "manifest": "fuzz/Cargo.toml",
+      "command": [
+        "+1.89.0",
+        "update",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit": 0,
+      "lock_sha256": "c02fd11d839b55119ad45ad87ee22694e48cee7d9ebd41bb64c4588c1dd34fca",
+      "lock_unchanged": true,
+      "scope": "dependency metadata only; no build scripts, compiler product checks, tests or policy execution"
+    }
+  ],
+  "product_compilation_run": false,
+  "tests_run": false,
+  "cargo_deny_run": false,
+  "native_or_release_qualification": false,
+  "adopted": false,
+  "formatter_source_comparison": [
+    {
+      "path": "Taskfile.yml",
+      "canonical_selection_unchanged": true,
+      "selected_lines": [
+        "- cargo +1.85.0 fmt --all",
+        "- cargo +1.85.0 fmt --manifest-path fuzz/Cargo.toml --all",
+        "- cargo +1.85.0 fmt --all -- --check",
+        "- cargo +1.85.0 fmt --manifest-path fuzz/Cargo.toml --all -- --check"
+      ]
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "canonical_selection_unchanged": true,
+      "selected_lines": [
+        "- name: Install canonical formatter without changing the compiler lane",
+        "run: rustup toolchain install 1.85.0 --profile minimal --component rustfmt --no-self-update",
+        "cargo +1.85.0 fmt --all -- --check",
+        "cargo +1.85.0 fmt --manifest-path fuzz/Cargo.toml --all -- --check"
+      ]
+    }
+  ]
+}

@@ -1,8 +1,10 @@
+# OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
 [package]
 name = "optiflow-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
+rust-version = "1.89"
 license = "MIT"
 
 [package.metadata]

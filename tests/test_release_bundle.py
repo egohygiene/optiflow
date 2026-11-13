@@ -20,7 +20,7 @@ SCRIPT = REPOSITORY_ROOT / "scripts" / "release_bundle.py"
 RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 SOURCE_REVISION = release.READ_ONLY_SOURCES["v0.1.1"]
 CREATED_AT = "2026-09-12T00:00:00Z"
-MINIMUM_SUPPORTED_RUST = "1.85.0"
+MINIMUM_SUPPORTED_RUST = "1.89.0"
 RELAY_RELEASE_REVISION = "1eada5142f7fc7da7862f335589e3b8f5884ffaf"
 TARGETS = (
     "x86_64-unknown-linux-gnu",

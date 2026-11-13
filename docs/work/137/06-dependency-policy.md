@@ -1,3 +1,9 @@
+OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
+
+The primary Rust1.85 repair record below is retained as baseline history. This
+isolated branch proposes an alternative in [the optional compatibility packet](06-optional-msrv-189.md);
+the primary repair and its unresolved-advisory status are unchanged.
+
 # Flow #137 checkpoint 6 — November 13, 2026
 
 Status: container/toolchain source repair authored; SQLite advisory remains
