@@ -2,6 +2,15 @@
 version: "3"
 
 tasks:
+  ci:workflows:
+    desc: Check workflow expression scopes using an explicitly installed actionlint 1.7.12
+    requires:
+      vars: [ACTIONLINT]
+    env:
+      WORKFLOW_LINT_EXECUTABLE: '{{.ACTIONLINT}}'
+    cmds:
+      - python3 -B scripts/check-workflows.py --actionlint "$WORKFLOW_LINT_EXECUTABLE"
+
   diagnostics:preview:
     desc: Preview generated support categories without creating a bundle
     requires:
