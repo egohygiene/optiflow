@@ -1,0 +1,45 @@
+{
+  "schema_version": "egohygiene.filesystem-corpus-source-review/v1",
+  "scope": "source bookkeeping only; no Rust proof execution",
+  "old_index_sha256": "376054e77eb5e5f892e5dee9ab40718de2da3d0dd11f8aed6b3786ee061d5ad2",
+  "new_index_sha256": "b87312d0f6a159f5be41f85efbbd2880df331a10347bc85f5da53c9a851416bd",
+  "cargo_lock_sha256": {
+    "before": "fc6655ba90b172dcb4ae925497978b6cbcd53b987a93b2f7753b20231207c901",
+    "after": "268f92574d8b244da608ccc980fa7b5a529af40bd7d5e125c2146fc0178b10c5"
+  },
+  "changed_case_bindings": [
+    {
+      "id": "fs88-cache-signature",
+      "field": "proof_source_sha256",
+      "before": "db04104f3293b8dcafbd64fb1814e57aa5949af425f7896f5254543898902cc3",
+      "after": "ee6348cada60ae089d7da4ae70887d1658f84b61b0cbcbfde8d8b9b4698faa73"
+    }
+  ],
+  "preserved": [
+    "catalog",
+    "generator",
+    "case IDs and order",
+    "recipes",
+    "expected outcomes",
+    "literal payloads",
+    "all other proof sources"
+  ],
+  "source_ancestor_matching_old_proof": "6d9f41703de1c2b920de91eba96326175079b3ab",
+  "reviewed_state_source_delta": "migration 0010 application and implementation, with formatting; cache signature proof assertions unchanged",
+  "checks": [
+    {
+      "command": "python -B scripts/filesystem-corpus.py --check",
+      "exit_code": 0,
+      "cases": 17
+    },
+    {
+      "command": "python -B -m unittest tests/test_filesystem_corpus_bindings.py tests/test_filesystem_corpus_lock.py",
+      "exit_code": 0,
+      "tests": 14
+    }
+  ],
+  "rust_build_or_tests_run": false,
+  "linux_corpus_tier_run": false,
+  "native_macos_run": false,
+  "ci_dispatched": false
+}
