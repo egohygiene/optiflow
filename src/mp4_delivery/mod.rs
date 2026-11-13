@@ -11,6 +11,7 @@ pub mod runtime;
 mod worker;
 pub mod validation;
 pub mod artifact;
+pub mod folder;
 pub use validation::{produce,Outcome};
 pub use worker::internal_worker;
 pub use planning::{Request,Plan,RateControl,Preset,Limits,plan};
@@ -22,7 +23,7 @@ pub const METADATA_BYTES:usize=16_777_216;
 pub const MAX_FRAMES:usize=36_000;
 pub const MAX_AUDIO_PACKETS:usize=50_000;
 pub const MAX_ELAPSED_MS:u64=7_200_000;
-pub(crate) fn digest<T:Serialize>(v:&T)->Result<EvidenceDigest>{let value=serde_json::to_value(v)?;Ok(hash(&serde_json::to_vec(&value)?))}
+pub(crate) fn digest<T:Serialize+?Sized>(v:&T)->Result<EvidenceDigest>{let value=serde_json::to_value(v)?;Ok(hash(&serde_json::to_vec(&value)?))}
 pub(crate) fn hash(bytes:&[u8])->EvidenceDigest{EvidenceDigest {algorithm:"blake3-256".into(),value:blake3::hash(bytes).to_hex().to_string()}}
 pub(crate) fn normalized(path:&Path)->Result<()> {ensure!(path.is_absolute()&&!path.components().any(|c|matches!(c,std::path::Component::CurDir|std::path::Component::ParentDir)),"normalized absolute MP4 path required");Ok(())}
 

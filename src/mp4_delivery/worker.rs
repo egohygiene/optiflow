@@ -1,7 +1,7 @@
 //! Closed worker inside the existing observed cgroup/tmpfs guard. Two passes
 //! share scratch; no arbitrary argv or original host source path is accepted.
 use super::*;
-use std::{collections::BTreeMap,ffi::OsString,fs::{self,File,OpenOptions},io::{Read,Write},time::{Duration,Instant}};
+use std::{collections::BTreeMap,ffi::OsString,fs::{self,OpenOptions},io::{Read,Write},time::{Duration,Instant}};
 use anyhow::Context;
 use crate::subprocess::{SubprocessCommand,SubprocessLimits,SubprocessRunner};
 use crate::video_sandbox::PinnedLauncher;
@@ -29,6 +29,7 @@ pub(crate) struct Child {pub tool:String,pub argv:Vec<String>,pub stdout_digest:
 pub(crate) struct Report {pub schema:String,pub job_digest:EvidenceDigest,pub output_digest:EvidenceDigest,pub output_bytes:u64,pub children:Vec<Child>,pub pass_log_digests:BTreeMap<String,EvidenceDigest>,pub runtime_qualified:bool,pub source_mutation:bool}
 impl Job {pub(crate) fn validate(&self)->Result<()> {
     ensure!(self.schema=="optiflow.mp4-worker-job.v1"&&(1..=INPUT_BYTES).contains(&self.input_bytes)&&(1..=MAX_ELAPSED_MS).contains(&self.elapsed_ms)&&(1..=OUTPUT_BYTES).contains(&self.allocation.maximum_candidate_bytes),"bounded explicit MP4 worker job required");planning::valid_digest(&self.input_digest)?;
+    ensure!((134_217_728..=2_147_483_648).contains(&self.provider_memory_bytes)&&(16_777_216..=2_147_483_648).contains(&self.scratch_bytes)&&self.scratch_bytes%4096==0&&self.scratch_bytes.checked_add(67_108_864).is_some_and(|n|n<=self.provider_memory_bytes),"worker resource policy exceeds MP4 scope");
     for p in [&self.ffmpeg,&self.ffprobe]{normalized(&p.path)?;planning::valid_digest(&p.digest)?;}ensure!(self.ffmpeg.path!=self.ffprobe.path,"distinct worker tools required");Ok(())
 }}
 fn decoder_args(audio:bool,scale:u32)->Vec<String>{let mut args=["-hide_banner","-nostdin","-loglevel","error","-xerror","-err_detect","explode","-copyts","-i",INPUT_FILE,"-map",if audio{"0:a:0"}else{"0:v:0"}].into_iter().map(str::to_owned).collect::<Vec<_>>();

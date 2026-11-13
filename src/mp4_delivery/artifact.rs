@@ -10,7 +10,7 @@ pub struct Pin {pub directory:PathBuf,pub manifest_digest:EvidenceDigest,pub can
 #[serde(deny_unknown_fields)]
 struct Manifest {schema:String,profile:String,id:String,state:String,candidate_digest:EvidenceDigest,candidate_bytes:u64,evidence_digest:EvidenceDigest,evidence_bytes:u64,quality_review:String,replacement_authority:bool,upload_authority:bool}
 #[derive(Debug,Serialize)]
-pub struct Inspection {pub schema:String,pub artifact:Pin,pub candidate:container::Summary,pub evidence_scope:String,pub current_native_decode:bool,pub native_qualified:bool,pub quality_review:String,pub replacement_authority:bool,pub upload_authority:bool}
+pub struct Inspection {pub schema:String,pub artifact:Pin,pub candidate:container::Summary,pub source_digest:EvidenceDigest,pub source_bytes:u64,pub request_digest:EvidenceDigest,pub tools:Vec<planning::Tool>,pub evidence_scope:String,pub current_native_decode:bool,pub native_qualified:bool,pub quality_review:String,pub replacement_authority:bool,pub upload_authority:bool}
 fn same(path:&Path,file:&File)->Result<()> {
     #[cfg(unix)]{let current=crate::candidate_artifact::open_directory(path)?;let a=rustix::fs::fstat(file)?;let b=rustix::fs::fstat(&current)?;ensure!(a.st_dev==b.st_dev&&a.st_ino==b.st_ino,"MP4 publication directory identity changed");Ok(())}
     #[cfg(not(unix))]{let _=(path,file);anyhow::bail!("MP4 publication unsupported")}
@@ -36,5 +36,5 @@ pub fn inspect(pin:&Pin)->Result<Inspection>{
     let candidate=BoundedFileObservation::open_mp4(&pin.directory.join("candidate.mp4"),OUTPUT_BYTES,&||Ok(()))?;ensure!(candidate.snapshot().link_count==1&&candidate.snapshot().logical_bytes==m.candidate_bytes&&candidate.digest()==&m.candidate_digest,"MP4 candidate changed");let parsed=container::observe(&candidate,&||Ok(()))?;
     validation::retained(&e,&parsed.summary,m.candidate_bytes,&m.candidate_digest)?;candidate.verify_current()?;same(&pin.directory,&root)?;
     ensure!(crate::candidate_artifact::read_member(&root,"mp4-artifact.json",16384)?==raw&&crate::candidate_artifact::read_member(&root,"evidence.json",METADATA_BYTES)?==body,"MP4 record changed during inspection");
-    Ok(Inspection {schema:"optiflow.mp4-delivery-artifact-inspection.v1".into(),artifact:pin.clone(),candidate:parsed.summary,evidence_scope:"current_candidate_bytes_structure_and_retained_validation_records; original_tools_native_decode_and_release_not_reobserved".into(),current_native_decode:false,native_qualified:false,quality_review:m.quality_review,replacement_authority:false,upload_authority:false})
+    Ok(Inspection {schema:"optiflow.mp4-delivery-artifact-inspection.v1".into(),artifact:pin.clone(),candidate:parsed.summary,source_digest:e.plan.payload.source.content_digest.clone(),source_bytes:e.plan.payload.source.snapshot.logical_bytes,request_digest:digest(&e.plan.payload.request)?,tools:e.plan.payload.tools,evidence_scope:"current_candidate_bytes_structure_and_retained_validation_records; original_tools_native_decode_and_release_not_reobserved".into(),current_native_decode:false,native_qualified:false,quality_review:m.quality_review,replacement_authority:false,upload_authority:false})
 }

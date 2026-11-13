@@ -26,7 +26,7 @@ pub struct TrackSummary {
 pub struct Summary {pub schema:String,pub movie_timescale:u32,pub video:TrackSummary,pub audio:TrackSummary,pub metadata:BTreeMap<String,Vec<u8>>,pub qualification:String}
 #[derive(Debug,Clone)]
 pub(crate) struct Sample {pub offset:u64,pub size:u32,pub pts:Time,pub duration:Time}
-pub(crate) struct Parsed {pub summary:Summary,pub video:Vec<Sample>,pub audio:Vec<Sample>}
+pub(crate) struct Parsed {pub summary:Summary}
 #[derive(Clone,Copy)]struct Atom<'a>{kind:[u8;4],data:&'a[u8]}
 fn slice(v:&[u8],at:usize,n:usize)->Result<&[u8]>{v.get(at..at.checked_add(n).context("MP4 range overflow")?).context("truncated MP4 field")}
 fn u16_at(v:&[u8],at:usize)->Result<u16>{Ok(u16::from_be_bytes(slice(v,at,2)?.try_into()?))}
@@ -102,7 +102,7 @@ pub(crate) fn observe(file:&BoundedFileObservation,guard:&impl Fn()->Result<()>)
     let video=parsed.iter().position(|t|t.0.kind=="video_h264").context("H264 video absent")?;let (v,vs)=parsed.remove(video);ensure!(parsed.len()==1&&parsed[0].0.kind=="audio_aac_lc","one AAC track required");let (a,asamples)=parsed.remove(0);
     ensure!([&v,&a].iter().all(|t|t.edit_duration.numerator>0&&i128::from(t.edit_duration.numerator)<=i128::from(t.edit_duration.denominator)*900),"supported complete edit duration exceeds fifteen minutes");
     let mut ranges=vs.iter().chain(&asamples).map(|s|(s.offset,s.offset+u64::from(s.size))).collect::<Vec<_>>();ranges.sort_unstable();ensure!(ranges.windows(2).all(|w|w[0].1<=w[1].0),"overlapping media sample extents refused");
-    Ok(Parsed {summary:Summary {schema:"optiflow.mp4-container-observation.v1".into(),movie_timescale:scale,video:v,audio:a,metadata:metadata(&m)?,qualification:"structural_observation_only; native_probe_decode_and_human_review_required".into()},video:vs,audio:asamples})
+    Ok(Parsed {summary:Summary {schema:"optiflow.mp4-container-observation.v1".into(),movie_timescale:scale,video:v,audio:a,metadata:metadata(&m)?,qualification:"structural_observation_only; native_probe_decode_and_human_review_required".into()}})
 }
 
 #[cfg(test)]mod tests {

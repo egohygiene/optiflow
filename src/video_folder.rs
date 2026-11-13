@@ -12,8 +12,13 @@ use crate::video_profile::Profile;
 const INVENTORY_BYTES:usize=4_194_304;
 mod preview;
 pub use preview::{PreviewProfile,PreviewRequest,Preview,profiles,preview};
-struct Discovery {source_root:PathBuf,batch:FolderLimits,recursive:bool,input_bytes:u64,profile:Profile,request_fingerprint:EvidenceDigest,inventory_schema:String}
-impl Discovery {fn for_run(request:&VideoFolderRequest)->Result<Self>{Ok(Self {source_root:request.source_root.clone(),batch:request.batch.clone(),recursive:request.recursive,input_bytes:request.limits.input_bytes,profile:request.profile()?,request_fingerprint:digest(request)?,inventory_schema:request.document_schema("inventory")?})}}
+struct Discovery {source_root:PathBuf,batch:FolderLimits,recursive:bool,input_bytes:u64,profile:Option<Profile>,request_fingerprint:EvidenceDigest,inventory_schema:String}
+impl Discovery {fn for_run(request:&VideoFolderRequest)->Result<Self>{Ok(Self {source_root:request.source_root.clone(),batch:request.batch.clone(),recursive:request.recursive,input_bytes:request.limits.input_bytes,profile:Some(request.profile()?),request_fingerprint:digest(request)?,inventory_schema:request.document_schema("inventory")?})}}
+pub(crate) fn discover_mp4(root:&Path,batch:&FolderLimits,recursive:bool,input_bytes:u64,fingerprint:EvidenceDigest,cancel:&impl Fn()->bool)->Result<FolderInventory>{
+    let scope=Discovery {source_root:root.into(),batch:batch.clone(),recursive,input_bytes,profile:None,request_fingerprint:fingerprint,inventory_schema:"optiflow.mp4-folder-inventory.v1".into()};let budget=BatchBudget::new(batch.elapsed_ms)?;
+    #[cfg(target_os="linux")]{native::discover(&scope,&budget,cancel)}
+    #[cfg(not(target_os="linux"))]{let _=(scope,budget,cancel);anyhow::bail!("MP4 folder discovery requires the existing Linux owner")}
+}
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -224,15 +229,13 @@ mod native {
                 ensure!(FileStateSignature::from_symlink_metadata(&std::fs::symlink_metadata(&path)?)==*before,"source changed between traversal and classification");
                 if hashed.checked_add(before.logical_size_bytes).is_none_or(|v|v>request.batch.maximum_total_input_bytes){record.disposition=EntryDisposition::Skipped;record.reason="batch_input_read_byte_limit".into();}
                 else {
-                    let guard=||budget.check(cancel);let observation=BoundedFileObservation::open_guarded(&path,request.input_bytes,&guard)?;
+                    let guard=||budget.check(cancel);let observation=if request.profile.is_some(){BoundedFileObservation::open_guarded(&path,request.input_bytes,&guard)?}else{BoundedFileObservation::open_mp4(&path,request.input_bytes,&guard)?};
                     ensure!(observation.snapshot().device_id==device&&observation.snapshot().link_count==1,"source identity/device/link changed during discovery");
-                    let bytes=observation.read_bytes_profile(request.profile,&guard)?;hashed+=bytes.len() as u64;
-                    let kind=infer::get(&bytes).map(|v|crate::inventory::classify_content_type(v.mime_type()));
-                    let looks_video=matches!(kind,Some(crate::domain::MediaKind::Video))||bytes.starts_with(&[0x1a,0x45,0xdf,0xa3]);
+                    hashed+=observation.snapshot().logical_bytes;
                     record.source=Some(SourceBinding {snapshot:observation.snapshot().clone(),digest:observation.digest().clone()});
-                    if !looks_video {record.disposition=EntryDisposition::Unsupported;record.reason="not_a_supported_video_content_type".into();}
-                    else if crate::video_container::inspect_profile(&bytes,request.profile).is_err() {record.disposition=EntryDisposition::Unsupported;record.reason="outside_closed_matroska_ffv1_subset".into();}
-                    else {record.reason="closed_container_observed_native_validation_pending".into();}
+                    if let Some(profile)=request.profile {let bytes=observation.read_bytes_profile(profile,&guard)?;let kind=infer::get(&bytes).map(|v|crate::inventory::classify_content_type(v.mime_type()));let looks_video=matches!(kind,Some(crate::domain::MediaKind::Video))||bytes.starts_with(&[0x1a,0x45,0xdf,0xa3]);
+                        if !looks_video {record.disposition=EntryDisposition::Unsupported;record.reason="not_a_supported_video_content_type".into();}else if crate::video_container::inspect_profile(&bytes,profile).is_err(){record.disposition=EntryDisposition::Unsupported;record.reason="outside_closed_matroska_ffv1_subset".into();}else{record.reason="closed_container_observed_native_validation_pending".into();}
+                    }else if crate::mp4_delivery::container::observe(&observation,&guard).is_err(){record.disposition=EntryDisposition::Unsupported;record.reason="outside_bounded_mp4_h264_aac_subset".into();}else{record.reason="mp4_container_observed_native_validation_pending".into();}
                     observation.verify_current_guarded(&guard)?;
                 }
             }

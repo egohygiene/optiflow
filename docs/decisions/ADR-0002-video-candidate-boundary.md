@@ -66,6 +66,17 @@ Partial staging and failed/unconfirmed cleanup stay failures without adoption.
 All source/compiler/tests/lint/schema/native/provider/CI qualification remains
 deferred by maintainer; no native-supported-host acceptance or release is recorded.
 
+November 12 proposed source extension: the explicit MP4 CLI bypasses mutable
+configuration/state and delegates to the same public profile/producer/readback
+owners. Fixed serial MP4 folders reuse descriptor discovery under their own
+inventory identity. Frozen inputs/tools, immutable starts/results, explicit
+bounded continuation and exact store membership stop uncertain work without
+replay or adoption. After a durable result, an explicit policy may remove only
+the known generated duplicate scratch candidate; originals and retained audit
+records remain. A missing cleanup receipt blocks continuation. This extends
+source composition only; proposed status, native/quality/release qualification,
+replacement/disposal and public-upload boundaries are unchanged.
+
 November 7 source extension: bounded serial folder discovery and per-entry
 start/result evidence compose this same producer. A single candidate runs at
 a time; failed/unresolved states stop and read-only recovery grants no replay.

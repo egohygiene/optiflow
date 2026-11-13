@@ -40,7 +40,7 @@ impl Request {
         self.limits.validate()?;self.control.validate(self.limits.candidate_bytes)?;
         ensure!(self.schema==REQUEST_SCHEMA&&self.profile==PROFILE&&self.audio=="copy"&&self.metadata=="preserve_supported_allow_encoder_change","explicit MP4 profile/audio-copy/metadata policy required");
         validate_sandbox(&self.sandbox)?;
-        for path in [&self.source,&self.ffmpeg.path,&self.ffprobe.path,&self.private_workdir,&self.artifact_root,&self.sandbox.systemd_run.path,&self.sandbox.systemctl.path,&self.sandbox.helper.path] {normalized(path)?;ensure!(path.to_str().is_some_and(|s|!s.contains('%')&&!s.chars().any(char::is_control)),"UTF8 path without service specifiers/control characters required");}
+        for path in [&self.source,&self.ffmpeg.path,&self.ffprobe.path,&self.private_workdir,&self.artifact_root,&self.sandbox.systemd_run.path,&self.sandbox.systemctl.path,&self.sandbox.helper.path,&self.sandbox.user_bus] {normalized(path)?;ensure!(path.to_str().is_some_and(|s|s.len()<=4096&&!s.contains('%')&&!s.chars().any(char::is_control)),"bounded UTF8 path without service specifiers/control characters required");}
         ensure!(self.ffmpeg.path!=self.ffprobe.path,"distinct explicit ffmpeg/ffprobe required");
         for output in [&self.private_workdir,&self.artifact_root] {for source in [&self.source,&self.ffmpeg.path,&self.ffprobe.path,&self.sandbox.systemd_run.path,&self.sandbox.systemctl.path,&self.sandbox.helper.path] {ensure!(!output.starts_with(source)&&!source.starts_with(output),"MP4 output overlaps selected source/tool");}}
         ensure!(!self.private_workdir.starts_with(&self.artifact_root)&&!self.artifact_root.starts_with(&self.private_workdir),"private MP4 work and publication namespaces must be disjoint");
@@ -97,6 +97,13 @@ pub struct Payload {pub request:Request,pub source:Source,pub tools:Vec<Tool>,pu
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Plan {pub schema:String,pub payload:Payload,pub plan_digest:EvidenceDigest}
+pub(crate) fn bind_tools(request:&Request,guard:&impl Fn()->Result<()>)->Result<Vec<Tool>>{
+    let mut tools=vec![];
+    for (name,pin) in [("ffmpeg",&request.ffmpeg),("ffprobe",&request.ffprobe),("systemd_run",&request.sandbox.systemd_run),("systemctl",&request.sandbox.systemctl),("worker",&request.sandbox.helper)] {
+        let observed=BoundedFileObservation::open_guarded(&pin.path,134_217_728,guard)?;
+        ensure!(observed.digest()==&pin.digest&&observed.snapshot().mode&0o111!=0&&observed.snapshot().mode&0o6000==0,"selected MP4 executable differs from exact safe pin");tools.push(Tool {name:name.into(),path:pin.path.clone(),content_digest:pin.digest.clone(),snapshot:observed.snapshot().clone()});
+    }Ok(tools)
+}
 pub(crate) fn retained(plan:&Plan)->Result<()> {
     let p=&plan.payload;let r=&p.request;r.validate()?;
     ensure!(plan.schema==PLAN_SCHEMA&&plan.plan_digest==digest(p)?&&p.source.path==r.source&&p.source.snapshot.logical_bytes>0&&p.source.snapshot.logical_bytes<=r.limits.input_bytes&&!p.runtime_qualified&&!p.source_mutation&&p.quality_review=="required; lossy video has no exact visual equivalence claim","retained MP4 plan scope differs");
@@ -107,15 +114,11 @@ pub(crate) fn retained(plan:&Plan)->Result<()> {
 pub fn plan(request:&Request,cancel:impl Fn()->bool)->Result<Plan>{
     request.validate()?;let guard=||{ensure!(!cancel(),"MP4 planning cancelled");Ok(())};
     let source=super::inspect(&request.source,request.limits.input_bytes,&cancel)?;
-    let mut tools=vec![];
-    for (name,pin) in [("ffmpeg",&request.ffmpeg),("ffprobe",&request.ffprobe),("systemd_run",&request.sandbox.systemd_run),("systemctl",&request.sandbox.systemctl),("worker",&request.sandbox.helper)] {
-        let observed=BoundedFileObservation::open_guarded(&pin.path,134_217_728,&guard)?;
-        ensure!(observed.digest()==&pin.digest&&observed.snapshot().mode&0o111!=0&&observed.snapshot().mode&0o6000==0,"selected MP4 executable differs from exact safe pin");tools.push(Tool {name:name.into(),path:pin.path.clone(),content_digest:pin.digest.clone(),snapshot:observed.snapshot().clone()});
-    }
+    let tools=bind_tools(request,&guard)?;
     let allocation=allocation(&request.control,&source.media,request.limits.candidate_bytes)?;
     let out=allocation.maximum_candidate_bytes;
     let projected_scratch_bytes=request.limits.input_bytes.checked_add(out.checked_mul(2).context("faststart scratch overflow")?).and_then(|n|n.checked_add(83_886_080)).context("MP4 whole scratch admission overflow")?;
-    ensure!(projected_scratch_bytes<=request.sandbox.provider_scratch_bytes&&projected_scratch_bytes.checked_add(out.checked_mul(2).context("host staging overflow")?).and_then(|n|n.checked_add(83_886_080)).is_some_and(|n|n<=request.limits.working_bytes),"whole input/pass-log/faststart/private-trace/publication scratch exceeds selected admission");
+    ensure!(projected_scratch_bytes<=request.sandbox.provider_scratch_bytes&&projected_scratch_bytes.checked_add(out.checked_mul(2).context("host staging overflow")?).and_then(|n|n.checked_add(134_217_728)).is_some_and(|n|n<=request.limits.working_bytes),"whole input/pass-log/faststart/private-trace/publication scratch exceeds selected admission");
     let projected_host_payload_bytes=request.limits.input_bytes.checked_add(out.checked_mul(3).context("MP4 candidate buffer admission overflow")?).and_then(|n|n.checked_add(134_217_728)).context("MP4 host buffer admission overflow")?;
     ensure!(projected_host_payload_bytes.checked_add(request.sandbox.provider_subtree_memory_bytes).is_some_and(|n|n<=request.limits.memory_admission_bytes),"host payload buffers plus provider quota exceed selected memory admission; total host RSS is not guaranteed");
     let encoder_argv=encode_argv(&request.control,&allocation,source.media.video.timescale,source.media.movie_timescale)?;

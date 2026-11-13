@@ -59,13 +59,18 @@ pub(crate) fn retained(e:&Evidence,actual:&Summary,bytes:u64,content:&EvidenceDi
         let expected_digest=match index{2=>Some(hash(e.source_probe.as_bytes())),3=>Some(e.source_video.trace_digest.clone()),4=>Some(e.source_audio.trace_digest.clone()),6=>Some(hash(e.candidate_probe.as_bytes())),7=>Some(e.candidate_video.trace_digest.clone()),8=>Some(e.candidate_audio.trace_digest.clone()),_=>None};if let Some(expected)=expected_digest{ensure!(i.output_digest==expected,"native trace/probe capture join differs");}
     }Ok(())
 }
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(tag="state",rename_all="snake_case",deny_unknown_fields)]
-pub enum Outcome {Accepted {artifact:artifact::Pin,source_bytes:u64,candidate_bytes:u64,encoded_bytes_saved:u64,quality_review:String,physical_space_reclaimed:bool},Unchanged {reason:String,source_bytes:u64,candidate_bytes:Option<u64>,attempt_directory:Option<PathBuf>}}
+pub enum Outcome {Accepted {artifact:artifact::Pin,source_bytes:u64,candidate_bytes:u64,encoded_bytes_saved:u64,quality_review:String,physical_space_reclaimed:bool,attempt_directory:PathBuf},Unchanged {reason:String,source_bytes:u64,candidate_bytes:Option<u64>,candidate_digest:Option<EvidenceDigest>,attempt_directory:Option<PathBuf>}}
 fn store_trace(directory:&File,name:&str,bytes:&[u8])->Result<()>{runtime::write_member(directory,name,bytes)}
 pub fn produce(request:&Request,cancel:impl Fn()->bool)->Result<Outcome>{
+    produce_bound(request,None,None,cancel)
+}
+pub(crate) fn produce_bound(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool)->Result<Outcome>{
     let started=Instant::now();let stop=||cancel()||started.elapsed()>=Duration::from_millis(request.limits.elapsed_ms);let planned=planning::plan(request,&stop)?;
-    if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes){return Ok(Outcome::Unchanged {reason:"original already fits the explicit target; no encoding performed".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:None,attempt_directory:None});}
+    if let Some(expected)=expected{ensure!(planned.payload.source.snapshot==expected.snapshot&&planned.payload.source.content_digest==expected.digest,"MP4 input differs from frozen folder selection");}
+    if let Some(tools)=tools{ensure!(planned.payload.tools.as_slice()==tools,"MP4 tools differ from frozen folder baseline");}
+    if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes){return Ok(Outcome::Unchanged {reason:"original already fits the explicit target; no encoding performed".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:None,candidate_digest:None,attempt_directory:None});}
     let (attempt,directory)=runtime::fresh_directory(&request.private_workdir,"mp4-attempt")?;runtime::write_member(&directory,"intent.json",&serde_json::to_vec(&planned)?)?;
     let mut session=runtime::Session::new_at(request,&cancel,started).with_context(||format!("retain MP4 attempt {}",attempt.display()))?;ensure!(session.plan.plan_digest==planned.plan_digest,"MP4 input/tool/settings changed before execution");
     let source=session.source_bytes()?;let source_media=planned.payload.source.media.clone();let source_probe=session.call(Operation::Probe,&source,&source_media)?;runtime::require_probe(&source_probe,&source_media)?;
@@ -75,11 +80,11 @@ pub fn produce(request:&Request,cancel:impl Fn()->bool)->Result<Outcome>{
     let candidate_probe=session.call(Operation::Probe,&candidate,&parsed.summary)?;runtime::require_probe(&candidate_probe,&parsed.summary)?;
     let cv=session.call(Operation::DecodeVideo,&candidate,&parsed.summary)?;let ca=session.call(Operation::DecodeAudio,&candidate,&parsed.summary)?;let candidate_video=trace(&cv,&parsed.summary.video)?;let candidate_audio=trace(&ca,&parsed.summary.audio)?;store_trace(&directory,"candidate-video.framehash",&cv)?;store_trace(&directory,"candidate-audio.framehash",&ca)?;
     ensure!(same_audio(&candidate_audio,&source_audio),"complete decoded AAC samples/clock differ");candidate_file.verify_current_guarded(&||session.check())?;session.recheck()?;
-    if candidate.len() as u64>=planned.payload.source.snapshot.logical_bytes{return Ok(Outcome::Unchanged {reason:"validated lossy candidate is not strictly smaller; original retained".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:Some(candidate.len() as u64),attempt_directory:Some(attempt)});}
+    if candidate.len() as u64>=planned.payload.source.snapshot.logical_bytes{return Ok(Outcome::Unchanged {reason:"validated lossy candidate is not strictly smaller; original retained".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:Some(candidate.len() as u64),candidate_digest:Some(hash(&candidate)),attempt_directory:Some(attempt)});}
     let e=Evidence {schema:"optiflow.mp4-delivery-evidence.v1".into(),plan:planned.clone(),candidate_digest:hash(&candidate),candidate_bytes:candidate.len() as u64,candidate:parsed.summary,source_probe:String::from_utf8(source_probe)?,candidate_probe:String::from_utf8(candidate_probe)?,source_video,source_audio,candidate_video,candidate_audio,invocations:session.invocations.clone(),encoded_bytes_saved:planned.payload.source.snapshot.logical_bytes-candidate.len() as u64,full_native_decode_observed:true,video_pixel_equivalence:false,quality_review:"required; explicitly lossy video".into(),native_qualified:false,source_unchanged_at_precommit:true,physical_space_reclaimed:false,replacement_authority:false,upload_authority:false};
     retained(&e,&e.candidate,e.candidate_bytes,&e.candidate_digest)?;runtime::write_member(&directory,"validation.json",&serde_json::to_vec(&e)?)?;
     let artifact=artifact::publish(&request.artifact_root,&candidate,&e,||{session.recheck()?;candidate_file.verify_current_guarded(&||session.check())})?;
-    Ok(Outcome::Accepted {artifact,source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:e.candidate_bytes,encoded_bytes_saved:e.encoded_bytes_saved,quality_review:e.quality_review,physical_space_reclaimed:false})
+    Ok(Outcome::Accepted {artifact,source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:e.candidate_bytes,encoded_bytes_saved:e.encoded_bytes_saved,quality_review:e.quality_review,physical_space_reclaimed:false,attempt_directory:attempt})
 }
 
 #[cfg(test)]mod tests {

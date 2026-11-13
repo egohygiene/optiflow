@@ -130,16 +130,6 @@ impl BoundedFileObservation {
     }
 }
 
-fn observe(
-    path: &Path,
-    maximum: u64,
-    retain: bool,
-    guard: &impl Fn() -> Result<()>,
-) -> Result<(File, FileSnapshot, EvidenceDigest, Vec<u8>)> {observe_bounded(path,maximum,retain,MAX_RETAINED_BYTES,guard)}
-
-fn observe_bounded(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,guard:&impl Fn()->Result<()>)->Result<(File,FileSnapshot,EvidenceDigest,Vec<u8>)>{
-    observe_scoped(path,maximum,retain,retained_maximum,MAX_OBSERVATION_BYTES,guard)
-}
 fn observe_scoped(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,ceiling:u64,guard:&impl Fn()->Result<()>)->Result<(File,FileSnapshot,EvidenceDigest,Vec<u8>)>{
     guard()?;
     ensure!(

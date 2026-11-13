@@ -21,7 +21,7 @@ impl PreviewRequest {
 }
 pub fn preview(request:&PreviewRequest,cancel:impl Fn()->bool)->Result<Preview> {
     request.validate()?;let budget=BatchBudget::new(request.batch.elapsed_ms)?;
-    let scope=Discovery {source_root:request.source_root.clone(),batch:request.batch.clone(),recursive:request.recursive,input_bytes:request.input_bytes,profile:request.profile.owner(),request_fingerprint:digest(request)?,inventory_schema:"optiflow.video-folder-preview-inventory.v1".into()};
+    let scope=Discovery {source_root:request.source_root.clone(),batch:request.batch.clone(),recursive:request.recursive,input_bytes:request.input_bytes,profile:Some(request.profile.owner()),request_fingerprint:digest(request)?,inventory_schema:"optiflow.video-folder-preview-inventory.v1".into()};
     #[cfg(target_os="linux")] let inventory=native::discover(&scope,&budget,&cancel)?;
     #[cfg(not(target_os="linux"))] {let _=(scope,budget,cancel);anyhow::bail!("video preview uses the existing Linux discovery owner; this host remains unsupported");}
     #[cfg(target_os="linux")] {let eligible_files=inventory.entries.iter().filter(|e|e.disposition==EntryDisposition::Eligible).count() as u64;let unsupported_files=inventory.entries.iter().filter(|e|e.disposition==EntryDisposition::Unsupported).count() as u64;let skipped_entries=inventory.entries.iter().filter(|e|e.disposition==EntryDisposition::Skipped).count() as u64;
