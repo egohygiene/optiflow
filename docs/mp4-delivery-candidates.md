@@ -70,7 +70,108 @@ qualification/review authority. Partial attempts/staging remain preserved and
 cannot be adopted as committed artifacts. Physical space reclamation, in-place
 replacement, source disposal and public upload remain false.
 
-Eight clock/container/budget/argv/worker/guard/preservation cases are authored, uncompiled/unrun. All builds,
+## Explicit CLI and SDK
+
+The `mp4-delivery` group routes before mutable configuration/state setup. Every
+operation uses the same public `mp4_delivery` owner; command output uses the
+existing command-result envelope. These are authored interfaces, not executed
+examples or a released/qualified binary.
+
+| Command | Scope |
+| --- | --- |
+| `mp4-delivery profiles` | Pure compiled profile description; no files/tools |
+| `mp4-delivery inspect --source PATH --maximum-input-bytes BYTES` | Full bounded source hash and independent container observation |
+| `mp4-delivery plan --request FILE` | Explicit source/tool pins, rate allocation and storage/memory admission; no provider invocation |
+| `mp4-delivery run --request FILE` | Selected Linux guard, complete technical validation, private candidate pin |
+| `mp4-delivery status --pin FILE` | Current private artifact bytes/structure and retained evidence; no original/tool reobservation |
+| `mp4-delivery folder-preview --request FILE` | Bounded descriptor discovery, no provider/workspace |
+| `mp4-delivery folder-run --request FILE` | Fresh fixed serial composition and immutable journal |
+| `mp4-delivery folder-resume --request FILE` | Explicit input/tool reconciliation, then only never-started work |
+| `mp4-delivery folder-status --run-directory PATH` | Retained results and uncertainty; no replay |
+
+The standalone request shape is in
+[`mp4-delivery-request-v1.schema.json`](../schemas/mp4-delivery-request-v1.schema.json).
+Select normalized absolute source/tool/work/artifact paths, actual lowercase
+Blake3 tool pins, exact FFmpeg/ffprobe 8.0.1 and the existing Linux user-manager
+guard with its pinned helper. Choose every limit explicitly. Private work and
+artifact roots must already exist with the existing private-root permissions;
+there is no automatic tool acquisition, installation or host setup.
+
+For a decimal 105 MB upload limit, select a target below that limit to retain
+headroom, for example the following **control fragment** inside a complete
+request. The copied audio and sample tables must still fit the budget:
+
+```json
+{"kind":"target_size","maximum_bytes":100000000,"mux_reserve_bytes":4000000,"preset":"slow"}
+```
+
+Once a separately qualified binary and real request are available, intended
+invocations are:
+
+```sh
+optiflow --json mp4-delivery plan --request /private/mp4-request.json
+optiflow --json mp4-delivery run --request /private/mp4-request.json > /private/mp4-result.json
+# Only an accepted result contains an artifact pin; retain it separately.
+jq -e '.result | select(.state == "accepted") | .artifact' /private/mp4-result.json > /private/mp4-pin.json
+optiflow --json mp4-delivery status --pin /private/mp4-pin.json
+```
+
+An already-fitting source is unchanged without encoding. A validated candidate
+that is not strictly smaller is also unchanged, with its generated attempt
+identified for review. Standalone attempts remain retained; only folder mode
+has the explicit generated-only cleanup policy described below. Neither result
+replaces an input or proves available space was physically reclaimed. JSON
+bytes in a pin are evidence identifiers, not signing or a human quality approval.
+
+Task aliases expose profiles, plan/run and folder preview/run/resume/status.
+For example, `task mp4:plan REQUEST=/private/mp4-request.json` delegates directly
+to the same command; it does not build, install or qualify anything.
+
+## Fixed serial folders
+
+[`mp4-folder-request-v1.schema.json`](../schemas/mp4-folder-request-v1.schema.json)
+contains a complete single-file request under `template`. Set `template.source`
+to exactly `source_root`; it is a root placeholder, not an input file. Per-entry
+composition changes only that source path and the remaining elapsed allowance.
+Select `recursive`, a fresh `run_directory`, explicit batch bounds and
+`scratch_cleanup: "remove_only_known_generated_candidate_after_durable_result"`.
+The journal parent, private work and a dedicated **empty** artifact store must
+already exist privately. Source/work/store/journal/tool namespaces are disjoint.
+
+Discovery reuses the existing no-follow, device-aware, hardlink-refusing walker
+with an explicit MP4 classifier. The complete bounded inventory and exact tool
+baseline are frozen before work. Unsupported content receives a retained reason;
+unknown metadata/codec/clock features never trigger a fallback codec or profile.
+No more than one candidate is produced at a time. Batch caps additionally limit
+entries (4,096), files (256), actions (32), depth (32), input/publication admission
+(8 GiB each) and the explicit continuation window (24 hours). Per-file profile
+and caller limits still apply. Publication admission reserves candidate bytes
+plus 128 MiB and a marker allowance per started action for retained audit records.
+
+Before each action, a durable start binds the frozen source and exact child
+request. The producer checks those bindings and the frozen tool baseline. Only
+after the owner result is durably recorded may folder mode remove its exact
+known generated `candidate.mp4` duplicate. Accepted artifacts are re-inspected
+first. Audit records, frame hashes and original inputs remain. Failed, uncertain,
+unknown or modified scratch is retained; no generic recursive cleanup is added.
+The cleanup receipt itself must be durable before the next entry may start.
+
+Status verifies contiguous retained starts/results, artifact pins and their
+source/request/tool joins, cleanup receipts, report prefixes and exact artifact
+store membership. Current original/tool freshness is explicitly not observed by
+status. Missing results/cleanup receipts, failed starts, unknown journal members,
+partial staging and unaccounted artifacts block continuation. A crash between
+an effect and its durable record requires reconciliation; absence is never used
+to adopt an artifact, infer cleanup or replay an encoder invocation.
+
+Explicit resume requires the same request, current full inventory identities
+and exact current tool baseline, then proceeds only from never-started entries.
+Each resume grants a new explicit bounded elapsed window; cumulative action and
+publication admission caps do not reset. It cannot raise request budgets or
+recover failed work by retrying it. The existing FFV1 v1/v2 folder defaults,
+fingerprints and profile ceilings remain unchanged.
+
+Eleven clock/container/budget/argv/worker/guard/preservation/folder/CLI cases are authored, uncompiled/unrun. All builds,
 tests/dependencies/lint/format/schema/docs/drift/native/provider/media/CLI/SDK/CI
 execution remains deferred. No actual private media, review, native/macOS
 qualification, signing, release or posting occurred. Flow #88 remains last and

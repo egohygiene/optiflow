@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.14
+version: 0.1.15
 status: draft
 owners:
   - egohygiene
@@ -22,6 +22,24 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## MP4 CLI and serial folder continuation
+
+The explicit MP4 command family delegates to the same public inspection,
+planning, production and pinned readback owners before mutable application
+state. Its folder lane reuses bounded descriptor discovery with a distinct MP4
+classifier, frozen inventory and exact tool baseline. Immutable per-entry
+start/result records and explicit bounded continuation permit only never-started
+work after reconciliation. Uncertain/failed starts, unknown journal/store members,
+changed source/tools or unaccounted artifacts block replay/adoption. Per-file
+production remains the existing MP4 owner; originals, native qualification,
+human review and all mutation/disposal authority remain separate.
+
+The explicit folder policy removes only the exact generated scratch candidate
+after durable owner result and committed-artifact reinspection. Retained audit
+files, original inputs, accepted private artifacts and uncertain/failed scratch
+remain. Missing cleanup receipts block continuation; cleanup is never inferred
+from absence. This limits duplicate candidate accumulation in serial runs.
 
 ## Independently validated MP4 artifacts
 

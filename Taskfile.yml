@@ -2,6 +2,65 @@
 version: "3"
 
 tasks:
+  mp4:profiles:
+    desc: Describe the explicit unqualified MP4 delivery source profile
+    cmds:
+      - optiflow mp4-delivery profiles
+
+  mp4:plan:
+    desc: Inspect an explicit MP4 request and tool pins without invoking providers
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery plan --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:run:
+    desc: Explicitly produce a private MP4 candidate requiring human quality review
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery run --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:folder:preview:
+    desc: Discover an explicit MP4 folder without providers or writable workspaces
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-preview --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:folder:run:
+    desc: Start a fresh serial MP4 run with explicit generated-only scratch cleanup
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-run --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:folder:resume:
+    desc: Reconcile and continue only never-started MP4 folder work
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-resume --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:folder:status:
+    desc: Inspect retained MP4 folder results without replay
+    requires:
+      vars: [RUN_DIRECTORY]
+    env:
+      OPTIFLOW_MP4_RUN: '{{.RUN_DIRECTORY}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-status --run-directory "$OPTIFLOW_MP4_RUN"
+
   video:profiles:
     desc: Describe explicit source-only video candidate profile limits
     cmds:

@@ -13,10 +13,16 @@ pub fn describe() -> Value {
             {"id":"lossless-png-replacement-v1","source_mutation":true,"state":"requires_existing_native_qualification_and_exact_authority"},
             {"id":"video-candidates-v2","source_mutation":false,"state":"source_candidate; runtime_and_release_evidence_required"},
             {"id":"video-folder-preview-v1","source_mutation":false,"state":"read_only_source_discovery; no_provider_or_run_authority"},
+            {"id":"optiflow.mp4-h264-aac-delivery.v1","source_mutation":false,"state":"unqualified_source_candidate; lossy_video_requires_human_quality_review","provider_execution":"explicit_linux_guard_only","replacement_authority":false,"upload_authority":false},
             {"id":"local-explanations-v1","source_mutation":false,"state":"optional_advisory; no_mutation_authority"}],
         "native_packaging_targets":["x86_64-unknown-linux-gnu","aarch64-apple-darwin","x86_64-apple-darwin"],
         "retained_target_objectives":["x86_64-pc-windows-msvc"],
         "schemas":[
+            {"name":"mp4-delivery-request-v1.schema.json","document":include_str!("../schemas/mp4-delivery-request-v1.schema.json")},
+            {"name":"mp4-delivery-plan-v1.schema.json","document":include_str!("../schemas/mp4-delivery-plan-v1.schema.json")},
+            {"name":"mp4-delivery-artifact-pin-v1.schema.json","document":include_str!("../schemas/mp4-delivery-artifact-pin-v1.schema.json")},
+            {"name":"mp4-delivery-evidence-v1.schema.json","document":include_str!("../schemas/mp4-delivery-evidence-v1.schema.json")},
+            {"name":"mp4-folder-request-v1.schema.json","document":include_str!("../schemas/mp4-folder-request-v1.schema.json")},
             {"name":"video-folder-preview-request-v1.schema.json","document":include_str!("../schemas/video-folder-preview-request-v1.schema.json")},
             {"name":"command-result.schema.json","document":include_str!("../schemas/command-result.schema.json")},
             {"name":"extension-lock-v1.schema.json","document":include_str!("../schemas/extension-lock-v1.schema.json")}]

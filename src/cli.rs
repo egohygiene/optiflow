@@ -57,6 +57,7 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::ReleaseContract => "release-contract",
+            Command::Mp4Delivery(a) => a.command.name(),
             Command::Doctor => "doctor",
             Command::Explain(a) => match &a.command {ExplainCommand::SetupLocal(_)=>"explain setup-local",ExplainCommand::SetupStatus(_)=>"explain setup-status",ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
             Command::VideoFolder(a) => match &a.command {VideoFolderCommand::Profiles=>"video-folder profiles",VideoFolderCommand::Preview(_)=>"video-folder preview",VideoFolderCommand::Discover(_)=>"video-folder discover",VideoFolderCommand::Run(_)=>"video-folder run",VideoFolderCommand::Resume(_)=>"video-folder resume",VideoFolderCommand::Status(_)=>"video-folder status"},
@@ -115,6 +116,8 @@ impl Cli {
 pub enum Command {
     /// Describe compiled release interfaces without state or tool observation.
     ReleaseContract,
+    /// Explicit lossy H264/AAC candidates; originals remain untouched.
+    Mp4Delivery(Mp4DeliveryArgs),
     /// Optional advisory explanations of explicitly pinned report/plan records.
     Explain(ExplainArgs),
     /// Bounded source-preserving video folders with explicit v1/v2 requests.
@@ -547,6 +550,36 @@ pub struct OptimizeRunArgs {#[arg(long)] pub request:PathBuf,#[arg(long)] pub in
 
 #[derive(Debug,Args)]
 pub struct VideoRequestArgs {#[arg(long)] pub request:PathBuf}
+#[derive(Debug,Args)]
+pub struct Mp4DeliveryArgs {#[command(subcommand)] pub command:Mp4DeliveryCommand}
+#[derive(Debug,Subcommand)]
+pub enum Mp4DeliveryCommand {
+    /// Describe the compiled, unqualified source profile without tool observation.
+    Profiles,
+    /// Independently inspect one bounded MP4 without native tools.
+    Inspect(Mp4InspectArgs),
+    /// Bind a closed request, source and tools without invoking providers.
+    Plan(VideoRequestArgs),
+    /// Produce a private technically validated candidate; quality review is separate.
+    Run(VideoRequestArgs),
+    /// Reobserve a private artifact using an externally retained pin JSON file.
+    Status(Mp4PinArgs),
+    /// Discover bounded MP4 folder inputs without creating workspaces or running tools.
+    FolderPreview(VideoRequestArgs),
+    /// Start a fresh serial folder journal and dedicated artifact store.
+    FolderRun(VideoRequestArgs),
+    /// Reconcile current inputs/tools and continue only never-started folder work.
+    FolderResume(VideoRequestArgs),
+    /// Read retained folder results without replay or original/tool observation.
+    FolderStatus(VideoFolderStatusArgs),
+}
+impl Mp4DeliveryCommand {pub fn name(&self)->&'static str {match self {
+    Self::Profiles=>"mp4-delivery profiles",Self::Inspect(_)=>"mp4-delivery inspect",Self::Plan(_)=>"mp4-delivery plan",Self::Run(_)=>"mp4-delivery run",Self::Status(_)=>"mp4-delivery status",Self::FolderPreview(_)=>"mp4-delivery folder-preview",Self::FolderRun(_)=>"mp4-delivery folder-run",Self::FolderResume(_)=>"mp4-delivery folder-resume",Self::FolderStatus(_)=>"mp4-delivery folder-status",
+}}}
+#[derive(Debug,Args)]
+pub struct Mp4InspectArgs {#[arg(long)] pub source:PathBuf,#[arg(long)] pub maximum_input_bytes:u64}
+#[derive(Debug,Args)]
+pub struct Mp4PinArgs {#[arg(long)] pub pin:PathBuf}
 #[derive(Debug,Args)]
 pub struct VideoFolderArgs {#[command(subcommand)] pub command:VideoFolderCommand}
 #[derive(Debug,Subcommand)]

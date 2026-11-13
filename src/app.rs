@@ -17,6 +17,7 @@ mod candidate_commands;
 mod replacement_commands;
 mod optimize_commands;
 mod video_commands;
+mod mp4_commands;
 mod explanation_commands;
 mod execution_commands;
 mod extension_commands;
@@ -51,6 +52,10 @@ impl Execution {
 }
 
 pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
+    if let Command::Mp4Delivery(a)=&cli.command {
+        let execution=mp4_commands::run(&a.command,signals);
+        return (CommandResult::resolve(cli.command_name(),execution.coverage,execution.artifacts,execution.diagnostics,execution.result),cli.selected_output_format());
+    }
     if matches!(&cli.command, Command::ReleaseContract) {
         return (CommandResult::resolve("release-contract",None,Vec::new(),Vec::new(),Some(crate::release_contract::describe())),cli.selected_output_format());
     }
@@ -85,6 +90,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
     }
     let execution = match cli.command {
         Command::ReleaseContract => Execution::success(&crate::release_contract::describe()),
+        Command::Mp4Delivery(a) => mp4_commands::run(&a.command,signals),
         Command::Doctor => run_doctor(&state_directory),
         Command::Explain(a) => explanation_commands::run(a.command,signals),
         Command::VideoFolder(a) => video_commands::folder(a.command,signals),

@@ -31,7 +31,7 @@ impl<'a,F:Fn()->bool> Session<'a,F> {
     }
     pub fn check(&self)->Result<()> {ensure!(!(self.cancel)()&&self.started.elapsed()<Duration::from_millis(self.request.limits.elapsed_ms),"MP4 session cancelled or deadline exhausted");Ok(())}
     pub fn recheck(&self)->Result<()> {self.check()?;let guard=||self.check();self.source.verify_current_guarded(&guard)?;for tool in &self.tools{tool.verify_current_guarded(&guard)?;}self.sandbox.verify(&guard)?;
-        let reserve=self.request.limits.minimum_free_bytes.max(self.request.sandbox.minimum_free_bytes).checked_add(self.plan.payload.allocation.maximum_candidate_bytes.checked_mul(2).context("MP4 host reserve overflow")?).and_then(|n|n.checked_add(83_886_080)).context("MP4 host reserve overflow")?;
+        let reserve=self.request.limits.minimum_free_bytes.max(self.request.sandbox.minimum_free_bytes).checked_add(self.plan.payload.allocation.maximum_candidate_bytes.checked_mul(2).context("MP4 host reserve overflow")?).and_then(|n|n.checked_add(134_217_728)).context("MP4 host reserve overflow")?;
         free(&self.request.artifact_root,reserve)?;free(&self.request.private_workdir,reserve)?;self.check()
     }
     fn raw(&self,tool:&Path,args:&[String],input:&[u8],maximum:usize)->Result<(Vec<u8>,SandboxReceipt,u64)>{
