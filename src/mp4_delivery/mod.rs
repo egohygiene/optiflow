@@ -13,7 +13,8 @@ pub mod validation;
 pub mod artifact;
 pub mod folder;
 pub mod preflight;
-pub use validation::{produce,Outcome};
+pub mod progress;
+pub use validation::{produce,produce_with_progress,Outcome};
 pub use worker::internal_worker;
 pub use planning::{Request,Plan,RateControl,Preset,Limits,plan};
 

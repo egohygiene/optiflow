@@ -589,6 +589,10 @@ pub struct Mp4RequestArgs {
     #[arg(long)] pub request:PathBuf,
     /// Explicit versioned JSON settings patch with final precedence.
     #[arg(long)] pub settings:Option<PathBuf>,
+    /// New private JSONL operational log, only for run/folder-run/folder-resume.
+    #[arg(long)] pub event_log:Option<PathBuf>,
+    #[arg(long,requires="event_log")] pub maximum_events:Option<u64>,
+    #[arg(long,requires="event_log")] pub maximum_event_bytes:Option<u64>,
 }
 #[derive(Debug,Args)]
 pub struct Mp4InspectArgs {#[arg(long)] pub source:PathBuf,#[arg(long)] pub maximum_input_bytes:u64}

@@ -339,7 +339,8 @@
             "candidate_output_bound_exceeded",
             "candidate_validation_failed",
             "candidate_not_smaller",
-            "candidate_uncommitted"
+            "candidate_uncommitted",
+            "mp4_progress_degraded"
           ]
         },
         "severity": { "enum": ["information", "warning", "error", "fatal"] },

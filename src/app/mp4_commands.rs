@@ -1,8 +1,9 @@
 //! Thin routing through the existing configuration owner, without mutable state.
-use anyhow::{Context,Result};
+use anyhow::{Context,Result,ensure};
 use super::Execution;
 use crate::{cli::{Mp4DeliveryCommand,Mp4RequestArgs},configuration::{ConfigurationResolution,mp4 as settings},mp4_delivery as mp4,signals::SignalState};
 use crate::outcome::{Diagnostic,DiagnosticCode,DiagnosticSeverity,DiagnosticClassification,DiagnosticImpact};
+mod progress;
 
 fn overrides(a:&Mp4RequestArgs,signals:&SignalState)->Result<Option<settings::Settings>> {a.settings.as_ref().map(|path|settings::overrides(&crate::record_io::read(path,131_072,signals)?)).transpose()}
 fn resolve(a:&Mp4RequestArgs,configuration:Option<&ConfigurationResolution>,signals:&SignalState)->Result<settings::Resolution> {
@@ -14,8 +15,10 @@ fn resolve_folder(a:&Mp4RequestArgs,configuration:Option<&ConfigurationResolutio
     let bytes=crate::record_io::read(&a.request,131_072,signals)?;settings::resolve_folder(&bytes,configured,overrides(a,signals)?.as_ref())
 }
 pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&ConfigurationResolution>,signals:&SignalState)->Execution {
+    let mut progress_health=None;
     let result=(||->Result<serde_json::Value>{
         let cancel=||signals.is_cancelled();
+        if let Mp4DeliveryCommand::Plan(a)|Mp4DeliveryCommand::Resolve(a)|Mp4DeliveryCommand::Preflight(a)|Mp4DeliveryCommand::FolderPreview(a)|Mp4DeliveryCommand::FolderResolve(a)=command {ensure!(a.event_log.is_none()&&a.maximum_events.is_none()&&a.maximum_event_bytes.is_none(),"progress logging is only available for explicit run/folder-run/folder-resume");}
         match command {
             Mp4DeliveryCommand::Profiles=>Ok(mp4::profiles()),
             Mp4DeliveryCommand::Inspect(a)=>Ok(serde_json::to_value(mp4::inspect(&a.source,a.maximum_input_bytes,cancel)?)?),
@@ -23,7 +26,9 @@ pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&Configuratio
             Mp4DeliveryCommand::Preflight(a)=>Ok(serde_json::to_value(mp4::preflight::observe(&resolve(a,configuration,signals)?.request,cancel)?)?),
             Mp4DeliveryCommand::Plan(a)|Mp4DeliveryCommand::Run(a)=>{
                 let request=resolve(a,configuration,signals)?.request;
-                if matches!(command,Mp4DeliveryCommand::Plan(_)){Ok(serde_json::to_value(mp4::plan(&request,cancel)?)?)}else{Ok(serde_json::to_value(mp4::produce(&request,cancel)?)?)}
+                if matches!(command,Mp4DeliveryCommand::Plan(_)){Ok(serde_json::to_value(mp4::plan(&request,cancel)?)?)}else{
+                    let forbidden=forbidden(&request,None);let (value,health)=progress::execute(a,&forbidden,|observer|mp4::produce_with_progress(&request,cancel,observer))?;progress_health=Some(health);Ok(serde_json::to_value(value?)?)
+                }
             },
             Mp4DeliveryCommand::Status(a)=>{
                 let bytes=crate::record_io::read(&a.pin,131_072,signals)?;
@@ -34,8 +39,9 @@ pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&Configuratio
                 let request=resolve_folder(a,configuration,signals)?.request;
                 match command {
                     Mp4DeliveryCommand::FolderPreview(_)=>Ok(serde_json::to_value(mp4::folder::preview(&request,cancel)?)?),
-                    Mp4DeliveryCommand::FolderRun(_)=>Ok(serde_json::to_value(mp4::folder::run(&request,cancel)?)?),
-                    Mp4DeliveryCommand::FolderResume(_)=>Ok(serde_json::to_value(mp4::folder::resume(&request,cancel)?)?),
+                    Mp4DeliveryCommand::FolderRun(_)|Mp4DeliveryCommand::FolderResume(_)=>{
+                        let forbidden=forbidden(&request.template,Some(&request));let (value,health)=progress::execute(a,&forbidden,|observer|if matches!(command,Mp4DeliveryCommand::FolderRun(_)){mp4::folder::run_with_progress(&request,cancel,observer)}else{mp4::folder::resume_with_progress(&request,cancel,observer)})?;progress_health=Some(health);Ok(serde_json::to_value(value?)?)
+                    },
                     _=>unreachable!(),
                 }
             },
@@ -43,7 +49,11 @@ pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&Configuratio
             Mp4DeliveryCommand::FolderStatus(a)=>Ok(serde_json::to_value(mp4::folder::status(&a.run_directory)?)?),
         }
     })();
-    match result {Ok(value)=>Execution::success(&value),Err(error)=>Execution::failure(Diagnostic::new(DiagnosticCode::ExecutionUnsupported,DiagnosticSeverity::Error,DiagnosticClassification::Capability,DiagnosticImpact::BlocksCommand,error.to_string()))}
+    let mut execution=match result {Ok(value)=>Execution::success(&value),Err(error)=>Execution::failure(Diagnostic::new(DiagnosticCode::ExecutionUnsupported,DiagnosticSeverity::Error,DiagnosticClassification::Capability,DiagnosticImpact::BlocksCommand,error.to_string()))};
+    if progress_health.is_some_and(|h|h.degraded()){execution.diagnostics.push(Diagnostic::new(DiagnosticCode::Mp4ProgressDegraded,DiagnosticSeverity::Warning,DiagnosticClassification::Observation,DiagnosticImpact::None,"some operational progress was dropped or its sink failed; inspect authoritative work results/evidence separately"));}execution
+}
+fn forbidden<'a>(request:&'a mp4::Request,folder:Option<&'a mp4::folder::Request>)->Vec<&'a std::path::Path> {
+    let mut paths=vec![request.source.as_path(),request.private_workdir.as_path(),request.artifact_root.as_path(),request.ffmpeg.path.as_path(),request.ffprobe.path.as_path(),request.sandbox.systemd_run.path.as_path(),request.sandbox.systemctl.path.as_path(),request.sandbox.helper.path.as_path(),request.sandbox.user_bus.as_path()];if let Some(folder)=folder{paths.push(&folder.source_root);paths.push(&folder.run_directory);}paths
 }
 
 #[cfg(test)]mod tests {
