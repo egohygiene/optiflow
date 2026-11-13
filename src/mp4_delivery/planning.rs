@@ -97,6 +97,13 @@ pub struct Payload {pub request:Request,pub source:Source,pub tools:Vec<Tool>,pu
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Plan {pub schema:String,pub payload:Payload,pub plan_digest:EvidenceDigest}
+pub(crate) fn retained(plan:&Plan)->Result<()> {
+    let p=&plan.payload;let r=&p.request;r.validate()?;
+    ensure!(plan.schema==PLAN_SCHEMA&&plan.plan_digest==digest(p)?&&p.source.path==r.source&&p.source.snapshot.logical_bytes>0&&p.source.snapshot.logical_bytes<=r.limits.input_bytes&&!p.runtime_qualified&&!p.source_mutation&&p.quality_review=="required; lossy video has no exact visual equivalence claim","retained MP4 plan scope differs");
+    ensure!(p.allocation==allocation(&r.control,&p.source.media,r.limits.candidate_bytes)?&&p.encoder_argv==encode_argv(&r.control,&p.allocation,p.source.media.video.timescale,p.source.media.movie_timescale)?,"retained MP4 target budget or encoder intent differs");
+    let pins=[("ffmpeg",&r.ffmpeg),("ffprobe",&r.ffprobe),("systemd_run",&r.sandbox.systemd_run),("systemctl",&r.sandbox.systemctl),("worker",&r.sandbox.helper)];ensure!(p.tools.len()==pins.len(),"retained tool membership differs");
+    for (tool,(name,pin)) in p.tools.iter().zip(pins){ensure!(tool.name==name&&tool.path==pin.path&&tool.content_digest==pin.digest&&tool.snapshot.logical_bytes>0&&tool.snapshot.logical_bytes<=134_217_728&&tool.snapshot.mode&0o111!=0&&tool.snapshot.mode&0o6000==0,"retained MP4 tool binding differs");}Ok(())
+}
 pub fn plan(request:&Request,cancel:impl Fn()->bool)->Result<Plan>{
     request.validate()?;let guard=||{ensure!(!cancel(),"MP4 planning cancelled");Ok(())};
     let source=super::inspect(&request.source,request.limits.input_bytes,&cancel)?;
@@ -108,8 +115,8 @@ pub fn plan(request:&Request,cancel:impl Fn()->bool)->Result<Plan>{
     let allocation=allocation(&request.control,&source.media,request.limits.candidate_bytes)?;
     let out=allocation.maximum_candidate_bytes;
     let projected_scratch_bytes=request.limits.input_bytes.checked_add(out.checked_mul(2).context("faststart scratch overflow")?).and_then(|n|n.checked_add(83_886_080)).context("MP4 whole scratch admission overflow")?;
-    ensure!(projected_scratch_bytes<=request.sandbox.provider_scratch_bytes&&projected_scratch_bytes.checked_add(out).and_then(|n|n.checked_add(METADATA_BYTES as u64)).is_some_and(|n|n<=request.limits.working_bytes),"whole input/pass-log/faststart/publication scratch exceeds selected admission");
-    let projected_host_payload_bytes=request.limits.input_bytes.checked_add(out.checked_mul(3).context("MP4 candidate buffer admission overflow")?).and_then(|n|n.checked_add(67_108_864)).context("MP4 host buffer admission overflow")?;
+    ensure!(projected_scratch_bytes<=request.sandbox.provider_scratch_bytes&&projected_scratch_bytes.checked_add(out.checked_mul(2).context("host staging overflow")?).and_then(|n|n.checked_add(83_886_080)).is_some_and(|n|n<=request.limits.working_bytes),"whole input/pass-log/faststart/private-trace/publication scratch exceeds selected admission");
+    let projected_host_payload_bytes=request.limits.input_bytes.checked_add(out.checked_mul(3).context("MP4 candidate buffer admission overflow")?).and_then(|n|n.checked_add(134_217_728)).context("MP4 host buffer admission overflow")?;
     ensure!(projected_host_payload_bytes.checked_add(request.sandbox.provider_subtree_memory_bytes).is_some_and(|n|n<=request.limits.memory_admission_bytes),"host payload buffers plus provider quota exceed selected memory admission; total host RSS is not guaranteed");
     let encoder_argv=encode_argv(&request.control,&allocation,source.media.video.timescale,source.media.movie_timescale)?;
     let payload=Payload {request:request.clone(),source,tools,allocation,encoder_argv,projected_host_payload_bytes,projected_scratch_bytes,runtime_qualified:false,quality_review:"required; lossy video has no exact visual equivalence claim".into(),source_mutation:false};

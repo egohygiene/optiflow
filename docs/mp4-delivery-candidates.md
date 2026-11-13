@@ -53,7 +53,24 @@ validation/publication step. Unsupported/degraded native guards, non-Linux hosts
 codec diagnostics, quota overflow and unknown partial state refuse. Total host
 RSS, syscall preemption and physical reclamation are not claimed.
 
-Six clock/container/budget/argv/worker/guard cases are authored, uncompiled/unrun. All builds,
+`mp4_delivery::produce` first preserves already-fitting target-size originals
+without encoding. Otherwise it independently checks the final MP4 tables,
+complete selected source/candidate native frame/sample decodes, copied AAC bytes
+and codec configuration, presentation/edit clocks, supported metadata, actual
+byte cap and strict size reduction. Source priming/tail scope is bounded;
+unsupported decode/clock behavior refuses. Lossy video never claims exact pixel
+equivalence, a perceptual score, musical review or an industry/platform approval.
+
+Only passing technical candidates receive a private versioned artifact, committed
+through the existing descriptor/fsync/no-replace primitives. The returned pin
+includes an externally retainable marker digest. `artifact::inspect` rechecks
+current candidate bytes/structure and retained native evidence with that pin;
+it never reopens the original host paths, reruns native decode or upgrades
+qualification/review authority. Partial attempts/staging remain preserved and
+cannot be adopted as committed artifacts. Physical space reclamation, in-place
+replacement, source disposal and public upload remain false.
+
+Eight clock/container/budget/argv/worker/guard/preservation cases are authored, uncompiled/unrun. All builds,
 tests/dependencies/lint/format/schema/docs/drift/native/provider/media/CLI/SDK/CI
 execution remains deferred. No actual private media, review, native/macOS
 qualification, signing, release or posting occurred. Flow #88 remains last and

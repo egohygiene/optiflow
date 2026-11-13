@@ -9,6 +9,9 @@ pub mod container;
 pub mod planning;
 pub mod runtime;
 mod worker;
+pub mod validation;
+pub mod artifact;
+pub use validation::{produce,Outcome};
 pub use worker::internal_worker;
 pub use planning::{Request,Plan,RateControl,Preset,Limits,plan};
 
