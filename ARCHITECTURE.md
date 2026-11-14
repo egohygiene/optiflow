@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.17
+version: 0.1.18
 status: draft
 owners:
   - egohygiene
@@ -31,6 +31,18 @@ uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
 output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
+
+## MP4 operational progress
+
+Caller-owned synchronous observers receive bounded phase/entry events from the
+existing producer and serial-folder owners. Known entry totals are distinct from
+indeterminate encoding; no fabricated percent or accepted state is inferred.
+Events contain no media, source paths, tool argv, metadata or native captures.
+An explicitly selected private no-clobber CLI JSONL sink stays outside source,
+work/store/journal namespaces. Event limits and sink failures remain operational
+diagnostics and never change domain request/plan/artifact identities or outcome.
+Machine stdout retains one final command result. Progress cannot establish
+validation, checkpoint reuse, human approval, native qualification or completion.
 
 ## Read-only MP4 preflight
 

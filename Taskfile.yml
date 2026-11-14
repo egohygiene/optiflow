@@ -35,6 +35,16 @@ tasks:
     cmds:
       - optiflow --json diagnostics doctor
 
+  mp4:run:events:
+    desc: Run an explicit MP4 request with a new private operational event log
+    requires:
+      vars: [REQUEST, EVENT_LOG]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_MP4_EVENTS: '{{.EVENT_LOG}}'
+    cmds:
+      - optiflow --json mp4-delivery run --request "$OPTIFLOW_MP4_REQUEST" --event-log "$OPTIFLOW_MP4_EVENTS"
+
   mp4:preflight:
     desc: Observe explicit MP4 prerequisites without provider execution or reservation
     requires:

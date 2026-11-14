@@ -4,6 +4,7 @@ use anyhow::Context;
 use std::{fs::File,time::{Duration,Instant}};
 use container::{Summary,TrackSummary,Time};
 use worker::Operation;
+use progress::{Observer,Phase,Transition};
 #[derive(Debug,Clone,PartialEq,Eq,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trace {pub schema:String,pub kind:String,pub frames:u64,pub decoded_bytes:u64,pub decoded_audio_samples:Option<u64>,pub first_pts:Time,pub last_end:Time,pub clock_digest:EvidenceDigest,pub decoded_content_digest:EvidenceDigest,pub trace_digest:EvidenceDigest}
@@ -64,26 +65,39 @@ pub(crate) fn retained(e:&Evidence,actual:&Summary,bytes:u64,content:&EvidenceDi
 pub enum Outcome {Accepted {artifact:artifact::Pin,source_bytes:u64,candidate_bytes:u64,encoded_bytes_saved:u64,quality_review:String,physical_space_reclaimed:bool,attempt_directory:PathBuf},Unchanged {reason:String,source_bytes:u64,candidate_bytes:Option<u64>,candidate_digest:Option<EvidenceDigest>,attempt_directory:Option<PathBuf>}}
 fn store_trace(directory:&File,name:&str,bytes:&[u8])->Result<()>{runtime::write_member(directory,name,bytes)}
 pub fn produce(request:&Request,cancel:impl Fn()->bool)->Result<Outcome>{
-    produce_bound(request,None,None,cancel)
+    produce_with_progress(request,cancel,&Observer::silent())
 }
-pub(crate) fn produce_bound(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool)->Result<Outcome>{
+pub fn produce_with_progress(request:&Request,cancel:impl Fn()->bool,observer:&Observer<'_>)->Result<Outcome>{produce_bound(request,None,None,cancel,observer,None)}
+pub(crate) fn produce_bound(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool,observer:&Observer<'_>,entry:Option<usize>)->Result<Outcome>{
+    observer.phase(Phase::Operation,Transition::Started,entry);let result=produce_inner(request,expected,tools,cancel,observer,entry);observer.phase(Phase::Operation,if result.is_ok(){Transition::Finished}else{Transition::Failed},entry);result
+}
+fn produce_inner(request:&Request,expected:Option<&crate::video_folder::SourceBinding>,tools:Option<&[planning::Tool]>,cancel:impl Fn()->bool,observer:&Observer<'_>,entry:Option<usize>)->Result<Outcome>{
+    observer.phase(Phase::Planning,Transition::Started,entry);
     let started=Instant::now();let stop=||cancel()||started.elapsed()>=Duration::from_millis(request.limits.elapsed_ms);let planned=planning::plan(request,&stop)?;
     if let Some(expected)=expected{ensure!(planned.payload.source.snapshot==expected.snapshot&&planned.payload.source.content_digest==expected.digest,"MP4 input differs from frozen folder selection");}
     if let Some(tools)=tools{ensure!(planned.payload.tools.as_slice()==tools,"MP4 tools differ from frozen folder baseline");}
+    observer.phase(Phase::Planning,Transition::Finished,entry);
     if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes){return Ok(Outcome::Unchanged {reason:"original already fits the explicit target; no encoding performed".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:None,candidate_digest:None,attempt_directory:None});}
+    observer.phase(Phase::RuntimePreparation,Transition::Started,entry);
     let (attempt,directory)=runtime::fresh_directory(&request.private_workdir,"mp4-attempt")?;runtime::write_member(&directory,"intent.json",&serde_json::to_vec(&planned)?)?;
     let mut session=runtime::Session::new_at(request,&cancel,started).with_context(||format!("retain MP4 attempt {}",attempt.display()))?;ensure!(session.plan.plan_digest==planned.plan_digest,"MP4 input/tool/settings changed before execution");
+    observer.phase(Phase::RuntimePreparation,Transition::Finished,entry);observer.phase(Phase::SourceDecode,Transition::Started,entry);
     let source=session.source_bytes()?;let source_media=planned.payload.source.media.clone();let source_probe=session.call(Operation::Probe,&source,&source_media)?;runtime::require_probe(&source_probe,&source_media)?;
     let sv=session.call(Operation::DecodeVideo,&source,&source_media)?;let sa=session.call(Operation::DecodeAudio,&source,&source_media)?;let source_video=trace(&sv,&source_media.video)?;let source_audio=trace(&sa,&source_media.audio)?;store_trace(&directory,"source-video.framehash",&sv)?;store_trace(&directory,"source-audio.framehash",&sa)?;
+    observer.phase(Phase::SourceDecode,Transition::Finished,entry);observer.phase(Phase::Encoding,Transition::Started,entry);
     let candidate=session.call(Operation::Encode,&source,&source_media)?;runtime::write_member(&directory,"candidate.mp4",&candidate)?;
+    observer.phase(Phase::Encoding,Transition::Finished,entry);observer.phase(Phase::CandidateValidation,Transition::Started,entry);
     let candidate_file=BoundedFileObservation::open_mp4(&attempt.join("candidate.mp4"),planned.payload.allocation.maximum_candidate_bytes,&||session.check())?;let parsed=container::observe(&candidate_file,&||session.check())?;compare(&source_media,&parsed.summary)?;
     let candidate_probe=session.call(Operation::Probe,&candidate,&parsed.summary)?;runtime::require_probe(&candidate_probe,&parsed.summary)?;
     let cv=session.call(Operation::DecodeVideo,&candidate,&parsed.summary)?;let ca=session.call(Operation::DecodeAudio,&candidate,&parsed.summary)?;let candidate_video=trace(&cv,&parsed.summary.video)?;let candidate_audio=trace(&ca,&parsed.summary.audio)?;store_trace(&directory,"candidate-video.framehash",&cv)?;store_trace(&directory,"candidate-audio.framehash",&ca)?;
     ensure!(same_audio(&candidate_audio,&source_audio),"complete decoded AAC samples/clock differ");candidate_file.verify_current_guarded(&||session.check())?;session.recheck()?;
+    observer.phase(Phase::CandidateValidation,Transition::Finished,entry);
     if candidate.len() as u64>=planned.payload.source.snapshot.logical_bytes{return Ok(Outcome::Unchanged {reason:"validated lossy candidate is not strictly smaller; original retained".into(),source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:Some(candidate.len() as u64),candidate_digest:Some(hash(&candidate)),attempt_directory:Some(attempt)});}
     let e=Evidence {schema:"optiflow.mp4-delivery-evidence.v1".into(),plan:planned.clone(),candidate_digest:hash(&candidate),candidate_bytes:candidate.len() as u64,candidate:parsed.summary,source_probe:String::from_utf8(source_probe)?,candidate_probe:String::from_utf8(candidate_probe)?,source_video,source_audio,candidate_video,candidate_audio,invocations:session.invocations.clone(),encoded_bytes_saved:planned.payload.source.snapshot.logical_bytes-candidate.len() as u64,full_native_decode_observed:true,video_pixel_equivalence:false,quality_review:"required; explicitly lossy video".into(),native_qualified:false,source_unchanged_at_precommit:true,physical_space_reclaimed:false,replacement_authority:false,upload_authority:false};
     retained(&e,&e.candidate,e.candidate_bytes,&e.candidate_digest)?;runtime::write_member(&directory,"validation.json",&serde_json::to_vec(&e)?)?;
+    observer.phase(Phase::ArtifactCommit,Transition::Started,entry);
     let artifact=artifact::publish(&request.artifact_root,&candidate,&e,||{session.recheck()?;candidate_file.verify_current_guarded(&||session.check())})?;
+    observer.phase(Phase::ArtifactCommit,Transition::Finished,entry);
     Ok(Outcome::Accepted {artifact,source_bytes:planned.payload.source.snapshot.logical_bytes,candidate_bytes:e.candidate_bytes,encoded_bytes_saved:e.encoded_bytes_saved,quality_review:e.quality_review,physical_space_reclaimed:false,attempt_directory:attempt})
 }
 

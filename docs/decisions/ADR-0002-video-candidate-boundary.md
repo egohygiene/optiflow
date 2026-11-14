@@ -38,6 +38,14 @@ physical-reclamation authority. No new codec or implicit profile upgrade is adde
 
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
 
+November 12 product-source extension: caller-owned bounded progress observers
+and an explicitly selected private CLI JSONL sink project existing phases and
+entry counters. Indeterminate work receives no estimated percent. Events stay
+non-authoritative and exclude source content/paths, argv and native captures;
+they do not enter semantic identity, checkpoints or acceptance. Event loss/sink
+errors produce optional operational diagnostics without rewriting work outcomes.
+No observer, exporter, network service or background task is enabled by default.
+
 November 12 product-source extension: read-only preflight reuses the same
 source/tool observation and plan/resource arithmetic, reports individual missing
 prerequisites, and does not start or contact a provider/service. Observed sockets,
