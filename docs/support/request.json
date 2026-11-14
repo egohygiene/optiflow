@@ -1,0 +1,9 @@
+{
+  "schema_version": "egohygiene.diagnostics-request/v1",
+  "categories": [
+    "build",
+    "platform",
+    "contracts",
+    "health"
+  ]
+}

@@ -14,6 +14,7 @@ use crate::signals::{Interruption, SignalState};
 use crate::state::StateStore;
 
 mod candidate_commands;
+mod diagnostics_commands;
 mod replacement_commands;
 mod optimize_commands;
 mod video_commands;
@@ -52,6 +53,7 @@ impl Execution {
 }
 
 pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
+    if let Command::Diagnostics(a)=&cli.command{let value=diagnostics_commands::run(&a.command,signals);return(CommandResult::resolve(cli.command_name(),value.coverage,value.artifacts,value.diagnostics,value.result),cli.selected_output_format());}
     if let Command::Mp4Delivery(a)=&cli.command {
         let configuration=if a.command.uses_configuration(){match crate::configuration::resolve(&cli){Ok(value)=>Some(value),Err(error)=>return (CommandResult::failure(cli.command_name(),*error),cli.selected_output_format())}}else{None};
         let format=configuration.as_ref().map(|v|v.runtime.output_format).unwrap_or_else(||cli.selected_output_format());
@@ -91,6 +93,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
         );
     }
     let execution = match cli.command {
+        Command::Diagnostics(a)=>diagnostics_commands::run(&a.command,signals),
         Command::ReleaseContract => Execution::success(&crate::release_contract::describe()),
         Command::Mp4Delivery(a) => mp4_commands::run(&a.command,Some(&resolution),signals),
         Command::Doctor => run_doctor(&state_directory),
