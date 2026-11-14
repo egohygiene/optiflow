@@ -1,6 +1,7 @@
 //! Safe, read-only media inventory and exact-duplicate planning.
 
 pub mod adapters;
+pub mod diagnostics;
 pub mod app;
 pub mod artifact_set;
 pub mod candidate_artifact;
