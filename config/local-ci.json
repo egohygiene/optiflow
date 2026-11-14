@@ -18,6 +18,40 @@
       ]
     },
     {
+      "id": "replacement-counter-regressions",
+      "kind": "direct",
+      "required": true,
+      "timeout_seconds": 600,
+      "command": [
+        "cargo",
+        "+1.89.0",
+        "test",
+        "--lib",
+        "execution::sqlite_integer::",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "2"
+      ]
+    },
+    {
+      "id": "replacement-contract-regressions",
+      "kind": "direct",
+      "required": true,
+      "timeout_seconds": 600,
+      "command": [
+        "cargo",
+        "+1.89.0",
+        "test",
+        "--lib",
+        "execution::replacement::",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "2"
+      ]
+    },
+    {
       "id": "workflow-budget-regressions",
       "kind": "direct",
       "required": true,
@@ -67,7 +101,7 @@
       "id": "full-rust-matrix",
       "kind": "unsupported",
       "required": false,
-      "reason": "This selection checks only the declared-compiler library target. All-target/all-feature compilation, Rust tests, Clippy, moving toolchains, fuzz and performance workloads require their own exact-source results; library-check success does not qualify them."
+      "reason": "This selection checks the declared-compiler library target and two focused replacement/counter unit groups. All-target/all-feature compilation, unselected Rust tests, Clippy, moving toolchains, fuzz and performance workloads require their own exact-source results; these selected checks do not qualify them."
     },
     {
       "id": "native-host-and-provider-matrix",
