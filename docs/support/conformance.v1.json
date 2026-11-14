@@ -1,0 +1,26 @@
+{
+  "schema_version": "egohygiene.diagnostics-conformance/v1",
+  "scope": "metadata-only; no provider or collector",
+  "cases": [
+    "preview-no-write",
+    "bundle-generated-allowlist",
+    "inspect-unsigned",
+    "no-clobber",
+    "unknown-input-refusal",
+    "tampered-member-refusal",
+    "path-traversal-refusal",
+    "duplicate-member-refusal",
+    "oversize-refusal",
+    "alias-refusal",
+    "health-unknown-not-zero"
+  ],
+  "canary_categories": [
+    "secret",
+    "argv",
+    "path",
+    "prompt",
+    "environment",
+    "otel_header"
+  ],
+  "no_media_no_network_no_domain_authority": true
+}
