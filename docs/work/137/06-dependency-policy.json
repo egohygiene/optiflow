@@ -1,0 +1,61 @@
+{
+  "schema_version": "egohygiene.dependency-policy-decision/v1",
+  "observed_date": "2026-11-13",
+  "scope": "source and upstream metadata review only",
+  "promised_rust_version": "1.85",
+  "policy_toolchain": "1.85.0",
+  "cargo_deny_action": "3c6349835b2b7b196a839186cb8b78e02f7b5f25",
+  "cargo_deny_version": "0.20.2",
+  "advisory": {
+    "id": "RUSTSEC-2026-0459",
+    "revision": "c5ed55613b44ac8c641bb7e86120afb659930e58",
+    "patched_libsqlite3_sys": ">=0.39.0",
+    "unaffected_libsqlite3_sys": "<0.6.0"
+  },
+  "owning_locks": [
+    {
+      "manifest": "Cargo.toml",
+      "locked": {
+        "libsqlite3-sys": "0.38.2",
+        "rusqlite": "0.40.2"
+      }
+    },
+    {
+      "manifest": "fuzz/Cargo.toml",
+      "locked": {
+        "libsqlite3-sys": "0.38.2",
+        "rusqlite": "0.40.2"
+      }
+    }
+  ],
+  "upstream_candidates": [
+    {
+      "package": "libsqlite3-sys",
+      "version": "0.39.0",
+      "rust_version": "1.88.0"
+    },
+    {
+      "package": "libsqlite3-sys",
+      "version": "0.39.1",
+      "rust_version": "1.88.0"
+    },
+    {
+      "package": "rusqlite",
+      "version": "0.41.0",
+      "rust_version": "1.89.0"
+    },
+    {
+      "package": "rusqlite",
+      "version": "0.41.1",
+      "rust_version": "1.89.0"
+    }
+  ],
+  "compatible_patched_registry_graph_observed": false,
+  "advisory_resolved": false,
+  "acceptance_complete": false,
+  "policy_ignores_added": false,
+  "system_sqlite_selected": false,
+  "product_compilation_run": false,
+  "tests_run": false,
+  "hosted_execution_run": false
+}
