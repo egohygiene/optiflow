@@ -674,7 +674,7 @@ fn track(
             payload_bytes: bytes,
             payload_digest: EvidenceDigest {
                 algorithm: "blake3-256".into(),
-                value: payload.finalize().to_hex().into(),
+                value: payload.finalize().to_hex().to_string(),
             },
             presentation_digest: digest(&timeline)?,
             frame_period,
