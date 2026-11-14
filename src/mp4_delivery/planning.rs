@@ -433,21 +433,28 @@ pub(crate) fn bind_tools(request: &Request, guard: &impl Fn() -> Result<()>) -> 
         ("systemctl", &request.sandbox.systemctl),
         ("worker", &request.sandbox.helper),
     ] {
-        let observed = BoundedFileObservation::open_guarded(&pin.path, 134_217_728, guard)?;
-        ensure!(
-            observed.digest() == &pin.digest
-                && observed.snapshot().mode & 0o111 != 0
-                && observed.snapshot().mode & 0o6000 == 0,
-            "selected MP4 executable differs from exact safe pin"
-        );
-        tools.push(Tool {
-            name: name.into(),
-            path: pin.path.clone(),
-            content_digest: pin.digest.clone(),
-            snapshot: observed.snapshot().clone(),
-        });
+        tools.push(observe_tool(name, pin, guard)?);
     }
     Ok(tools)
+}
+pub(crate) fn observe_tool(
+    name: &str,
+    pin: &PinnedLauncher,
+    guard: &impl Fn() -> Result<()>,
+) -> Result<Tool> {
+    let observed = BoundedFileObservation::open_guarded(&pin.path, 134_217_728, guard)?;
+    ensure!(
+        observed.digest() == &pin.digest
+            && observed.snapshot().mode & 0o111 != 0
+            && observed.snapshot().mode & 0o6000 == 0,
+        "selected MP4 executable differs from exact safe pin"
+    );
+    Ok(Tool {
+        name: name.into(),
+        path: pin.path.clone(),
+        content_digest: pin.digest.clone(),
+        snapshot: observed.snapshot().clone(),
+    })
 }
 pub(crate) fn retained(plan: &Plan) -> Result<()> {
     let p = &plan.payload;
@@ -508,6 +515,12 @@ pub fn plan(request: &Request, cancel: impl Fn() -> bool) -> Result<Plan> {
     };
     let source = super::inspect(&request.source, request.limits.input_bytes, &cancel)?;
     let tools = bind_tools(request, &guard)?;
+    let plan = assemble(request, source, tools)?;
+    guard()?;
+    Ok(plan)
+}
+pub(crate) fn assemble(request: &Request, source: Source, tools: Vec<Tool>) -> Result<Plan> {
+    request.validate()?;
     let allocation = allocation(
         &request.control,
         &source.media,
@@ -570,7 +583,7 @@ pub fn plan(request: &Request, cancel: impl Fn() -> bool) -> Result<Plan> {
         serde_json::to_vec(&plan)?.len() <= METADATA_BYTES,
         "MP4 plan exceeds bound"
     );
-    guard()?;
+    retained(&plan)?;
     Ok(plan)
 }
 

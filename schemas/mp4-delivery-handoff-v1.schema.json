@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-delivery-handoff-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "prepared",
+    "outcome",
+    "selected_output",
+    "state",
+    "origin_verification",
+    "quality_review",
+    "native_qualified",
+    "replacement_authority",
+    "upload_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-delivery-handoff.v1"
+    },
+    "prepared": {
+      "$ref": "mp4-handoff-preparation-v1.schema.json"
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "artifact",
+            "source_bytes",
+            "candidate_bytes",
+            "encoded_bytes_saved",
+            "quality_review",
+            "physical_space_reclaimed",
+            "attempt_directory"
+          ],
+          "properties": {
+            "state": {
+              "const": "accepted"
+            },
+            "artifact": {
+              "$ref": "mp4-delivery-artifact-pin-v1.schema.json"
+            },
+            "source_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912
+            },
+            "candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 268435456
+            },
+            "encoded_bytes_saved": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "quality_review": {
+              "const": "required; explicitly lossy video"
+            },
+            "physical_space_reclaimed": {
+              "const": false
+            },
+            "attempt_directory": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason",
+            "source_bytes",
+            "candidate_bytes",
+            "candidate_digest",
+            "attempt_directory"
+          ],
+          "properties": {
+            "state": {
+              "const": "unchanged"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "source_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912
+            },
+            "candidate_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 268435456
+            },
+            "candidate_digest": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+                }
+              ]
+            },
+            "attempt_directory": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "selected_output": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "path",
+            "content_digest",
+            "byte_count"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "validated_candidate",
+                "explicit_unchanged_original"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "content_digest": {
+              "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+            },
+            "byte_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 268435456
+            }
+          }
+        }
+      ]
+    },
+    "state": {
+      "enum": [
+        "candidate_ready_for_human_review",
+        "unchanged_not_selected",
+        "unchanged_original_explicitly_selected",
+        "unchanged_original_unavailable"
+      ]
+    },
+    "origin_verification": {
+      "const": "caller_declared_origin; external_manifest_release_and_provenance_not_verified"
+    },
+    "quality_review": {
+      "const": "required_for_lossy_candidate; not_recorded_as_approved"
+    },
+    "native_qualified": {
+      "const": false
+    },
+    "replacement_authority": {
+      "const": false
+    },
+    "upload_authority": {
+      "const": false
+    }
+  }
+}

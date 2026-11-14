@@ -30,6 +30,8 @@ pub struct ConfigurationResolution {
     pub policy: EffectivePolicyV1,
     pub sources: Vec<ConfigurationSourceRecord>,
     pub shadowed_values: Vec<ShadowedValue>,
+    #[serde(skip_serializing_if = "super::mp4::State::is_empty")]
+    pub mp4_delivery: super::mp4::State,
     #[serde(skip)]
     pub runtime: RuntimePolicy,
 }
@@ -57,6 +59,7 @@ struct ResolvedValue<T> {
 }
 
 struct WorkingPolicy {
+    mp4_delivery: super::mp4::State,
     output_format: ResolvedValue<OutputFormat>,
     state_directory: ResolvedValue<PathBuf>,
     follow_symlinks: ResolvedValue<bool>,
@@ -102,6 +105,7 @@ pub fn resolve(cli: &Cli) -> Result<ConfigurationResolution, Box<Diagnostic>> {
         path: None,
     };
     let mut working = WorkingPolicy {
+        mp4_delivery: super::mp4::State::default(),
         output_format: ResolvedValue {
             value: OutputFormat::Human,
             provenance: default("compiled output default"),
@@ -230,6 +234,7 @@ pub fn resolve(cli: &Cli) -> Result<ConfigurationResolution, Box<Diagnostic>> {
     Ok(ConfigurationResolution {
         policy,
         sources,
+        mp4_delivery: working.mp4_delivery,
         shadowed_values: working.shadowed,
         runtime,
     })
@@ -423,6 +428,18 @@ fn apply_document(
         detail: detail.to_owned(),
         path: Some(SerializedPath::from_path(path)),
     };
+    if let Some(settings) = &document.mp4_delivery {
+        working
+            .mp4_delivery
+            .apply(settings, provenance("mp4_delivery"))
+            .map_err(|error| {
+                path_diagnostic(
+                    DiagnosticCode::ConfigurationValueInvalid,
+                    path,
+                    format!("MP4 configuration could not be materialized: {error}"),
+                )
+            })?;
+    }
     if let Some(format) = document.output.as_ref().and_then(|output| output.format) {
         replace(
             "presentation_policy.output_format",

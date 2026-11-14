@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-folder-comparison-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "request_digest",
+    "inventory_digest",
+    "state",
+    "counts",
+    "entries",
+    "accepted_source_bytes",
+    "accepted_candidate_bytes",
+    "encoded_bytes_saved",
+    "reduction",
+    "last_report",
+    "continuation",
+    "source_freshness",
+    "savings_scope",
+    "quality_review",
+    "native_qualified",
+    "physical_space_reclaimed",
+    "replacement_authority",
+    "upload_authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-folder-comparison.v1"
+    },
+    "request_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    },
+    "inventory_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    },
+    "state": {
+      "enum": [
+        "retained_complete",
+        "never_started_work_remains",
+        "reconciliation_required"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discovered_entries",
+        "files_seen",
+        "inspected_files",
+        "eligible_files",
+        "optimized_files",
+        "unchanged_files",
+        "unsupported_entries",
+        "skipped_entries",
+        "failed_files",
+        "recorded_results",
+        "pending_entries",
+        "uncertain_attempts"
+      ],
+      "properties": {
+        "discovered_entries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files_seen": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inspected_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "eligible_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "optimized_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unchanged_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsupported_entries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped_entries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recorded_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_entries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uncertain_attempts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "relative_path",
+          "status",
+          "reason",
+          "observed_source_bytes",
+          "candidate_bytes",
+          "encoded_bytes_saved",
+          "candidate_scope",
+          "artifact"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "relative_path": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "encoding",
+                  "value"
+                ],
+                "properties": {
+                  "encoding": {
+                    "const": "utf8"
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 16384
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "encoding",
+                  "base64"
+                ],
+                "properties": {
+                  "encoding": {
+                    "const": "unix_bytes"
+                  },
+                  "base64": {
+                    "type": "string",
+                    "maxLength": 32768
+                  }
+                }
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "unchanged",
+              "unsupported",
+              "skipped",
+              "failed",
+              "uncertain_started",
+              "not_started"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "observed_source_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "candidate_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "encoded_bytes_saved": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "candidate_scope": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "artifact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "mp4-delivery-artifact-pin-v1.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "accepted_source_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "accepted_candidate_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "encoded_bytes_saved": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reduction": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "saved_bytes",
+            "accepted_source_bytes"
+          ],
+          "properties": {
+            "saved_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "accepted_source_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "last_report": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sequence",
+            "result_count",
+            "stop_reason",
+            "window_elapsed_ms"
+          ],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "result_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "stop_reason": {
+              "enum": [
+                "complete",
+                "cancelled",
+                "elapsed_window",
+                "cumulative_action_limit",
+                "cumulative_publication_limit",
+                "reconciliation_required",
+                "not_recorded"
+              ]
+            },
+            "window_elapsed_ms": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "continuation": {
+      "enum": [
+        "manual_reconciliation_required",
+        "complete",
+        "report_history_limit",
+        "cumulative_action_limit",
+        "cumulative_publication_limit",
+        "explicit_resume_of_never_started_work"
+      ]
+    },
+    "source_freshness": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "savings_scope": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "quality_review": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "native_qualified": {
+      "const": false
+    },
+    "physical_space_reclaimed": {
+      "const": false
+    },
+    "replacement_authority": {
+      "const": false
+    },
+    "upload_authority": {
+      "const": false
+    }
+  }
+}

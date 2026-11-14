@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.16
+version: 0.1.24
 status: draft
 owners:
   - egohygiene
@@ -31,6 +31,106 @@ uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
 output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
+
+## Generated APFS image fault trials (#93)
+
+A separate explicitly invoked native test utility owns a fresh private image
+workspace and generated fixtures. Current hdiutil image/mount association and
+external record pins constrain detach/reattach; no arbitrary device or existing
+volume is accepted. Immutable intents preserve uncertain operations without
+replay or automatic cleanup. Captures describe simulated image faults and
+observed descriptor reads only. They cannot replace physical removable-volume
+evidence, mutation acceptance, durable recovery proof or release qualification.
+
+## Held replacement subjects at namespace transitions (#95)
+
+The existing private Linux replacement engine rechecks full bounded bytes and
+preserved properties through the held original and staged/optimized handles
+before retention, publication and each restore move, and before recording a
+completed transition. Directory handles and their current path identities must
+still agree. Rename updates are observed as new bindings without accepting a
+new subject. A refusal after an intent leaves that phase pending with both
+objects retained; it grants no replay, rollback, unlink or adoption authority.
+These checks are observations, not atomic snapshots or native qualification.
+The application/SDK gates, PNG limits and legacy plan/event meanings remain intact.
+
+## Native mutation release-review evidence (#93)
+
+The existing offline owner-report adapter may assemble a separate unsigned
+mutation review from explicitly pinned native three-target archives, disposable
+volume claims and bounded actual command captures. Read-only/synthetic receipts
+cannot stand for mutation, restore, finalization or physical interruption evidence.
+The adapter verifies bytes/structure and surfaces unresolved reclamation/coverage;
+it does not manufacture native facts, activate runtime gates, attest, sign or
+publish. The historical read-only release pipeline and source pins remain intact.
+
+## Native metadata and bounded private staging (#111)
+
+A Darwin implementation of the existing descriptor-property port preserves
+ownership, mode, bounded xattrs, exact modification/creation times and zero BSD
+flags through held handles. ACL observation/replacement remains an explicitly
+supplied safe descriptor bridge with pinned identity; no dependency is silently
+adopted. The existing copy owner can stream bounded content into an explicit
+empty destination and then reuse independent property/readback/synchronization.
+The default backend and Mac cross-volume production dispatch remain unavailable;
+private-copy receipts confer no namespace commit, removal or qualification.
+
+## Typed MP4 input and delivery handoff
+
+Explicit input references bind selected path, complete bytes and caller-declared
+origin. Preparation binds the existing source/tool/plan identity, consumer byte
+cap and explicit lossy/unchanged policy before native work. Execution rechecks
+the prepared plan and delegates to the same producer; pinned candidates join
+that exact retained plan before output selection. Unchanged originals are never
+selected without the recorded policy and a fresh exact input observation.
+Typed handoff readback requires an externally retained semantic digest and
+reobserves selected output while leaving upstream origin, native qualification
+and human quality approval unverified. Machine capability metadata describes
+the existing profile without enabling a released Flow route or sibling dependency.
+
+## MP4 folder comparisons and stopping reasons
+
+A separate read-only comparison view derives counts, per-entry outcomes and
+accepted-subset encoded-byte reduction from reconciled inventory/results and
+pinned artifacts. It never infers whole-collection or physical-space savings,
+selects an unchanged original for downstream use, or refreshes native/human
+qualification. New versioned folder reports record actual bounded-window stop
+causes with validated result-prefix/accounting witnesses; legacy reports retain
+their original meaning and an unknown stop cause. Cumulative budget exhaustion,
+uncertain work and report-history limits remain distinct continuation barriers.
+
+## MP4 operational progress
+
+Caller-owned synchronous observers receive bounded phase/entry events from the
+existing producer and serial-folder owners. Known entry totals are distinct from
+indeterminate encoding; no fabricated percent or accepted state is inferred.
+Events contain no media, source paths, tool argv, metadata or native captures.
+An explicitly selected private no-clobber CLI JSONL sink stays outside source,
+work/store/journal namespaces. Event limits and sink failures remain operational
+diagnostics and never change domain request/plan/artifact identities or outcome.
+Machine stdout retains one final command result. Progress cannot establish
+validation, checkpoint reuse, human approval, native qualification or completion.
+
+## Read-only MP4 preflight
+
+The MP4 owner independently observes selected source/tool pins, private output
+roots, free-space admission and the explicit local user-manager socket without
+starting a process or connecting to a service. It reuses planning/resource
+arithmetic and reports each missing prerequisite. Host/space observations are
+not reservations, actual confinement, delegation or native qualification. The
+existing runtime rechecks all execution prerequisites and actual guard receipts.
+
+## MP4 configuration resolution
+
+The existing configuration owner resolves optional MP4 settings from its current
+user/project or explicitly selected TOML source. A distinct selection request
+may inherit control and limits; a complete v1 request keeps every value explicit.
+An explicitly selected CLI settings document has final precedence. No lossy
+control, provider, source, path, permission or resource policy is guessed.
+Resolution exposes effective values/provenance and yields the same closed v1
+producer request, whose full effective policy remains bound into existing plans.
+Pure descriptions/readback bypass configuration and mutable state. Configuration
+resolution grants no execution, human approval, mutation or release authority.
 
 ## MP4 CLI and serial folder continuation
 

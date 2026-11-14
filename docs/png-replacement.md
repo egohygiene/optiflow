@@ -73,3 +73,37 @@ Two useful saved-declaration/scope/gate regressions are authored, uncompiled and
 unrun. No test/compiler/build, dependency/lint/format/schema/native/media/CLI/SDK
 or hosted CI operation ran. Feature #95 and #93's native/platform/release gates
 remain open; Flow #88 stays last. No actual user-media mutation or approval.
+
+## Held subject integrity — November 13, 2026 source checkpoint
+
+The shared private Linux engine now reuses the execution hasher on the held
+original and staged descriptors before retaining the original, before publishing
+the replacement and before recording completion. Both restore moves have the
+same checks, including the optimized object retained after the first move.
+Each observation is bounded by the existing file ceiling and cancellation state.
+The full byte pin, owner/mode/modification time and bounded extended attributes
+must still agree; atime may advance during reads, and rename's new ctime belongs
+to a freshly observed binding of the same object. A current path's bytes cannot
+substitute for the held descriptor's bytes.
+
+Current source/retention directory bindings must also match the held directory
+handles. Restore requires the journal's original and published objects to match
+the approved original and staged identities and the exact selected namespace.
+The no-replace renames remain unchanged. Failure after an intent leaves that
+intent pending and the objects available for inspection; the engine adds no
+retry, rollback, unlink or orphan-adoption path. These observations do not provide
+an atomic snapshot or isolation from concurrent writers.
+
+Six private-engine regressions are authored, uncompiled and unrun: successful
+retention/restore across rename ctimes, staged corruption before original
+retention, changed held bytes despite a current metadata pin, late xattrs,
+substituted directory handles and restore collisions. The generated raw byte
+fixtures isolate transaction behavior; they are not PNG or native qualification.
+No tests, compiler/build, dependency, lint/format/schema/docs/drift, product
+CLI/SDK, native/provider/media, drive operation or CI execution/polling ran.
+
+The application and SDK qualification gates still refuse before writable state.
+This checkpoint leaves #95 open: #93's actual native release, qualified PNG
+replacement/recovery/property trials and v0.3.0 install/upgrade/rollback evidence
+remain required. macOS replacement dispatch is still unavailable. The current
+package is still v0.1.1; no original replacement/disposal or release occurred.

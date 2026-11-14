@@ -50,6 +50,132 @@ tasks:
     cmds:
       - optiflow --json diagnostics doctor
 
+  native:apfs:create:
+    desc: Explicitly create generated fixtures in a fresh disposable APFS image
+    requires:
+      vars: [WORKSPACE]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py create --workspace "$OPTI_APFS_TRIAL_ROOT" --acknowledge-generated-volume-simulation
+
+  native:apfs:disconnect:
+    desc: Explicitly force-detach only the pinned generated trial image
+    requires:
+      vars: [WORKSPACE, TRIAL_SHA256]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+      OPTI_APFS_TRIAL_SHA256: '{{.TRIAL_SHA256}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py disconnect --workspace "$OPTI_APFS_TRIAL_ROOT" --trial-sha256 "$OPTI_APFS_TRIAL_SHA256" --acknowledge-generated-volume-simulation
+
+  native:apfs:reconnect:
+    desc: Reattach the exact generated image after its pinned simulated disconnect
+    requires:
+      vars: [WORKSPACE, TRIAL_SHA256, DISCONNECT_SHA256]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+      OPTI_APFS_TRIAL_SHA256: '{{.TRIAL_SHA256}}'
+      OPTI_APFS_DISCONNECT_SHA256: '{{.DISCONNECT_SHA256}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py reconnect --workspace "$OPTI_APFS_TRIAL_ROOT" --trial-sha256 "$OPTI_APFS_TRIAL_SHA256" --disconnect-sha256 "$OPTI_APFS_DISCONNECT_SHA256" --acknowledge-generated-volume-simulation
+
+  native:apfs:finish:
+    desc: Normally detach the reconnected generated image and retain its files/receipts
+    requires:
+      vars: [WORKSPACE, TRIAL_SHA256, RECONNECT_SHA256]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+      OPTI_APFS_TRIAL_SHA256: '{{.TRIAL_SHA256}}'
+      OPTI_APFS_RECONNECT_SHA256: '{{.RECONNECT_SHA256}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py finish --workspace "$OPTI_APFS_TRIAL_ROOT" --trial-sha256 "$OPTI_APFS_TRIAL_SHA256" --reconnect-sha256 "$OPTI_APFS_RECONNECT_SHA256" --acknowledge-generated-volume-simulation
+
+  release:report:mutation-review:
+    desc: Assemble an unsigned native mutation evidence review without executing or publishing
+    requires:
+      vars: [REQUEST, OUTPUT_DIRECTORY]
+    env:
+      OPTIFLOW_MUTATION_REVIEW_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_MUTATION_REVIEW_OUTPUT: '{{.OUTPUT_DIRECTORY}}'
+    cmds:
+      - python3 scripts/owner_reports.py mutation-review --request "$OPTIFLOW_MUTATION_REVIEW_REQUEST" --output-directory "$OPTIFLOW_MUTATION_REVIEW_OUTPUT"
+
+  mp4:capabilities:
+    desc: Describe source-only MP4 compatibility and preservation requirements
+    cmds:
+      - optiflow --json mp4-delivery capabilities
+
+  mp4:handoff:prepare:
+    desc: Bind an explicit input reference and consumer policy without encoding
+    requires:
+      vars: [REQUEST, INPUT_REFERENCE, CONSUMER, UNCHANGED_POLICY]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_MP4_INPUT: '{{.INPUT_REFERENCE}}'
+      OPTIFLOW_MP4_CONSUMER: '{{.CONSUMER}}'
+      OPTIFLOW_MP4_UNCHANGED: '{{.UNCHANGED_POLICY}}'
+    cmds:
+      - >-
+        optiflow --json mp4-delivery prepare-handoff
+        --request "$OPTIFLOW_MP4_REQUEST" --input-reference "$OPTIFLOW_MP4_INPUT"
+        --consumer "$OPTIFLOW_MP4_CONSUMER" --unchanged-policy "$OPTIFLOW_MP4_UNCHANGED"
+
+  mp4:handoff:run:
+    desc: Execute a frozen prepared handoff through the existing MP4 owner
+    requires:
+      vars: [PREPARED]
+    env:
+      OPTIFLOW_MP4_PREPARED: '{{.PREPARED}}'
+    cmds:
+      - optiflow --json mp4-delivery run-handoff --request "$OPTIFLOW_MP4_PREPARED"
+
+  mp4:folder:summary:
+    desc: Compare retained MP4 outcomes and explain continuation barriers
+    requires:
+      vars: [RUN_DIRECTORY]
+    env:
+      OPTIFLOW_MP4_RUN: '{{.RUN_DIRECTORY}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-summary --run-directory "$OPTIFLOW_MP4_RUN"
+
+  mp4:run:events:
+    desc: Run an explicit MP4 request with a new private operational event log
+    requires:
+      vars: [REQUEST, EVENT_LOG]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_MP4_EVENTS: '{{.EVENT_LOG}}'
+    cmds:
+      - optiflow --json mp4-delivery run --request "$OPTIFLOW_MP4_REQUEST" --event-log "$OPTIFLOW_MP4_EVENTS"
+
+  mp4:preflight:
+    desc: Observe explicit MP4 prerequisites without provider execution or reservation
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery preflight --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:resolve:
+    desc: Show effective MP4 settings and provenance without media/tool observation
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery resolve --request "$OPTIFLOW_MP4_REQUEST"
+
+  mp4:folder:resolve:
+    desc: Show the resolved frozen folder policy without traversal or providers
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_MP4_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-resolve --request "$OPTIFLOW_MP4_REQUEST"
+
   mp4:profiles:
     desc: Describe the explicit unqualified MP4 delivery source profile
     cmds:

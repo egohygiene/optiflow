@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-delivery-selection-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile",
+    "source",
+    "ffmpeg",
+    "ffprobe",
+    "sandbox",
+    "private_workdir",
+    "artifact_root",
+    "audio",
+    "metadata"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-delivery-selection.v1"
+    },
+    "profile": {
+      "const": "optiflow.mp4-h264-aac-delivery.v1"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "ffmpeg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "digest"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "ffprobe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "digest"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "systemd_run",
+        "systemctl",
+        "helper",
+        "user_bus",
+        "provider_subtree_memory_bytes",
+        "provider_scratch_bytes",
+        "minimum_free_bytes"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.linux-mp4-delivery-sandbox.v1"
+        },
+        "systemd_run": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "digest"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "systemctl": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "digest"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "helper": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "digest"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "user_bus": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "provider_subtree_memory_bytes": {
+          "type": "integer",
+          "minimum": 134217728,
+          "maximum": 2147483648
+        },
+        "provider_scratch_bytes": {
+          "type": "integer",
+          "minimum": 16777216,
+          "maximum": 2147483648,
+          "multipleOf": 4096
+        },
+        "minimum_free_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1099511627776
+        }
+      }
+    },
+    "private_workdir": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "artifact_root": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "control": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "crf",
+            "preset"
+          ],
+          "properties": {
+            "kind": {
+              "const": "quality"
+            },
+            "crf": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 51
+            },
+            "preset": {
+              "enum": [
+                "fast",
+                "medium",
+                "slow",
+                "very_slow"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "maximum_bytes",
+            "mux_reserve_bytes",
+            "preset"
+          ],
+          "properties": {
+            "kind": {
+              "const": "target_size"
+            },
+            "maximum_bytes": {
+              "type": "integer",
+              "minimum": 1048576,
+              "maximum": 268435456
+            },
+            "mux_reserve_bytes": {
+              "type": "integer",
+              "minimum": 1048576,
+              "maximum": 268435455
+            },
+            "preset": {
+              "enum": [
+                "fast",
+                "medium",
+                "slow",
+                "very_slow"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "audio": {
+      "const": "copy"
+    },
+    "metadata": {
+      "const": "preserve_supported_allow_encoder_change"
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 536870912
+        },
+        "candidate_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 268435456
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7200000
+        },
+        "memory_admission_bytes": {
+          "type": "integer",
+          "minimum": 134217728,
+          "maximum": 8589934592
+        },
+        "working_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967296
+        },
+        "minimum_free_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1099511627776
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "blake3-256"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

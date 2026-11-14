@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-folder-report-v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "record",
+    "stop_reason",
+    "window_elapsed_ms"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-folder-report.v2"
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "sequence",
+        "request_digest",
+        "inventory_digest",
+        "results_digest",
+        "result_count",
+        "actions_started",
+        "encoded_bytes_saved",
+        "publication_admission_bytes",
+        "state",
+        "elapsed_policy",
+        "physical_space_reclaimed",
+        "replacement_authority"
+      ],
+      "properties": {
+        "schema": {
+          "const": "optiflow.mp4-folder-report.v1"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "request_digest": {
+          "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+        },
+        "inventory_digest": {
+          "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+        },
+        "results_digest": {
+          "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+        },
+        "result_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actions_started": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "encoded_bytes_saved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publication_admission_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "enum": [
+            "retained_complete",
+            "never_started_work_remains",
+            "reconciliation_required"
+          ]
+        },
+        "elapsed_policy": {
+          "const": "new_explicit_bounded_window_for_never_started_work; cumulative_actions_and_publication_caps"
+        },
+        "physical_space_reclaimed": {
+          "const": false
+        },
+        "replacement_authority": {
+          "const": false
+        }
+      }
+    },
+    "stop_reason": {
+      "enum": [
+        "complete",
+        "cancelled",
+        "elapsed_window",
+        "cumulative_action_limit",
+        "cumulative_publication_limit",
+        "reconciliation_required"
+      ]
+    },
+    "window_elapsed_ms": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

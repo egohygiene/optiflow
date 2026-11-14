@@ -127,21 +127,7 @@ impl<'a, F: Fn() -> bool> Session<'a, F> {
             tool.verify_current_guarded(&guard)?;
         }
         self.sandbox.verify(&guard)?;
-        let reserve = self
-            .request
-            .limits
-            .minimum_free_bytes
-            .max(self.request.sandbox.minimum_free_bytes)
-            .checked_add(
-                self.plan
-                    .payload
-                    .allocation
-                    .maximum_candidate_bytes
-                    .checked_mul(2)
-                    .context("MP4 host reserve overflow")?,
-            )
-            .and_then(|n| n.checked_add(134_217_728))
-            .context("MP4 host reserve overflow")?;
+        let reserve = required_free(self.request)?;
         free(&self.request.artifact_root, reserve)?;
         free(&self.request.private_workdir, reserve)?;
         self.check()
@@ -251,26 +237,44 @@ impl<'a, F: Fn() -> bool> Session<'a, F> {
         Ok(bytes)
     }
 }
-pub(crate) fn free(root: &Path, required: u64) -> Result<()> {
+pub(crate) fn required_free(request: &Request) -> Result<u64> {
+    request
+        .limits
+        .minimum_free_bytes
+        .max(request.sandbox.minimum_free_bytes)
+        .checked_add(
+            request
+                .control
+                .maximum(request.limits.candidate_bytes)
+                .checked_mul(2)
+                .context("MP4 host reserve overflow")?,
+        )
+        .and_then(|n| n.checked_add(134_217_728))
+        .context("MP4 host reserve overflow")
+}
+pub(crate) fn available_free(root: &Path) -> Result<u64> {
     #[cfg(unix)]
     {
         let root = crate::candidate_artifact::open_directory(root)?;
         let volume = rustix::fs::fstatvfs(&root)?;
-        ensure!(
-            volume.f_frsize > 0
-                && volume
-                    .f_bavail
-                    .checked_mul(volume.f_frsize)
-                    .is_some_and(|n| n >= required),
-            "MP4 observed free-space reserve unavailable"
-        );
-        Ok(())
+        ensure!(volume.f_frsize > 0, "MP4 volume fragment size unavailable");
+        volume
+            .f_bavail
+            .checked_mul(volume.f_frsize)
+            .context("MP4 free-space observation overflow")
     }
     #[cfg(not(unix))]
     {
-        let _ = (root, required);
+        let _ = root;
         anyhow::bail!("MP4 storage admission unavailable")
     }
+}
+pub(crate) fn free(root: &Path, required: u64) -> Result<()> {
+    ensure!(
+        available_free(root)? >= required,
+        "MP4 observed free-space reserve unavailable"
+    );
+    Ok(())
 }
 pub(crate) fn fresh_directory(root: &Path, label: &str) -> Result<(PathBuf, File)> {
     crate::candidate_artifact::validate_private_root(root)?;

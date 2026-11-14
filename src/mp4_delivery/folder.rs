@@ -3,12 +3,15 @@
 use super::*;
 use crate::video_folder::{EntryDisposition, FolderInventory, FolderLimits, SourceBinding};
 use anyhow::Context;
+use progress::{Observer, Phase, Transition};
 use std::{
     collections::BTreeSet,
     fs::File,
     time::{Duration, Instant},
 };
 const JOURNAL_BYTES: u64 = 16_777_216;
+mod comparison;
+pub use comparison::{Comparison, Counts, StopReason, comparison};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Request {
@@ -27,7 +30,7 @@ impl Request {
         r.validate()?;
         Ok(r)
     }
-    fn validate(&self) -> Result<()> {
+    pub(crate) fn validate(&self) -> Result<()> {
         self.template.validate()?;
         normalized(&self.source_root)?;
         normalized(&self.run_directory)?;
@@ -147,7 +150,7 @@ struct Basis {
     tools: Vec<planning::Tool>,
     results: Vec<Record>,
     starts: Vec<Start>,
-    reports: Vec<Report>,
+    reports: Vec<comparison::Historical>,
     unfinished: Vec<usize>,
 }
 fn path(root: &Path, relative: &crate::domain::NativePath) -> Result<PathBuf> {
@@ -519,10 +522,48 @@ fn reconcile(root: &Path, bound: &File) -> Result<Basis> {
                             "MP4 accepted result/source/store differs"
                         );
                     }
-                    ("unchanged", Some(Outcome::Unchanged { source_bytes, .. })) => ensure!(
-                        *source_bytes == start.source.snapshot.logical_bytes,
-                        "unchanged result source differs"
-                    ),
+                    (
+                        "unchanged",
+                        Some(Outcome::Unchanged {
+                            reason,
+                            source_bytes,
+                            candidate_bytes,
+                            candidate_digest,
+                            attempt_directory,
+                        }),
+                    ) => {
+                        ensure!(
+                            *source_bytes == start.source.snapshot.logical_bytes
+                                && reason.len() <= 2048,
+                            "unchanged result source/reason differs"
+                        );
+                        ensure!(
+                            candidate_bytes.is_some() == candidate_digest.is_some()
+                                && candidate_bytes.is_some() == attempt_directory.is_some(),
+                            "unchanged candidate framing differs"
+                        );
+                        if let Some(size) = candidate_bytes {
+                            ensure!(
+                                *size >= *source_bytes
+                                    && *size
+                                        <= start
+                                            .child_request
+                                            .control
+                                            .maximum(start.child_request.limits.candidate_bytes),
+                                "unchanged candidate size is not a bounded nonshrinking result"
+                            );
+                            planning::valid_digest(
+                                candidate_digest
+                                    .as_ref()
+                                    .context("unchanged candidate digest absent")?,
+                            )?;
+                        } else {
+                            ensure!(
+                                matches!(&start.child_request.control,RateControl::TargetSize {maximum_bytes,..} if *source_bytes<=*maximum_bytes),
+                                "unencoded unchanged result must already fit the explicit target"
+                            );
+                        }
+                    }
                     ("failed", None) => {}
                     _ => anyhow::bail!("eligible MP4 outcome state differs"),
                 }
@@ -577,7 +618,8 @@ fn reconcile(root: &Path, bound: &File) -> Result<Basis> {
             break;
         }
         expected.insert(name.clone());
-        let r: Report = read(bound, &name)?;
+        let parsed = comparison::read_report(bound, &name)?;
+        let r = &parsed.record;
         ensure!(
             r.schema == "optiflow.mp4-folder-report.v1"
                 && r.sequence == sequence
@@ -618,8 +660,9 @@ fn reconcile(root: &Path, bound: &File) -> Result<Basis> {
                 && r.state == state,
             "retained MP4 report totals/state differ"
         );
+        comparison::validate_stop(&parsed, &request, &inventory)?;
         prior_count = r.result_count;
-        reports.push(r);
+        reports.push(parsed);
     }
     ensure!(
         names == expected,
@@ -709,7 +752,9 @@ fn drive(
     bound: &File,
     cancel: &impl Fn() -> bool,
     started: Instant,
+    observer: &Observer<'_>,
 ) -> Result<Status> {
+    observer.phase(Phase::FolderReconciliation, Transition::Started, None);
     let mut basis = reconcile(root, bound)?;
     let previous = summary(&basis)?;
     ensure!(
@@ -720,21 +765,36 @@ fn drive(
         basis.reports.len() < 64,
         "MP4 continuation report count exhausted"
     );
+    observer.phase(Phase::FolderReconciliation, Transition::Finished, None);
     let request = basis.request.clone();
     let deadline = Duration::from_millis(request.batch.elapsed_ms);
     let mut actions = previous.actions_started;
+    let mut stop_reason = StopReason::Complete;
     for index in basis.results.len()..basis.inventory.entries.len() {
-        if cancel() || started.elapsed() >= deadline {
+        if cancel() {
+            stop_reason = StopReason::Cancelled;
+            break;
+        }
+        if started.elapsed() >= deadline {
+            stop_reason = StopReason::ElapsedWindow;
             break;
         }
         let entry = &basis.inventory.entries[index];
         let eligible = entry.disposition == EntryDisposition::Eligible;
-        if eligible
-            && (actions >= request.batch.maximum_actions
-                || admission(&request, actions + 1)? > request.batch.maximum_publication_bytes)
-        {
+        if eligible && actions >= request.batch.maximum_actions {
+            stop_reason = StopReason::CumulativeActionLimit;
             break;
         }
+        if eligible && admission(&request, actions + 1)? > request.batch.maximum_publication_bytes {
+            stop_reason = StopReason::CumulativePublicationLimit;
+            break;
+        }
+        observer.entries(
+            Transition::Started,
+            index,
+            basis.results.len() as u64,
+            basis.inventory.entries.len() as u64,
+        );
         let mut record = Record {
             schema: "optiflow.mp4-folder-result.v1".into(),
             index,
@@ -771,10 +831,15 @@ fn drive(
             };
             write(root, bound, &format!("{index:04}-start.json"), &start)?;
             actions += 1;
-            let result =
-                validation::produce_bound(&child, Some(&source), Some(&basis.tools), || {
-                    cancel() || started.elapsed() >= deadline
-                });
+            let result = validation::produce_bound(
+                &child,
+                Some(&source),
+                Some(&basis.tools),
+                None,
+                || cancel() || started.elapsed() >= deadline,
+                observer,
+                Some(index),
+            );
             match result {
                 Ok(value) => {
                     record.status = if matches!(&value, Outcome::Accepted { .. }) {
@@ -799,7 +864,18 @@ fn drive(
         }
         let failed = record.status == "failed";
         basis.results.push(record);
+        observer.entries(
+            if failed {
+                Transition::Failed
+            } else {
+                Transition::Finished
+            },
+            index,
+            basis.results.len() as u64,
+            basis.inventory.entries.len() as u64,
+        );
         if failed {
+            stop_reason = StopReason::ReconciliationRequired;
             break;
         }
     }
@@ -809,24 +885,53 @@ fn drive(
         current.reports.len() < 64,
         "MP4 continuation report count exhausted"
     );
+    observer.phase(Phase::FolderReport, Transition::Started, None);
     let report=Report {schema:"optiflow.mp4-folder-report.v1".into(),sequence:current.reports.len(),request_digest:value.request_digest.clone(),inventory_digest:value.inventory_digest.clone(),results_digest:digest(&current.results)?,result_count:current.results.len(),actions_started:value.actions_started,encoded_bytes_saved:value.encoded_bytes_saved,publication_admission_bytes:value.publication_admission_bytes,state:value.state.clone(),elapsed_policy:"new_explicit_bounded_window_for_never_started_work; cumulative_actions_and_publication_caps".into(),physical_space_reclaimed:false,replacement_authority:false};
-    write(
-        root,
-        bound,
-        &format!("report-{:04}.json", report.sequence),
-        &report,
+    let sequence = report.sequence;
+    let report = comparison::WindowReport {
+        schema: "optiflow.mp4-folder-report.v2".into(),
+        record: report,
+        stop_reason,
+        window_elapsed_ms: started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
+    };
+    comparison::validate_stop(
+        &comparison::Historical {
+            record: report.record.clone(),
+            stop_reason,
+            window_elapsed_ms: Some(report.window_elapsed_ms),
+        },
+        &request,
+        &current.inventory,
     )?;
+    write(root, bound, &format!("report-{sequence:04}.json"), &report)?;
+    observer.phase(Phase::FolderReport, Transition::Finished, None);
     Ok(value)
 }
 pub fn run(request: &Request, cancel: impl Fn() -> bool) -> Result<Status> {
+    run_with_progress(request, cancel, &Observer::silent())
+}
+pub fn run_with_progress(
+    request: &Request,
+    cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+) -> Result<Status> {
+    observed(observer, || run_inner(request, cancel, observer))
+}
+fn run_inner(
+    request: &Request,
+    cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+) -> Result<Status> {
     request.validate()?;
     let started = Instant::now();
     let stop = || cancel() || started.elapsed() >= Duration::from_millis(request.batch.elapsed_ms);
+    observer.phase(Phase::FolderDiscovery, Transition::Started, None);
     let inventory = preview(request, &stop)?;
     let tools = planning::bind_tools(&request.template, &|| {
         ensure!(!stop(), "MP4 folder cancelled");
         Ok(())
     })?;
+    observer.phase(Phase::FolderDiscovery, Transition::Finished, None);
     crate::candidate_artifact::validate_private_root(&request.template.artifact_root)?;
     ensure!(
         root_members(&request.template.artifact_root)?.is_empty(),
@@ -836,12 +941,38 @@ pub fn run(request: &Request, cancel: impl Fn() -> bool) -> Result<Status> {
     write(&request.run_directory, &bound, "request.json", request)?;
     write(&request.run_directory, &bound, "inventory.json", &inventory)?;
     write(&request.run_directory, &bound, "tools.json", &tools)?;
-    drive(&request.run_directory, &bound, &cancel, started)
+    drive(&request.run_directory, &bound, &cancel, started, observer)
 }
 pub fn resume(request: &Request, cancel: impl Fn() -> bool) -> Result<Status> {
+    resume_with_progress(request, cancel, &Observer::silent())
+}
+pub fn resume_with_progress(
+    request: &Request,
+    cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+) -> Result<Status> {
+    observed(observer, || resume_inner(request, cancel, observer))
+}
+fn observed(observer: &Observer<'_>, operation: impl FnOnce() -> Result<Status>) -> Result<Status> {
+    observer.phase(Phase::Operation, Transition::Started, None);
+    let result = operation();
+    let transition = match &result {
+        Ok(value) if value.state == "retained_complete" => Transition::Finished,
+        Ok(_) => Transition::Stopped,
+        Err(_) => Transition::Failed,
+    };
+    observer.phase(Phase::Operation, transition, None);
+    result
+}
+fn resume_inner(
+    request: &Request,
+    cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+) -> Result<Status> {
     request.validate()?;
     let started = Instant::now();
     let bound = locked(&request.run_directory)?;
+    observer.phase(Phase::FolderReconciliation, Transition::Started, None);
     let basis = reconcile(&request.run_directory, &bound)?;
     ensure!(
         digest(&basis.request)? == digest(request)?,
@@ -851,10 +982,18 @@ pub fn resume(request: &Request, cancel: impl Fn() -> bool) -> Result<Status> {
         summary(&basis)?.state != "reconciliation_required",
         "failed/unfinished MP4 starts cannot be replayed"
     );
-    let stop = || cancel() || started.elapsed() >= Duration::from_millis(request.batch.elapsed_ms);
-    let observed = preview(request, &stop)?;
+    let continuation = comparison::continuation(&basis)?;
     ensure!(
-        digest(&observed)? == digest(&basis.inventory)?,
+        matches!(
+            continuation,
+            "complete" | "explicit_resume_of_never_started_work"
+        ),
+        "MP4 continuation blocked by {continuation}; cumulative limits cannot reset"
+    );
+    let stop = || cancel() || started.elapsed() >= Duration::from_millis(request.batch.elapsed_ms);
+    let current_inventory = preview(request, &stop)?;
+    ensure!(
+        digest(&current_inventory)? == digest(&basis.inventory)?,
         "current MP4 inventory/source identities differ"
     );
     let tools = planning::bind_tools(&request.template, &|| {
@@ -862,7 +1001,11 @@ pub fn resume(request: &Request, cancel: impl Fn() -> bool) -> Result<Status> {
         Ok(())
     })?;
     ensure!(tools == basis.tools, "current MP4 tool baseline differs");
-    drive(&request.run_directory, &bound, &cancel, started)
+    observer.phase(Phase::FolderReconciliation, Transition::Finished, None);
+    if continuation == "complete" {
+        return summary(&basis);
+    }
+    drive(&request.run_directory, &bound, &cancel, started, observer)
 }
 
 #[cfg(test)]

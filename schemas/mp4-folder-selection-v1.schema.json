@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-folder-selection-v1.schema.json",
+  "title": "Explicit serial MP4 delivery folder request",
+  "description": "Source contract only. Rust admission additionally requires disjoint normalized namespaces, template.source equal to source_root, exact tool pins, cumulative resource admission, and retained-state reconciliation. No replay, original replacement, human quality approval or upload authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "source_root",
+    "recursive",
+    "template",
+    "run_directory",
+    "batch",
+    "scratch_cleanup"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-folder-selection.v1"
+    },
+    "source_root": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "recursive": {
+      "type": "boolean"
+    },
+    "template": {
+      "oneOf": [
+        {
+          "$ref": "mp4-delivery-request-v1.schema.json"
+        },
+        {
+          "$ref": "mp4-delivery-selection-v1.schema.json"
+        }
+      ]
+    },
+    "run_directory": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "scratch_cleanup": {
+      "const": "remove_only_known_generated_candidate_after_durable_result"
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_entries",
+        "maximum_files",
+        "maximum_actions",
+        "maximum_depth",
+        "maximum_total_input_bytes",
+        "maximum_publication_bytes",
+        "elapsed_ms"
+      ],
+      "properties": {
+        "maximum_entries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "maximum_files": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "maximum_actions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maximum_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maximum_total_input_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8589934592
+        },
+        "maximum_publication_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8589934592
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        }
+      }
+    }
+  }
+}
