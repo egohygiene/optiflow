@@ -48,6 +48,19 @@ fn main() -> ExitCode {
                 ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
             ) {
                 if error.kind() == ErrorKind::DisplayHelp {
+                    if root_help::literal_root_help(&arguments[1..])
+                        && root_help::selected(&arguments[1..]).is_none()
+                    {
+                        // Display is Clap's color-unaware semantic rendering.
+                        use std::io::Write;
+                        return match std::io::stdout()
+                            .lock()
+                            .write_all(error.to_string().as_bytes())
+                        {
+                            Ok(()) => ExitCode::SUCCESS,
+                            Err(_) => ExitCode::from(1),
+                        };
+                    }
                     root_help::write_if_selected(&arguments[1..]);
                 }
                 let _ = error.print();
