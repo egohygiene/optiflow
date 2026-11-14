@@ -35,6 +35,47 @@ tasks:
     cmds:
       - optiflow --json diagnostics doctor
 
+  native:apfs:create:
+    desc: Explicitly create generated fixtures in a fresh disposable APFS image
+    requires:
+      vars: [WORKSPACE]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py create --workspace "$OPTI_APFS_TRIAL_ROOT" --acknowledge-generated-volume-simulation
+
+  native:apfs:disconnect:
+    desc: Explicitly force-detach only the pinned generated trial image
+    requires:
+      vars: [WORKSPACE, TRIAL_SHA256]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+      OPTI_APFS_TRIAL_SHA256: '{{.TRIAL_SHA256}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py disconnect --workspace "$OPTI_APFS_TRIAL_ROOT" --trial-sha256 "$OPTI_APFS_TRIAL_SHA256" --acknowledge-generated-volume-simulation
+
+  native:apfs:reconnect:
+    desc: Reattach the exact generated image after its pinned simulated disconnect
+    requires:
+      vars: [WORKSPACE, TRIAL_SHA256, DISCONNECT_SHA256]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+      OPTI_APFS_TRIAL_SHA256: '{{.TRIAL_SHA256}}'
+      OPTI_APFS_DISCONNECT_SHA256: '{{.DISCONNECT_SHA256}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py reconnect --workspace "$OPTI_APFS_TRIAL_ROOT" --trial-sha256 "$OPTI_APFS_TRIAL_SHA256" --disconnect-sha256 "$OPTI_APFS_DISCONNECT_SHA256" --acknowledge-generated-volume-simulation
+
+  native:apfs:finish:
+    desc: Normally detach the reconnected generated image and retain its files/receipts
+    requires:
+      vars: [WORKSPACE, TRIAL_SHA256, RECONNECT_SHA256]
+    env:
+      OPTI_APFS_TRIAL_ROOT: '{{.WORKSPACE}}'
+      OPTI_APFS_TRIAL_SHA256: '{{.TRIAL_SHA256}}'
+      OPTI_APFS_RECONNECT_SHA256: '{{.RECONNECT_SHA256}}'
+    cmds:
+      - python3 scripts/apfs_fault_trials.py finish --workspace "$OPTI_APFS_TRIAL_ROOT" --trial-sha256 "$OPTI_APFS_TRIAL_SHA256" --reconnect-sha256 "$OPTI_APFS_RECONNECT_SHA256" --acknowledge-generated-volume-simulation
+
   release:report:mutation-review:
     desc: Assemble an unsigned native mutation evidence review without executing or publishing
     requires:

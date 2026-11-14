@@ -1,5 +1,10 @@
 # Disposable Mac qualification workspace
 
+The separately invoked [image fault utility](simulated-volume-faults.md) now
+authors generated-fixture creation, forced detach, pinned reconnect and normal
+finish with separate simulated evidence. Its source has not been executed.
+These commands do not lift native/runtime or physical-drive qualification gates.
+
 Future operator preparation for #111/#93/#95; no command below was executed in
 this Linux session. Existing check deferrals and production qualification gates
 remain in place. A disk image supplies disposable software-test storage, not a

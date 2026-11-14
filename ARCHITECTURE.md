@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.23
+version: 0.1.24
 status: draft
 owners:
   - egohygiene
@@ -31,6 +31,16 @@ uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
 output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
+
+## Generated APFS image fault trials (#93)
+
+A separate explicitly invoked native test utility owns a fresh private image
+workspace and generated fixtures. Current hdiutil image/mount association and
+external record pins constrain detach/reattach; no arbitrary device or existing
+volume is accepted. Immutable intents preserve uncertain operations without
+replay or automatic cleanup. Captures describe simulated image faults and
+observed descriptor reads only. They cannot replace physical removable-volume
+evidence, mutation acceptance, durable recovery proof or release qualification.
 
 ## Held replacement subjects at namespace transitions (#95)
 
