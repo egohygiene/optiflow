@@ -102,3 +102,24 @@ pub fn inspect_retained_pair(
         "retained copy pair changed; no recovery action is authorized");
     equivalent(&current_source, &current_destination)
 }
+
+/// Bounded positional copy into an explicitly supplied empty private file.
+/// The caller owns exclusive destination creation and future namespace/journal
+/// policy. This function never truncates, renames, unlinks or removes a source.
+#[cfg(unix)]
+pub fn copy_to_staging(
+    source:&File,destination:&File,backend:&impl DescriptorPropertyBackend,
+    expected:&Observation,direction:Direction,maximum:u64,cancel:&impl Fn()->bool,
+)->Result<TransferReceipt>{
+    use std::os::unix::fs::{FileExt,MetadataExt};
+    recheck(source,backend,expected,maximum,cancel)?;check(cancel)?;
+    let initial=destination.metadata()?;ensure!(initial.is_file()&&initial.nlink()==1&&initial.ino()>0&&initial.len()==0&&(initial.dev(),initial.ino())!=(expected.subject.device_id,expected.subject.inode),"staging destination must be a distinct empty singly-linked regular file");
+    let mut offset=0u64;let mut buffer=[0u8;65_536];
+    while offset<expected.subject.byte_count {
+        check(cancel)?;let current=destination.metadata()?;ensure!(current.dev()==initial.dev()&&current.ino()==initial.ino()&&current.nlink()==1&&current.len()==offset,"staging destination changed during copy");
+        let count=usize::try_from((expected.subject.byte_count-offset).min(buffer.len() as u64))?;let n=source.read_at(&mut buffer[..count],offset)?;ensure!(n>0,"source truncated during staging copy");
+        destination.write_all_at(&buffer[..n],offset)?;offset=offset.checked_add(n as u64).context("staging copy overflow")?;ensure!(offset<=maximum,"staging copy exceeds selected bound");
+    }
+    check(cancel)?;ensure!(destination.metadata()?.len()==expected.subject.byte_count,"staging length differs after copy");
+    finish_copy(source,destination,backend,expected,direction,maximum,cancel)
+}

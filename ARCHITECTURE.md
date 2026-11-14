@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.20
+version: 0.1.21
 status: draft
 owners:
   - egohygiene
@@ -31,6 +31,17 @@ uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
 output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
+
+## Native metadata and bounded private staging (#111)
+
+A Darwin implementation of the existing descriptor-property port preserves
+ownership, mode, bounded xattrs, exact modification/creation times and zero BSD
+flags through held handles. ACL observation/replacement remains an explicitly
+supplied safe descriptor bridge with pinned identity; no dependency is silently
+adopted. The existing copy owner can stream bounded content into an explicit
+empty destination and then reuse independent property/readback/synchronization.
+The default backend and Mac cross-volume production dispatch remain unavailable;
+private-copy receipts confer no namespace commit, removal or qualification.
 
 ## Typed MP4 input and delivery handoff
 
