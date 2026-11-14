@@ -48,7 +48,7 @@ impl OwnedChild {
         if self.pid.is_init() {
             return Err(io::Error::other("refusing process-group signal for PID 1"));
         }
-        match kill_process_group(self.pid, Signal::Kill) {
+        match kill_process_group(self.pid, Signal::KILL) {
             Ok(()) | Err(rustix::io::Errno::SRCH) => {
                 self.group_signalled = true;
                 Ok(())

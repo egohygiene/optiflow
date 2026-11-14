@@ -8,6 +8,7 @@ use super::filesystem as fs;
 use super::finalization::FinalizationEvent;
 use super::model::*;
 use super::replacement::transaction::ReplacementEvent;
+use super::sqlite_integer::{read_nonnegative, write_nonnegative};
 use super::mutation::{MutationRun, MutationStatus};
 use super::recovery::RecoveryEvent;
 use super::{Result, failure};
@@ -209,7 +210,7 @@ impl Journal {
     pub(super) fn replacement_events(&self, fingerprint: &str) -> Result<Vec<ReplacementEvent>> {
         let (count,total):(u64,u64)=self.store.connection.query_row(
             "SELECT COUNT(*),COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
-            [fingerprint],|r|Ok((r.get(0)?,r.get(1)?))).map_err(state_error)?;
+            [fingerprint],|r|Ok((read_nonnegative(r,0)?,read_nonnegative(r,1)?))).map_err(state_error)?;
         if count>32||total>16_777_216 {return Err(state_error("replacement journal exceeds bounds"));}
         let documents: Vec<String> = self.store.connection.prepare(
             "SELECT document_json FROM execution_replacement_events WHERE plan_fingerprint=?1 ORDER BY sequence"
@@ -231,13 +232,14 @@ impl Journal {
         ReplacementEvent::from_json_slice(encoded.as_bytes()).map_err(state_error)?;
         let used:u64=self.store.connection.query_row(
             "SELECT COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
-            [&event.plan_fingerprint],|r|r.get(0)).map_err(state_error)?;
+            [&event.plan_fingerprint],|r|read_nonnegative(r,0)).map_err(state_error)?;
         if used.checked_add(encoded.len() as u64).is_none_or(|v|v>budget) {
             return Err(state_error("replacement journal budget exceeded"));
         }
+        let sequence = write_nonnegative(event.sequence).map_err(state_error)?;
         self.store.connection.execute(
             "INSERT INTO execution_replacement_events(plan_fingerprint,sequence,phase,document_json) VALUES (?1,?2,?3,?4)",
-            params![event.plan_fingerprint,event.sequence,event.phase,encoded]).map_err(state_error)?;
+            params![event.plan_fingerprint,sequence,event.phase,encoded]).map_err(state_error)?;
         self.sync_mutation_evidence()
     }
 
