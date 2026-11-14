@@ -1,0 +1,22 @@
+# Scope fixture only; never dispatched as a hosted workflow.
+name: Accept step-level runner context
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        type: choice
+        options: [pr, scheduled, extended]
+        default: pr
+  schedule:
+    - cron: '17 6 * * 1'
+jobs:
+  corpus:
+    if: github.event_name == 'workflow_dispatch' || vars.ANIFLOW_CORPUS_QUALIFICATION == 'enabled'
+    runs-on: ubuntu-latest
+    env:
+      CORPUS_TIER: "${{ inputs.tier || 'scheduled' }}"
+    steps:
+      - name: Observe the explicit step environment
+        env:
+          CORPUS_OUTPUT: '${{ runner.temp }}/corpus'
+        run: printf '%s\n' "$CORPUS_TIER" "$CORPUS_OUTPUT"

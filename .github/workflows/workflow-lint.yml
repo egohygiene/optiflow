@@ -1,0 +1,51 @@
+---
+name: Workflow expressions
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/check-workflows.py'
+      - 'tests/workflows/**'
+      - 'Taskfile.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/check-workflows.py'
+      - 'tests/workflows/**'
+      - 'Taskfile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  workflow-expressions:
+    name: Validate workflow expressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install and check the pinned expression linter
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow_lint_dir="$RUNNER_TEMP/actionlint-1.7.12"
+          mkdir -- "$workflow_lint_dir"
+          curl --fail --location --silent --show-error --retry 2 \
+            --output "$workflow_lint_dir/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          printf '%s  %s\n' \
+            8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 \
+            "$workflow_lint_dir/actionlint.tar.gz" | sha256sum --check --strict
+          tar --extract --gzip --file "$workflow_lint_dir/actionlint.tar.gz" \
+            --directory "$workflow_lint_dir" actionlint
+          python3 -B scripts/check-workflows.py --actionlint "$workflow_lint_dir/actionlint"

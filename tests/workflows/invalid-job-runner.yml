@@ -1,0 +1,10 @@
+# Deliberately invalid input to the linter regression, outside .github/workflows.
+name: Refuse job-level runner context
+on: workflow_dispatch
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    env:
+      CORPUS_OUTPUT: '${{ runner.temp }}/corpus'
+    steps:
+      - run: ':'
