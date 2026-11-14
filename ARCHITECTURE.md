@@ -8,7 +8,7 @@ status: draft
 owners:
   - egohygiene
 created: 2026-08-18
-updated: 2026-11-12
+updated: 2026-11-13
 governed_by:
   - architecture-architecture
 depends_on:
@@ -22,6 +22,15 @@ supersedes: []
 ---
 
 # OptiFlow Architecture
+
+## Local support diagnostics
+
+An explicitly selected support command bypasses media configuration, persistent
+state and provider discovery. Its product-owned SDK generates bounded metadata,
+uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
+output semantics. Health distinguishes unsupported exporters from unknown
+measurements. Support output cannot authorize mutation, validate user media or
+establish native qualification; it initializes no telemetry or network service.
 
 ## Typed MP4 input and delivery handoff
 

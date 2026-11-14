@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/flow/schemas/support-bundle-v1.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "egohygiene.diagnostics-bundle/v1"
+    },
+    "producer": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "enum": [
+            "flow",
+            "aniflow",
+            "optiflow",
+            "renderflow"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9][A-Za-z0-9.+_-]*$"
+        }
+      },
+      "required": [
+        "tool",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "created_unix_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "redaction_policy": {
+      "const": "generated_allowlist.v1"
+    },
+    "domain_evidence": {
+      "const": false
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "build.json"
+              },
+              "digest": {
+                "type": "object",
+                "properties": {
+                  "algorithm": {
+                    "enum": [
+                      "sha256",
+                      "blake3-256"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "algorithm",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "byte_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "const": "build"
+                  },
+                  "producer": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "enum": [
+                          "flow",
+                          "aniflow",
+                          "optiflow",
+                          "renderflow"
+                        ]
+                      },
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[0-9][A-Za-z0-9.+_-]*$"
+                      }
+                    },
+                    "required": [
+                      "tool",
+                      "version"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "category",
+                  "producer"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "digest",
+              "byte_count",
+              "payload"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "platform.json"
+              },
+              "digest": {
+                "type": "object",
+                "properties": {
+                  "algorithm": {
+                    "enum": [
+                      "sha256",
+                      "blake3-256"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "algorithm",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "byte_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "const": "platform"
+                  },
+                  "compiled_os": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9._+-]+$"
+                  },
+                  "compiled_arch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9._+-]+$"
+                  }
+                },
+                "required": [
+                  "category",
+                  "compiled_os",
+                  "compiled_arch"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "digest",
+              "byte_count",
+              "payload"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "contracts.json"
+              },
+              "digest": {
+                "type": "object",
+                "properties": {
+                  "algorithm": {
+                    "enum": [
+                      "sha256",
+                      "blake3-256"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "algorithm",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "byte_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "const": "contracts"
+                  },
+                  "identifiers": {
+                    "const": [
+                      "egohygiene.diagnostics-request/v1",
+                      "egohygiene.diagnostics-bundle/v1",
+                      "egohygiene.observability-health/v1"
+                    ]
+                  }
+                },
+                "required": [
+                  "category",
+                  "identifiers"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "digest",
+              "byte_count",
+              "payload"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "health.json"
+              },
+              "digest": {
+                "type": "object",
+                "properties": {
+                  "algorithm": {
+                    "enum": [
+                      "sha256",
+                      "blake3-256"
+                    ]
+                  },
+                  "value": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "algorithm",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "byte_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "const": "health"
+                  },
+                  "observation": {
+                    "type": "object",
+                    "properties": {
+                      "schema_version": {
+                        "const": "egohygiene.observability-health/v1"
+                      },
+                      "producer": {
+                        "type": "object",
+                        "properties": {
+                          "tool": {
+                            "enum": [
+                              "flow",
+                              "aniflow",
+                              "optiflow",
+                              "renderflow"
+                            ]
+                          },
+                          "version": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[0-9][A-Za-z0-9.+_-]*$"
+                          }
+                        },
+                        "required": [
+                          "tool",
+                          "version"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "logging_compiled": {
+                        "type": "boolean"
+                      },
+                      "logging_runtime_observed": {
+                        "const": false
+                      },
+                      "subscriber_initialized_by_diagnostics": {
+                        "const": false
+                      },
+                      "exporters_compiled": {
+                        "const": false
+                      },
+                      "collector_state": {
+                        "const": "not_applicable_no_exporter"
+                      },
+                      "queue_records": {
+                        "const": null
+                      },
+                      "dropped_records": {
+                        "const": null
+                      },
+                      "flush_state": {
+                        "const": "not_applicable_no_exporter"
+                      },
+                      "file_identity_supported": {
+                        "type": "boolean"
+                      },
+                      "network_contacted": {
+                        "const": false
+                      },
+                      "domain_evidence": {
+                        "const": false
+                      }
+                    },
+                    "required": [
+                      "schema_version",
+                      "producer",
+                      "logging_compiled",
+                      "logging_runtime_observed",
+                      "subscriber_initialized_by_diagnostics",
+                      "exporters_compiled",
+                      "collector_state",
+                      "queue_records",
+                      "dropped_records",
+                      "flush_state",
+                      "file_identity_supported",
+                      "network_contacted",
+                      "domain_evidence"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "category",
+                  "observation"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "name",
+              "digest",
+              "byte_count",
+              "payload"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "exclusions": {
+      "const": [
+        "media_documents",
+        "prompts_lyrics_captions_transcripts",
+        "environment_credentials_headers",
+        "argv_child_captures",
+        "private_paths_hostnames",
+        "raw_logs_traces_metrics_backtraces",
+        "durable_run_artifacts"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "producer",
+    "created_unix_ms",
+    "redaction_policy",
+    "domain_evidence",
+    "members",
+    "exclusions"
+  ],
+  "additionalProperties": false
+}
