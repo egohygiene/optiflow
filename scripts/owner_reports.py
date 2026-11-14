@@ -287,9 +287,19 @@ def qualified(request):
             "clean_install": request["clean_install"], "qualification": request["qualification"], "witness": witness, "requirements": requirements}
 
 
+def assemble(kind, request):
+    if kind == "publisher":
+        return publisher(request)
+    if kind == "qualified":
+        return qualified(request)
+    require(kind == "mutation-review", "supported owner report kind required")
+    import mutation_review
+    return mutation_review.build(request)
+
+
 def emit(kind, request, output):
     initial = canonical(request)
-    report = publisher(request) if kind == "publisher" else qualified(request)
+    report = assemble(kind, request)
     output = Path(output).absolute()
     require(output.parent.resolve(strict=True) == output.parent and not output.exists(), "fresh canonical output directory required")
     # Keep output separate from every selected pin, including proof directories.
@@ -316,16 +326,16 @@ def emit(kind, request, output):
         stream.flush()
         os.fsync(stream.fileno())
     # A second complete readback prevents a supplied record changing during assembly.
-    now = publisher(request) if kind == "publisher" else qualified(request)
+    now = assemble(kind, request)
     require(now == report and canonical(request) == initial, "source evidence changed during report assembly; preserve partial output")
     return {"schema_version": "egohygiene.owner-report-output/v1", "tool": TOOL, "kind": kind, "report": file_pin(path, MAX_JSON),
             "signature_state": "unsigned_candidate", "native_work_performed": False, "publication_performed": False,
-            "next_action": "review and attest these exact report bytes through the existing owner workflow; consumer verification remains required"}
+            "next_action": ("resolve native/hardware/release review findings; this review cannot activate runtime or publication gates" if kind == "mutation-review" else "review and attest these exact report bytes through the existing owner workflow; consumer verification remains required")}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=["publisher", "qualified"])
+    parser.add_argument("kind", choices=["publisher", "qualified", "mutation-review"])
     parser.add_argument("--request", required=True, type=Path)
     parser.add_argument("--output-directory", required=True, type=Path)
     args = parser.parse_args()
