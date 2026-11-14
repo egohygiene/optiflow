@@ -429,9 +429,16 @@ fn apply_document(
         path: Some(SerializedPath::from_path(path)),
     };
     if let Some(settings) = &document.mp4_delivery {
-        working.mp4_delivery.apply(settings, provenance("mp4_delivery")).map_err(|error| {
-            path_diagnostic(DiagnosticCode::ConfigurationValueInvalid,path,format!("MP4 configuration could not be materialized: {error}"))
-        })?;
+        working
+            .mp4_delivery
+            .apply(settings, provenance("mp4_delivery"))
+            .map_err(|error| {
+                path_diagnostic(
+                    DiagnosticCode::ConfigurationValueInvalid,
+                    path,
+                    format!("MP4 configuration could not be materialized: {error}"),
+                )
+            })?;
     }
     if let Some(format) = document.output.as_ref().and_then(|output| output.format) {
         replace(

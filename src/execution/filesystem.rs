@@ -161,18 +161,31 @@ pub fn check_mutation_platform(plan: &ExecutionPlan) -> Result<()> {
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn check_mutation_platform(_plan: &ExecutionPlan) -> Result<()> {
-    Err(failure(Code::ExecutionUnsupported, "mutation filesystem evidence requires Linux or macOS APFS"))
+    Err(failure(
+        Code::ExecutionUnsupported,
+        "mutation filesystem evidence requires Linux or macOS APFS",
+    ))
 }
 
 #[cfg(target_os = "macos")]
 pub(super) fn require_apfs(file: &File) -> Result<()> {
-    let filesystem = rustix::fs::fstatfs(file).map_err(|error| failure(
-        Code::ExecutionUnsupported, format!("cannot identify mutation filesystem: {error}"),
-    ))?;
-    let name: Vec<u8> = filesystem.f_fstypename.iter()
-        .take_while(|byte| **byte != 0).map(|byte| *byte as u8).collect();
+    let filesystem = rustix::fs::fstatfs(file).map_err(|error| {
+        failure(
+            Code::ExecutionUnsupported,
+            format!("cannot identify mutation filesystem: {error}"),
+        )
+    })?;
+    let name: Vec<u8> = filesystem
+        .f_fstypename
+        .iter()
+        .take_while(|byte| **byte != 0)
+        .map(|byte| *byte as u8)
+        .collect();
     if name != b"apfs" {
-        return Err(failure(Code::ExecutionUnsupported, "macOS mutation requires an observed APFS filesystem"));
+        return Err(failure(
+            Code::ExecutionUnsupported,
+            "macOS mutation requires an observed APFS filesystem",
+        ));
     }
     Ok(())
 }
@@ -180,26 +193,44 @@ pub(super) fn require_apfs(file: &File) -> Result<()> {
 /// Recheck the actual opened objects, not merely their declared parent paths,
 /// immediately before a same-volume move or restore.
 #[cfg(target_os = "macos")]
-pub fn check_rename_platform(source: &File, source_parent: &File, destination_parent: &File) -> Result<()> {
+pub fn check_rename_platform(
+    source: &File,
+    source_parent: &File,
+    destination_parent: &File,
+) -> Result<()> {
     use std::os::unix::fs::MetadataExt;
     require_apfs(source)?;
     require_apfs(source_parent)?;
     require_apfs(destination_parent)?;
     let device = metadata(source)?.dev();
     if metadata(source_parent)?.dev() != device || metadata(destination_parent)?.dev() != device {
-        return Err(failure(Code::ExecutionUnsupported, "opened macOS rename objects are not on the same APFS volume"));
+        return Err(failure(
+            Code::ExecutionUnsupported,
+            "opened macOS rename objects are not on the same APFS volume",
+        ));
     }
     Ok(())
 }
 
 #[cfg(target_os = "linux")]
-pub fn check_rename_platform(_source: &File, _source_parent: &File, _destination_parent: &File) -> Result<()> {
+pub fn check_rename_platform(
+    _source: &File,
+    _source_parent: &File,
+    _destination_parent: &File,
+) -> Result<()> {
     Ok(())
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-pub fn check_rename_platform(_source: &File, _source_parent: &File, _destination_parent: &File) -> Result<()> {
-    Err(failure(Code::ExecutionUnsupported, "mutation rename platform is unsupported"))
+pub fn check_rename_platform(
+    _source: &File,
+    _source_parent: &File,
+    _destination_parent: &File,
+) -> Result<()> {
+    Err(failure(
+        Code::ExecutionUnsupported,
+        "mutation rename platform is unsupported",
+    ))
 }
 
 /// Synchronize without silently falling back from Darwin F_FULLFSYNC. A
@@ -207,29 +238,44 @@ pub fn check_rename_platform(_source: &File, _source_parent: &File, _destination
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn sync_file(file: &File) -> Result<()> {
     #[cfg(target_os = "linux")]
-    file.sync_all().map_err(|error| failure(
-        Code::StateTransactionFailed, format!("filesystem synchronization failed: {error}"),
-    ))?;
+    file.sync_all().map_err(|error| {
+        failure(
+            Code::StateTransactionFailed,
+            format!("filesystem synchronization failed: {error}"),
+        )
+    })?;
     #[cfg(target_os = "macos")]
     {
-        rustix::fs::fsync(file).map_err(|error| failure(
-            Code::StateTransactionFailed, format!("macOS filesystem synchronization failed: {error}"),
-        ))?;
-        rustix::fs::fcntl_fullfsync(file).map_err(|error| failure(
-            Code::ExecutionUnsupported, format!("macOS durable F_FULLFSYNC is unavailable: {error}"),
-        ))?;
+        rustix::fs::fsync(file).map_err(|error| {
+            failure(
+                Code::StateTransactionFailed,
+                format!("macOS filesystem synchronization failed: {error}"),
+            )
+        })?;
+        rustix::fs::fcntl_fullfsync(file).map_err(|error| {
+            failure(
+                Code::ExecutionUnsupported,
+                format!("macOS durable F_FULLFSYNC is unavailable: {error}"),
+            )
+        })?;
     }
     Ok(())
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn sync_file(_file: &File) -> Result<()> {
-    Err(failure(Code::ExecutionUnsupported, "durable mutation synchronization is unsupported"))
+    Err(failure(
+        Code::ExecutionUnsupported,
+        "durable mutation synchronization is unsupported",
+    ))
 }
 
 pub fn sync_directory(file: &File) -> Result<()> {
     if !metadata(file)?.is_dir() {
-        return Err(failure(Code::ExecutionScopeInvalid, "directory synchronization requires a directory handle"));
+        return Err(failure(
+            Code::ExecutionScopeInvalid,
+            "directory synchronization requires a directory handle",
+        ));
     }
     sync_file(file)
 }
@@ -587,7 +633,11 @@ mod tests {
         let error = check_macos_mutation_topologies([CrossFilesystem, CrossFilesystem])
             .expect_err("cross-volume intent must remain unsupported");
         assert_eq!(error.code, Code::ExecutionUnsupported);
-        assert!(error.message.contains("descriptor-bound ACL observation and preservation"));
+        assert!(
+            error
+                .message
+                .contains("descriptor-bound ACL observation and preservation")
+        );
     }
 
     #[test]
@@ -599,7 +649,11 @@ mod tests {
             let error = check_macos_mutation_topologies(topologies)
                 .expect_err("a supported prefix cannot authorize a mixed plan");
             assert_eq!(error.code, Code::ExecutionUnsupported);
-            assert!(error.message.contains("descriptor-bound ACL observation and preservation"));
+            assert!(
+                error
+                    .message
+                    .contains("descriptor-bound ACL observation and preservation")
+            );
         }
     }
 }

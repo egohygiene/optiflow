@@ -59,7 +59,7 @@ pub struct SubprocessCommand {
     program: OsString,
     arguments: Vec<OsString>,
     clear_environment: bool,
-    environment: Vec<(OsString,OsString)>,
+    environment: Vec<(OsString, OsString)>,
     current_directory: Option<PathBuf>,
 }
 
@@ -96,7 +96,8 @@ impl SubprocessCommand {
 
     /// Supply an explicit environment allowlist after inherited values are cleared.
     pub fn env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
-        self.environment.push((key.into(),value.into())); self
+        self.environment.push((key.into(), value.into()));
+        self
     }
 
     /// Select an explicit working directory for the command.
@@ -605,13 +606,21 @@ impl SubprocessRunner {
                 self.limits.poll_interval,
                 &is_cancelled,
             )?;
-            pipe_capture::run(command, input, self.limits, started, deadline, &is_cancelled)
+            pipe_capture::run(
+                command,
+                input,
+                self.limits,
+                started,
+                deadline,
+                &is_cancelled,
+            )
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
             let _ = (command, input, is_cancelled);
             Err(SubprocessError::InvalidConfiguration {
-                message: "nonblocking pipe capture is implemented only on Linux and macOS".to_owned(),
+                message: "nonblocking pipe capture is implemented only on Linux and macOS"
+                    .to_owned(),
             })
         }
     }
@@ -691,7 +700,7 @@ impl SubprocessRunner {
         if command.clear_environment {
             process.env_clear();
         }
-        process.envs(command.environment.iter().map(|(key,value)| (key,value)));
+        process.envs(command.environment.iter().map(|(key, value)| (key, value)));
         if let Some(directory) = &command.current_directory {
             process.current_dir(directory);
         }

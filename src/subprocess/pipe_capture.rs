@@ -140,7 +140,7 @@ where
     if command.clear_environment {
         process.env_clear();
     }
-    process.envs(command.environment.iter().map(|(key,value)| (key,value)));
+    process.envs(command.environment.iter().map(|(key, value)| (key, value)));
     if let Some(directory) = &command.current_directory {
         process.current_dir(directory);
     }
@@ -168,7 +168,12 @@ where
             stderr: String::from_utf8_lossy(&stderr).trim().to_owned(),
         });
     }
-    Ok(SubprocessOutput { stdout, stderr, exit_code: status.code(), elapsed: started.elapsed() })
+    Ok(SubprocessOutput {
+        stdout,
+        stderr,
+        exit_code: status.code(),
+        elapsed: started.elapsed(),
+    })
 }
 
 fn nonblocking(fd: &impl AsFd) -> io::Result<()> {
@@ -187,10 +192,15 @@ where
     F: Fn() -> bool,
 {
     if cancelled() {
-        return Err(SubprocessError::Cancelled { program: program.to_owned() });
+        return Err(SubprocessError::Cancelled {
+            program: program.to_owned(),
+        });
     }
     if Instant::now() >= deadline {
-        return Err(SubprocessError::Timeout { program: program.to_owned(), timeout: limits.timeout });
+        return Err(SubprocessError::Timeout {
+            program: program.to_owned(),
+            timeout: limits.timeout,
+        });
     }
     Ok(())
 }
@@ -232,17 +242,24 @@ where
     loop {
         check_progress(program, limits, deadline, cancelled)?;
         let mut progressed = drain(
-            &mut stdout, &mut captured_stdout, limits.max_stdout_bytes,
-            OutputStream::Stdout, program,
+            &mut stdout,
+            &mut captured_stdout,
+            limits.max_stdout_bytes,
+            OutputStream::Stdout,
+            program,
         )?;
         check_progress(program, limits, deadline, cancelled)?;
         progressed |= drain(
-            &mut stderr, &mut captured_stderr, limits.max_stderr_bytes,
-            OutputStream::Stderr, program,
+            &mut stderr,
+            &mut captured_stderr,
+            limits.max_stderr_bytes,
+            OutputStream::Stderr,
+            program,
         )?;
         check_progress(program, limits, deadline, cancelled)?;
         let exited = child.poll_exited().map_err(|error| SubprocessError::Wait {
-            program: program.to_owned(), message: error.to_string(),
+            program: program.to_owned(),
+            message: error.to_string(),
         })?;
         if exited {
             stdin = None;
@@ -258,9 +275,12 @@ where
         } else if let Some(writer) = stdin.as_mut() {
             let end = input.len().min(position.saturating_add(IO_TURN));
             match writer.write(&input[position..end]) {
-                Ok(0) => return Err(SubprocessError::InputWrite {
-                    program: program.to_owned(), message: "stdin write made no progress".to_owned(),
-                }),
+                Ok(0) => {
+                    return Err(SubprocessError::InputWrite {
+                        program: program.to_owned(),
+                        message: "stdin write made no progress".to_owned(),
+                    });
+                }
                 Ok(count) => {
                     position += count;
                     progressed = true;
@@ -268,15 +288,26 @@ where
                         stdin = None;
                     }
                 }
-                Err(error) if matches!(error.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) => {}
-                Err(error) => return Err(SubprocessError::InputWrite {
-                    program: program.to_owned(), message: error.to_string(),
-                }),
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                    ) => {}
+                Err(error) => {
+                    return Err(SubprocessError::InputWrite {
+                        program: program.to_owned(),
+                        message: error.to_string(),
+                    });
+                }
             }
         }
         check_progress(program, limits, deadline, cancelled)?;
         if !progressed {
-            thread::sleep(limits.poll_interval.min(deadline.saturating_duration_since(Instant::now())));
+            thread::sleep(
+                limits
+                    .poll_interval
+                    .min(deadline.saturating_duration_since(Instant::now())),
+            );
         }
     }
 }
@@ -288,7 +319,9 @@ fn drain<R: Read>(
     stream: OutputStream,
     program: &str,
 ) -> Result<bool, SubprocessError> {
-    let Some(pipe) = reader.as_mut() else { return Ok(false); };
+    let Some(pipe) = reader.as_mut() else {
+        return Ok(false);
+    };
     let mut buffer = [0u8; IO_CHUNK];
     let mut total = 0;
     loop {
@@ -303,18 +336,26 @@ fn drain<R: Read>(
                 let observed = captured.len().saturating_add(count);
                 if observed > limit {
                     return Err(SubprocessError::Truncated {
-                        program: program.to_owned(), stream, limit_bytes: limit, observed_bytes: observed,
+                        program: program.to_owned(),
+                        stream,
+                        limit_bytes: limit,
+                        observed_bytes: observed,
                     });
                 }
                 if observed > captured.capacity() {
                     // Geometric growth avoids repeatedly copying a large
                     // capture, while the requested capacity never exceeds its
                     // byte cap. Allocator overhead is not an RSS guarantee.
-                    let target = captured.capacity().saturating_mul(2)
-                        .max(observed).min(limit);
-                    captured.try_reserve_exact(target - captured.len())
+                    let target = captured
+                        .capacity()
+                        .saturating_mul(2)
+                        .max(observed)
+                        .min(limit);
+                    captured
+                        .try_reserve_exact(target - captured.len())
                         .map_err(|error| SubprocessError::OutputRead {
-                            program: program.to_owned(), stream,
+                            program: program.to_owned(),
+                            stream,
                             message: format!("capture allocation failed: {error}"),
                         })?;
                 }
@@ -328,9 +369,13 @@ fn drain<R: Read>(
             // Return to the outer loop so repeated interrupts cannot starve
             // cancellation/deadline checks.
             Err(error) if error.kind() == io::ErrorKind::Interrupted => return Ok(total != 0),
-            Err(error) => return Err(SubprocessError::OutputRead {
-                program: program.to_owned(), stream, message: error.to_string(),
-            }),
+            Err(error) => {
+                return Err(SubprocessError::OutputRead {
+                    program: program.to_owned(),
+                    stream,
+                    message: error.to_string(),
+                });
+            }
         }
     }
 }
@@ -343,9 +388,13 @@ mod tests {
 
     fn runner(stdout: usize, stderr: usize) -> SubprocessRunner {
         SubprocessRunner::new(SubprocessLimits {
-            timeout: Duration::from_secs(2), poll_interval: Duration::from_millis(2),
-            max_stdout_bytes: stdout, max_stderr_bytes: stderr, max_concurrent_children: 1,
-        }).unwrap()
+            timeout: Duration::from_secs(2),
+            poll_interval: Duration::from_millis(2),
+            max_stdout_bytes: stdout,
+            max_stderr_bytes: stderr,
+            max_concurrent_children: 1,
+        })
+        .unwrap()
     }
 
     fn shell(script: &str) -> SubprocessCommand {
@@ -356,79 +405,131 @@ mod tests {
     fn bidirectional_input_larger_than_pipe_capacity_has_no_deadlock() {
         let input = vec![b'x'; 1024 * 1024];
         let output = runner(input.len(), 0)
-            .run_with_bounded_pipes_and_cancel(&shell("cat"), &input, || false).unwrap();
+            .run_with_bounded_pipes_and_cancel(&shell("cat"), &input, || false)
+            .unwrap();
         assert_eq!(output.stdout, input);
         assert!(output.stderr.is_empty());
     }
 
     #[test]
     fn stdout_overflow_terminates_without_waiting_for_child_exit() {
-        let error = runner(17, 0).run_with_bounded_pipes_and_cancel(
-            &shell("while :; do printf abcdefgh; done"), &[], || false,
-        ).unwrap_err();
-        assert!(matches!(error, SubprocessError::Truncated {
-            stream: OutputStream::Stdout, limit_bytes: 17, observed_bytes: 18, ..
-        }));
+        let error = runner(17, 0)
+            .run_with_bounded_pipes_and_cancel(
+                &shell("while :; do printf abcdefgh; done"),
+                &[],
+                || false,
+            )
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            SubprocessError::Truncated {
+                stream: OutputStream::Stdout,
+                limit_bytes: 17,
+                observed_bytes: 18,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn stderr_overflow_terminates_while_stdin_is_blocked() {
         let input = vec![0; 1024 * 1024];
-        let error = runner(0, 17).run_with_bounded_pipes_and_cancel(
-            &shell("while :; do printf abcdefgh >&2; done"), &input, || false,
-        ).unwrap_err();
-        assert!(matches!(error, SubprocessError::Truncated {
-            stream: OutputStream::Stderr, limit_bytes: 17, observed_bytes: 18, ..
-        }));
+        let error = runner(0, 17)
+            .run_with_bounded_pipes_and_cancel(
+                &shell("while :; do printf abcdefgh >&2; done"),
+                &input,
+                || false,
+            )
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            SubprocessError::Truncated {
+                stream: OutputStream::Stderr,
+                limit_bytes: 17,
+                observed_bytes: 18,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn exact_and_zero_output_limits_are_distinct_from_excess() {
-        assert_eq!(runner(3, 0).run_with_bounded_pipes_and_cancel(
-            &shell("printf abc"), &[], || false,
-        ).unwrap().stdout, b"abc");
-        assert!(runner(0, 0).run_with_bounded_pipes_and_cancel(
-            &shell("exit 0"), &[], || false,
-        ).is_ok());
-        assert!(matches!(runner(0, 0).run_with_bounded_pipes_and_cancel(
-            &shell("printf x"), &[], || false,
-        ), Err(SubprocessError::Truncated { limit_bytes: 0, observed_bytes: 1, .. })));
+        assert_eq!(
+            runner(3, 0)
+                .run_with_bounded_pipes_and_cancel(&shell("printf abc"), &[], || false,)
+                .unwrap()
+                .stdout,
+            b"abc"
+        );
+        assert!(
+            runner(0, 0)
+                .run_with_bounded_pipes_and_cancel(&shell("exit 0"), &[], || false,)
+                .is_ok()
+        );
+        assert!(matches!(
+            runner(0, 0).run_with_bounded_pipes_and_cancel(&shell("printf x"), &[], || false,),
+            Err(SubprocessError::Truncated {
+                limit_bytes: 0,
+                observed_bytes: 1,
+                ..
+            })
+        ));
     }
 
     #[test]
     fn cancellation_and_deadline_stop_nonreading_children() {
         let started = Instant::now();
-        assert!(matches!(runner(0, 0).run_with_bounded_pipes_and_cancel(
-            &shell("while :; do :; done"), &[0; 32], || started.elapsed() >= Duration::from_millis(25),
-        ), Err(SubprocessError::Cancelled { .. })));
+        assert!(matches!(
+            runner(0, 0).run_with_bounded_pipes_and_cancel(
+                &shell("while :; do :; done"),
+                &[0; 32],
+                || started.elapsed() >= Duration::from_millis(25),
+            ),
+            Err(SubprocessError::Cancelled { .. })
+        ));
         let mut limits = runner(0, 0).limits();
         limits.timeout = Duration::from_millis(25);
-        assert!(matches!(SubprocessRunner::new(limits).unwrap().run_with_bounded_pipes_and_cancel(
-            &shell("while :; do :; done"), &[0; 32], || false,
-        ), Err(SubprocessError::Timeout { .. })));
+        assert!(matches!(
+            SubprocessRunner::new(limits)
+                .unwrap()
+                .run_with_bounded_pipes_and_cancel(&shell("while :; do :; done"), &[0; 32], || {
+                    false
+                },),
+            Err(SubprocessError::Timeout { .. })
+        ));
     }
 
     #[test]
     fn exited_leader_cleans_same_group_pipe_holders_before_reaping() {
-        let output = runner(4, 0).run_with_bounded_pipes_and_cancel(
-            &shell("sleep 10 & printf done; exit 0"), &[], || false,
-        ).unwrap();
+        let output = runner(4, 0)
+            .run_with_bounded_pipes_and_cancel(
+                &shell("sleep 10 & printf done; exit 0"),
+                &[],
+                || false,
+            )
+            .unwrap();
         assert_eq!(output.stdout, b"done");
     }
 
     #[test]
     fn nonzero_exit_retains_bounded_diagnostics() {
-        let error = runner(0, 32).run_with_bounded_pipes_and_cancel(
-            &shell("printf denied >&2; exit 7"), &[], || false,
-        ).unwrap_err();
-        assert!(matches!(error, SubprocessError::Exit { code: Some(7), ref stderr, .. } if stderr == "denied"));
+        let error = runner(0, 32)
+            .run_with_bounded_pipes_and_cancel(&shell("printf denied >&2; exit 7"), &[], || false)
+            .unwrap_err();
+        assert!(
+            matches!(error, SubprocessError::Exit { code: Some(7), ref stderr, .. } if stderr == "denied")
+        );
     }
 
     #[test]
     fn pre_cancelled_request_does_not_spawn_missing_executable() {
-        let error = runner(0, 0).run_with_bounded_pipes_and_cancel(
-            &SubprocessCommand::new("/synthetic/not-installed/provider"), &[], || true,
-        ).unwrap_err();
+        let error = runner(0, 0)
+            .run_with_bounded_pipes_and_cancel(
+                &SubprocessCommand::new("/synthetic/not-installed/provider"),
+                &[],
+                || true,
+            )
+            .unwrap_err();
         assert!(matches!(error, SubprocessError::Cancelled { .. }));
     }
 }

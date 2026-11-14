@@ -201,9 +201,9 @@ fn require_object_shapes(value: &serde_json::Value) -> Result<(), PropertyError>
     require_object(&value["mtime"], "mtime")?;
     require_object(&value["birthtime"], "birthtime")?;
     require_object(&value["acl"], "ACL")?;
-    let attributes = value["xattrs"].as_array().ok_or_else(|| {
-        PropertyError::Malformed("xattrs must be an array of objects".to_owned())
-    })?;
+    let attributes = value["xattrs"]
+        .as_array()
+        .ok_or_else(|| PropertyError::Malformed("xattrs must be an array of objects".to_owned()))?;
     for attribute in attributes {
         require_object(attribute, "extended attribute")?;
     }
@@ -220,7 +220,9 @@ fn require_object_shapes(value: &serde_json::Value) -> Result<(), PropertyError>
 
 fn require_object(value: &serde_json::Value, name: &str) -> Result<(), PropertyError> {
     if !value.is_object() {
-        return Err(PropertyError::Malformed(format!("{name} must be an object")));
+        return Err(PropertyError::Malformed(format!(
+            "{name} must be an object"
+        )));
     }
     Ok(())
 }
@@ -230,24 +232,35 @@ fn require_object(value: &serde_json::Value, name: &str) -> Result<(), PropertyE
 /// Callers constructing this value directly own its prior allocation costs;
 /// use [`parse`] for bounded byte input. No ACL entries are sorted or removed,
 /// and noncanonical xattr ordering is refused rather than repaired.
-pub fn review(
-    snapshot: MacApfsCrossCopyPropertiesV1,
-) -> Result<ReviewedProperties, PropertyError> {
+pub fn review(snapshot: MacApfsCrossCopyPropertiesV1) -> Result<ReviewedProperties, PropertyError> {
     if snapshot.schema != SCHEMA {
-        return Err(PropertyError::Schema("expected the standalone v1 schema".to_owned()));
+        return Err(PropertyError::Schema(
+            "expected the standalone v1 schema".to_owned(),
+        ));
     }
     if snapshot.profile != PROFILE {
-        return Err(PropertyError::Unsupported("expected macos-apfs-cross-copy/v1".to_owned()));
+        return Err(PropertyError::Unsupported(
+            "expected macos-apfs-cross-copy/v1".to_owned(),
+        ));
     }
     if !(0o100000..=0o107777).contains(&snapshot.mode) {
-        return Err(PropertyError::Unsupported("mode must describe a regular file".to_owned()));
+        return Err(PropertyError::Unsupported(
+            "mode must describe a regular file".to_owned(),
+        ));
     }
     if snapshot.bsd_flags != 0 {
-        return Err(PropertyError::Unsupported("nonzero BSD flags are outside this profile".to_owned()));
+        return Err(PropertyError::Unsupported(
+            "nonzero BSD flags are outside this profile".to_owned(),
+        ));
     }
-    for (name, timestamp) in [("mtime", &snapshot.mtime), ("birthtime", &snapshot.birthtime)] {
+    for (name, timestamp) in [
+        ("mtime", &snapshot.mtime),
+        ("birthtime", &snapshot.birthtime),
+    ] {
         if timestamp.nanoseconds >= 1_000_000_000 {
-            return Err(PropertyError::NonCanonical(format!("{name} nanoseconds must be below one billion")));
+            return Err(PropertyError::NonCanonical(format!(
+                "{name} nanoseconds must be below one billion"
+            )));
         }
     }
     review_xattrs(&snapshot.xattrs)?;
@@ -255,40 +268,58 @@ pub fn review(
     // Bound the canonical ACL object itself, including the state discriminator
     // and all entry fields. Entry limits already make this a conservative cap.
     if canonical_bytes(&snapshot.acl)?.len() > MAX_ACL_ENCODED_BYTES {
-        return Err(PropertyError::Bounds("encoded ACL exceeds 64 KiB".to_owned()));
+        return Err(PropertyError::Bounds(
+            "encoded ACL exceeds 64 KiB".to_owned(),
+        ));
     }
 
     // All declaration fields, including SCHEMA and PROFILE, participate.
     // Explicit recursive ordering also works with serde_json preserve_order.
     let canonical = canonical_bytes(&snapshot)?;
     let fingerprint = blake3::hash(&canonical).to_hex().to_string();
-    Ok(ReviewedProperties { snapshot, fingerprint })
+    Ok(ReviewedProperties {
+        snapshot,
+        fingerprint,
+    })
 }
 
 fn review_xattrs(attributes: &[ExtendedAttribute]) -> Result<(), PropertyError> {
     if attributes.len() > MAX_XATTRS {
-        return Err(PropertyError::Bounds("more than 128 extended attributes".to_owned()));
+        return Err(PropertyError::Bounds(
+            "more than 128 extended attributes".to_owned(),
+        ));
     }
     let mut previous: Option<&str> = None;
     let mut total = 0usize;
     for attribute in attributes {
         review_hex(&attribute.name_hex, MAX_XATTR_NAME_BYTES, "xattr name")?;
         if attribute.name_hex.is_empty()
-            || attribute.name_hex.as_bytes().chunks_exact(2).any(|pair| pair == b"00")
+            || attribute
+                .name_hex
+                .as_bytes()
+                .chunks_exact(2)
+                .any(|pair| pair == b"00")
         {
-            return Err(PropertyError::NonCanonical("xattr names must be nonempty and NUL-free".to_owned()));
+            return Err(PropertyError::NonCanonical(
+                "xattr names must be nonempty and NUL-free".to_owned(),
+            ));
         }
         // Lowercase hex is order-preserving for byte strings, so no decoding
         // or allocation is needed to compare canonical raw names.
         if previous.is_some_and(|name| name >= attribute.name_hex.as_str()) {
-            return Err(PropertyError::NonCanonical("xattr names must be strictly increasing and unique".to_owned()));
+            return Err(PropertyError::NonCanonical(
+                "xattr names must be strictly increasing and unique".to_owned(),
+            ));
         }
         previous = Some(&attribute.name_hex);
         let length = review_hex(&attribute.value_hex, MAX_XATTR_VALUE_BYTES, "xattr value")?;
-        total = total.checked_add(length)
+        total = total
+            .checked_add(length)
             .ok_or_else(|| PropertyError::Bounds("xattr value byte count overflow".to_owned()))?;
         if total > MAX_XATTR_TOTAL_VALUE_BYTES {
-            return Err(PropertyError::Bounds("xattr values exceed one MiB in total".to_owned()));
+            return Err(PropertyError::Bounds(
+                "xattr values exceed one MiB in total".to_owned(),
+            ));
         }
     }
     Ok(())
@@ -299,21 +330,31 @@ fn review_acl(acl: &AclSnapshot) -> Result<(), PropertyError> {
         return Ok(());
     };
     if flags & !ACL_FLAGS != 0 {
-        return Err(PropertyError::Unsupported("unknown ACL header flags".to_owned()));
+        return Err(PropertyError::Unsupported(
+            "unknown ACL header flags".to_owned(),
+        ));
     }
     if flags & ACL_DEFER_INHERIT != 0 {
-        return Err(PropertyError::Unsupported("deferred ACL inheritance is outside this profile".to_owned()));
+        return Err(PropertyError::Unsupported(
+            "deferred ACL inheritance is outside this profile".to_owned(),
+        ));
     }
     if entries.len() > MAX_ACES {
-        return Err(PropertyError::Bounds("more than 128 ACL entries".to_owned()));
+        return Err(PropertyError::Bounds(
+            "more than 128 ACL entries".to_owned(),
+        ));
     }
     for entry in entries {
         if entry.principal_hex.len() != 32 {
-            return Err(PropertyError::NonCanonical("ACL principal must contain exactly 16 raw UUID bytes".to_owned()));
+            return Err(PropertyError::NonCanonical(
+                "ACL principal must contain exactly 16 raw UUID bytes".to_owned(),
+            ));
         }
         review_hex(&entry.principal_hex, 16, "ACL principal")?;
         if entry.flags & !ACE_FLAGS != 0 {
-            return Err(PropertyError::Unsupported("unknown ACL entry flags".to_owned()));
+            return Err(PropertyError::Unsupported(
+                "unknown ACL entry flags".to_owned(),
+            ));
         }
         if entry.permissions & !ACE_PERMISSIONS != 0 {
             return Err(PropertyError::Unsupported("unknown ACL rights".to_owned()));
@@ -324,12 +365,18 @@ fn review_acl(acl: &AclSnapshot) -> Result<(), PropertyError> {
 
 fn review_hex(value: &str, maximum_bytes: usize, name: &str) -> Result<usize, PropertyError> {
     if value.len() > maximum_bytes * 2 {
-        return Err(PropertyError::Bounds(format!("{name} exceeds its decoded byte bound")));
+        return Err(PropertyError::Bounds(format!(
+            "{name} exceeds its decoded byte bound"
+        )));
     }
     if value.len() % 2 != 0
-        || !value.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     {
-        return Err(PropertyError::NonCanonical(format!("{name} must use complete lowercase hex byte pairs")));
+        return Err(PropertyError::NonCanonical(format!(
+            "{name} must use complete lowercase hex byte pairs"
+        )));
     }
     Ok(value.len() / 2)
 }
@@ -346,7 +393,8 @@ impl<'a> From<&'a serde_json::Value> for CanonicalValue<'a> {
     fn from(value: &'a serde_json::Value) -> Self {
         match value {
             serde_json::Value::Object(entries) => Self::Object(
-                entries.iter()
+                entries
+                    .iter()
                     .map(|(key, value)| (key.as_str(), Self::from(value)))
                     .collect(),
             ),
@@ -359,8 +407,8 @@ impl<'a> From<&'a serde_json::Value> for CanonicalValue<'a> {
 }
 
 fn canonical_bytes<T: Serialize>(value: &T) -> Result<Vec<u8>, PropertyError> {
-    let value = serde_json::to_value(value)
-        .map_err(|error| PropertyError::Malformed(error.to_string()))?;
+    let value =
+        serde_json::to_value(value).map_err(|error| PropertyError::Malformed(error.to_string()))?;
     serde_json::to_vec(&CanonicalValue::from(&value))
         .map_err(|error| PropertyError::Malformed(error.to_string()))
 }

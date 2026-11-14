@@ -11,14 +11,14 @@ use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
-use serde::{Serialize,Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::domain::EvidenceDigest;
 
 const MAX_OBSERVATION_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_RETAINED_BYTES: u64 = 16 * 1024 * 1024;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize,Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileSnapshot {
     pub device_id: u64,
     pub inode: u64,
@@ -38,7 +38,7 @@ pub(crate) struct BoundedFileObservation {
     file: File,
     snapshot: FileSnapshot,
     digest: EvidenceDigest,
-    observation_ceiling:u64,
+    observation_ceiling: u64,
 }
 
 impl BoundedFileObservation {
@@ -52,11 +52,23 @@ impl BoundedFileObservation {
         maximum: u64,
         guard: &impl Fn() -> Result<()>,
     ) -> Result<Self> {
-        Self::open_scoped(path,maximum,MAX_OBSERVATION_BYTES,guard)
+        Self::open_scoped(path, maximum, MAX_OBSERVATION_BYTES, guard)
     }
-    pub(crate) fn open_mp4(path:&Path,maximum:u64,guard:&impl Fn()->Result<()>)->Result<Self>{Self::open_scoped(path,maximum,536_870_912,guard)}
-    fn open_scoped(path:&Path,maximum:u64,ceiling:u64,guard:&impl Fn()->Result<()>)->Result<Self>{
-        let (file, snapshot, digest, _) = observe_scoped(path,maximum,false,MAX_RETAINED_BYTES,ceiling,guard)?;
+    pub(crate) fn open_mp4(
+        path: &Path,
+        maximum: u64,
+        guard: &impl Fn() -> Result<()>,
+    ) -> Result<Self> {
+        Self::open_scoped(path, maximum, 536_870_912, guard)
+    }
+    fn open_scoped(
+        path: &Path,
+        maximum: u64,
+        ceiling: u64,
+        guard: &impl Fn() -> Result<()>,
+    ) -> Result<Self> {
+        let (file, snapshot, digest, _) =
+            observe_scoped(path, maximum, false, MAX_RETAINED_BYTES, ceiling, guard)?;
         guard()?;
         Ok(Self {
             path: path.to_path_buf(),
@@ -64,7 +76,7 @@ impl BoundedFileObservation {
             file,
             snapshot,
             digest,
-            observation_ceiling:ceiling,
+            observation_ceiling: ceiling,
         })
     }
 
@@ -83,13 +95,19 @@ impl BoundedFileObservation {
     }
 
     pub(crate) fn verify_current_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<()> {
-        ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
-        let current = Self::open_scoped(&self.path,self.maximum,self.observation_ceiling,guard)?;
+        ensure!(
+            snapshot_guarded(&self.file, guard)? == self.snapshot,
+            "bound file changed"
+        );
+        let current = Self::open_scoped(&self.path, self.maximum, self.observation_ceiling, guard)?;
         ensure!(
             current.snapshot == self.snapshot && current.digest == self.digest,
             "file identity, metadata or complete content changed"
         );
-        ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
+        ensure!(
+            snapshot_guarded(&self.file, guard)? == self.snapshot,
+            "bound file changed"
+        );
         guard()?;
         Ok(())
     }
@@ -100,44 +118,111 @@ impl BoundedFileObservation {
         self.read_bytes_guarded(&|| Ok(()))
     }
 
-    pub(crate) fn read_bytes_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<Vec<u8>> {self.read_bytes_bounded(MAX_RETAINED_BYTES,guard)}
-
-    pub(crate) fn read_bytes_profile(&self,profile:crate::video_profile::Profile,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{self.read_bytes_bounded(profile.input_bytes(),guard)}
-    pub(crate) fn read_mp4_bytes(&self,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{ensure!(self.observation_ceiling==536_870_912,"explicit MP4 observation required");self.read_bytes_bounded(self.maximum,guard)}
-    pub(crate) fn range(&self,offset:u64,count:usize,guard:&impl Fn()->Result<()>)->Result<Vec<u8>>{
-        guard()?;ensure!(count<=16_777_216&&offset.checked_add(count as u64).is_some_and(|n|n<=self.snapshot.logical_bytes),"bounded in-file metadata/sample range required");
-        ensure!(snapshot_guarded(&self.file,guard)?==self.snapshot,"bound range source changed");
-        #[cfg(unix)] {use std::os::unix::fs::FileExt;let mut bytes=vec![0;count];self.file.read_exact_at(&mut bytes,offset)?;guard()?;ensure!(snapshot_guarded(&self.file,guard)?==self.snapshot,"bound range source changed");Ok(bytes)}
-        #[cfg(not(unix))] {let _=(offset,count);anyhow::bail!("descriptor range observation unavailable on this host")}
+    pub(crate) fn read_bytes_guarded(&self, guard: &impl Fn() -> Result<()>) -> Result<Vec<u8>> {
+        self.read_bytes_bounded(MAX_RETAINED_BYTES, guard)
     }
 
-    fn read_bytes_bounded(&self,retained_maximum:u64,guard:&impl Fn()->Result<()>)->Result<Vec<u8>> {
+    pub(crate) fn read_bytes_profile(
+        &self,
+        profile: crate::video_profile::Profile,
+        guard: &impl Fn() -> Result<()>,
+    ) -> Result<Vec<u8>> {
+        self.read_bytes_bounded(profile.input_bytes(), guard)
+    }
+    pub(crate) fn read_mp4_bytes(&self, guard: &impl Fn() -> Result<()>) -> Result<Vec<u8>> {
+        ensure!(
+            self.observation_ceiling == 536_870_912,
+            "explicit MP4 observation required"
+        );
+        self.read_bytes_bounded(self.maximum, guard)
+    }
+    pub(crate) fn range(
+        &self,
+        offset: u64,
+        count: usize,
+        guard: &impl Fn() -> Result<()>,
+    ) -> Result<Vec<u8>> {
+        guard()?;
+        ensure!(
+            count <= 16_777_216
+                && offset
+                    .checked_add(count as u64)
+                    .is_some_and(|n| n <= self.snapshot.logical_bytes),
+            "bounded in-file metadata/sample range required"
+        );
+        ensure!(
+            snapshot_guarded(&self.file, guard)? == self.snapshot,
+            "bound range source changed"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::FileExt;
+            let mut bytes = vec![0; count];
+            self.file.read_exact_at(&mut bytes, offset)?;
+            guard()?;
+            ensure!(
+                snapshot_guarded(&self.file, guard)? == self.snapshot,
+                "bound range source changed"
+            );
+            Ok(bytes)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = (offset, count);
+            anyhow::bail!("descriptor range observation unavailable on this host")
+        }
+    }
+
+    fn read_bytes_bounded(
+        &self,
+        retained_maximum: u64,
+        guard: &impl Fn() -> Result<()>,
+    ) -> Result<Vec<u8>> {
         guard()?;
         ensure!(
             self.snapshot.logical_bytes <= retained_maximum,
             "file exceeds retained-byte ceiling"
         );
-        ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
-        let (_, current, digest, bytes) =
-            observe_scoped(&self.path,self.maximum.min(retained_maximum),true,retained_maximum,self.observation_ceiling,guard)?;
+        ensure!(
+            snapshot_guarded(&self.file, guard)? == self.snapshot,
+            "bound file changed"
+        );
+        let (_, current, digest, bytes) = observe_scoped(
+            &self.path,
+            self.maximum.min(retained_maximum),
+            true,
+            retained_maximum,
+            self.observation_ceiling,
+            guard,
+        )?;
         ensure!(
             current == self.snapshot && digest == self.digest,
             "file identity, metadata or complete content changed"
         );
-        ensure!(snapshot_guarded(&self.file, guard)? == self.snapshot, "bound file changed");
+        ensure!(
+            snapshot_guarded(&self.file, guard)? == self.snapshot,
+            "bound file changed"
+        );
         guard()?;
         Ok(bytes)
     }
 }
 
-fn observe_scoped(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,ceiling:u64,guard:&impl Fn()->Result<()>)->Result<(File,FileSnapshot,EvidenceDigest,Vec<u8>)>{
+fn observe_scoped(
+    path: &Path,
+    maximum: u64,
+    retain: bool,
+    retained_maximum: u64,
+    ceiling: u64,
+    guard: &impl Fn() -> Result<()>,
+) -> Result<(File, FileSnapshot, EvidenceDigest, Vec<u8>)> {
     guard()?;
     ensure!(
         maximum > 0 && maximum <= ceiling,
         "invalid observation byte ceiling"
     );
     ensure!(
-        !retain || (retained_maximum<=ceiling&&maximum<=retained_maximum),
+        !retain || (retained_maximum <= ceiling && maximum <= retained_maximum),
         "invalid retained-byte ceiling"
     );
     let mut file = open_regular_guarded(path, guard)?;
@@ -150,17 +235,26 @@ fn observe_scoped(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,ceilin
     let mut total = 0u64;
     let mut bytes = Vec::new();
     let mut buffer = [0u8; 64 * 1024];
-    let read_limit = maximum.checked_add(1).context("observation limit overflow")?;
+    let read_limit = maximum
+        .checked_add(1)
+        .context("observation limit overflow")?;
     let mut reader = (&mut file).take(read_limit);
     loop {
         guard()?;
-        let count = reader.read(&mut buffer).context("failed to read bound file")?;
+        let count = reader
+            .read(&mut buffer)
+            .context("failed to read bound file")?;
         guard()?;
         if count == 0 {
             break;
         }
-        total = total.checked_add(count as u64).context("read size overflow")?;
-        ensure!(total <= maximum, "file grew beyond observation byte ceiling");
+        total = total
+            .checked_add(count as u64)
+            .context("read size overflow")?;
+        ensure!(
+            total <= maximum,
+            "file grew beyond observation byte ceiling"
+        );
         hasher.update(&buffer[..count]);
         if retain {
             bytes.extend_from_slice(&buffer[..count]);
@@ -174,8 +268,14 @@ fn observe_scoped(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,ceilin
     // Walk the full path again rather than trusting the earlier parent handle.
     // A later path swap remains possible and must be rechecked by the caller.
     let current = open_regular_guarded(path, guard)?;
-    ensure!(snapshot_guarded(&current, guard)? == before, "file path changed during read");
-    ensure!(snapshot_guarded(&file, guard)? == before, "bound file changed after read");
+    ensure!(
+        snapshot_guarded(&current, guard)? == before,
+        "file path changed during read"
+    );
+    ensure!(
+        snapshot_guarded(&file, guard)? == before,
+        "bound file changed after read"
+    );
     let digest = EvidenceDigest {
         algorithm: "blake3-256".to_owned(),
         value: hasher.finalize().to_hex().to_string(),
@@ -187,9 +287,9 @@ fn observe_scoped(path:&Path,maximum:u64,retain:bool,retained_maximum:u64,ceilin
 fn normalized_absolute(path: &Path) -> Result<()> {
     ensure!(
         path.is_absolute()
-            && path.components().all(|part| {
-                matches!(part, Component::RootDir | Component::Normal(_))
-            }),
+            && path
+                .components()
+                .all(|part| { matches!(part, Component::RootDir | Component::Normal(_)) }),
         "path must be absolute and normalized"
     );
     let rebuilt: PathBuf = path.components().collect();
@@ -205,16 +305,18 @@ fn open_directory_guarded(path: &Path, guard: &impl Fn() -> Result<()>) -> Resul
     use rustix::fs::{Mode, OFlags, open, openat};
     guard()?;
     normalized_absolute(path)?;
-    let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC
-        | OFlags::NOFOLLOW | OFlags::NONBLOCK;
+    let flags =
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK;
     guard()?;
     let mut directory = File::from(open("/", flags, Mode::empty())?);
     guard()?;
     for part in path.components() {
         if let Component::Normal(name) = part {
             guard()?;
-            directory = File::from(openat(&directory, name, flags, Mode::empty())
-                .context("unsafe or unavailable directory component")?);
+            directory = File::from(
+                openat(&directory, name, flags, Mode::empty())
+                    .context("unsafe or unavailable directory component")?,
+            );
             guard()?;
         }
     }
@@ -227,12 +329,15 @@ fn open_regular_guarded(path: &Path, guard: &impl Fn() -> Result<()>) -> Result<
     use rustix::fs::{Mode, OFlags, openat};
     guard()?;
     normalized_absolute(path)?;
-    let directory = open_directory_guarded(path.parent().context("file path has no parent")?, guard)?;
+    let directory =
+        open_directory_guarded(path.parent().context("file path has no parent")?, guard)?;
     let name = path.file_name().context("file path has no leaf")?;
     let flags = OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK;
     guard()?;
-    let file = File::from(openat(&directory, name, flags, Mode::empty())
-        .context("unsafe or unavailable file leaf")?);
+    let file = File::from(
+        openat(&directory, name, flags, Mode::empty())
+            .context("unsafe or unavailable file leaf")?,
+    );
     guard()?;
     let metadata = file.metadata()?;
     guard()?;
@@ -296,7 +401,10 @@ pub(crate) fn validate_private_directory_guarded(
     let metadata = directory.metadata()?;
     guard()?;
     ensure!(metadata.is_dir(), "provider work path is not a directory");
-    ensure!(metadata.mode() & 0o7777 == 0o700, "provider directory must have mode 0700");
+    ensure!(
+        metadata.mode() & 0o7777 == 0o700,
+        "provider directory must have mode 0700"
+    );
     guard()
 }
 
@@ -330,7 +438,10 @@ mod tests {
         fs::write(&path, b"synthetic source bytes").unwrap();
         let observation = BoundedFileObservation::open(&path, 64).unwrap();
         let before = observation.snapshot().clone();
-        assert_eq!(observation.digest().value, blake3::hash(b"synthetic source bytes").to_hex().to_string());
+        assert_eq!(
+            observation.digest().value,
+            blake3::hash(b"synthetic source bytes").to_hex().to_string()
+        );
         assert_eq!(observation.read_bytes().unwrap(), b"synthetic source bytes");
         observation.verify_current().unwrap();
         assert_eq!(snapshot(&File::open(&path).unwrap()).unwrap(), before);
@@ -423,7 +534,9 @@ mod tests {
         let error = BoundedFileObservation::open_guarded(missing, 64, &cancelled).unwrap_err();
         assert_eq!(error.to_string(), "synthetic cancellation");
         assert_eq!(
-            validate_private_directory_guarded(missing, &cancelled).unwrap_err().to_string(),
+            validate_private_directory_guarded(missing, &cancelled)
+                .unwrap_err()
+                .to_string(),
             "synthetic cancellation"
         );
 
@@ -431,8 +544,20 @@ mod tests {
         let path = root.path().join("source.mkv");
         fs::write(&path, b"synthetic source bytes").unwrap();
         let observed = BoundedFileObservation::open(&path, 64).unwrap();
-        assert_eq!(observed.verify_current_guarded(&cancelled).unwrap_err().to_string(), "synthetic cancellation");
-        assert_eq!(observed.read_bytes_guarded(&cancelled).unwrap_err().to_string(), "synthetic cancellation");
+        assert_eq!(
+            observed
+                .verify_current_guarded(&cancelled)
+                .unwrap_err()
+                .to_string(),
+            "synthetic cancellation"
+        );
+        assert_eq!(
+            observed
+                .read_bytes_guarded(&cancelled)
+                .unwrap_err()
+                .to_string(),
+            "synthetic cancellation"
+        );
         assert_eq!(fs::read(&path).unwrap(), b"synthetic source bytes");
     }
 
@@ -444,10 +569,12 @@ mod tests {
         fs::write(&path, &content).unwrap();
         let observed = BoundedFileObservation::open(&path, content.len() as u64).unwrap();
         let checkpoints = Cell::new(0usize);
-        let captured = observed.read_bytes_guarded(&|| {
-            checkpoints.set(checkpoints.get() + 1);
-            Ok(())
-        }).unwrap();
+        let captured = observed
+            .read_bytes_guarded(&|| {
+                checkpoints.set(checkpoints.get() + 1);
+                Ok(())
+            })
+            .unwrap();
         assert_eq!(captured, content);
         assert!(checkpoints.get() > 0);
 
@@ -467,5 +594,30 @@ mod tests {
         assert_eq!(fs::read(&path).unwrap(), content);
     }
 }
-#[cfg(all(test,unix))] mod broader_retained_tests {use super::*;
-#[test] fn retained_read_above_legacy_cap_is_explicit_and_source_stays_unchanged(){let root=tempfile::tempdir().unwrap();let path=root.path().join("synthetic bytes");let bytes=vec![0x5a;16_777_217];std::fs::write(&path,&bytes).unwrap();let observed=BoundedFileObservation::open(&path,134_217_728).unwrap();assert!(observed.read_bytes().is_err());assert_eq!(observed.read_bytes_profile(crate::video_profile::Profile::BoundedV2,&||Ok(())).unwrap(),bytes);observed.verify_current().unwrap();assert!(observed.read_bytes_profile(crate::video_profile::Profile::BoundedV2,&||anyhow::bail!("cancelled")).is_err());}}
+#[cfg(all(test, unix))]
+mod broader_retained_tests {
+    use super::*;
+    #[test]
+    fn retained_read_above_legacy_cap_is_explicit_and_source_stays_unchanged() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("synthetic bytes");
+        let bytes = vec![0x5a; 16_777_217];
+        std::fs::write(&path, &bytes).unwrap();
+        let observed = BoundedFileObservation::open(&path, 134_217_728).unwrap();
+        assert!(observed.read_bytes().is_err());
+        assert_eq!(
+            observed
+                .read_bytes_profile(crate::video_profile::Profile::BoundedV2, &|| Ok(()))
+                .unwrap(),
+            bytes
+        );
+        observed.verify_current().unwrap();
+        assert!(
+            observed
+                .read_bytes_profile(crate::video_profile::Profile::BoundedV2, &|| anyhow::bail!(
+                    "cancelled"
+                ))
+                .is_err()
+        );
+    }
+}

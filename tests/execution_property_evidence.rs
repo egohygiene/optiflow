@@ -65,7 +65,8 @@ fn fingerprint(snapshot: MacApfsCrossCopyPropertiesV1) -> String {
 
 #[test]
 fn published_example_agrees_with_the_public_schema_and_reviewed_snapshot() {
-    let bytes = include_str!("../examples/execution-properties-macos-cross-copy-v1.json").as_bytes();
+    let bytes =
+        include_str!("../examples/execution-properties-macos-cross-copy-v1.json").as_bytes();
     let document: Value = serde_json::from_slice(bytes).unwrap();
     contracts::validate(Contract::ExecutionMacosCopyProperties, &document).unwrap();
     let reviewed = parse(bytes).unwrap();
@@ -95,19 +96,31 @@ fn legacy_or_future_profiles_and_missing_acl_cannot_be_promoted() {
     ] {
         let mut document = value();
         document["schema"] = json!(schema);
-        assert!(matches!(parse_value(&document), Err(PropertyError::Schema(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::Schema(_))
+        ));
     }
     for profile in ["linux/v3", "macos-apfs/v1", "macos-apfs-cross-copy/v2"] {
         let mut document = value();
         document["profile"] = json!(profile);
-        assert!(matches!(parse_value(&document), Err(PropertyError::Unsupported(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::Unsupported(_))
+        ));
     }
     let mut missing = value();
     missing.as_object_mut().unwrap().remove("acl");
-    assert!(matches!(parse_value(&missing), Err(PropertyError::Malformed(_))));
+    assert!(matches!(
+        parse_value(&missing),
+        Err(PropertyError::Malformed(_))
+    ));
     let mut null = value();
     null["acl"] = Value::Null;
-    assert!(matches!(parse_value(&null), Err(PropertyError::Malformed(_))));
+    assert!(matches!(
+        parse_value(&null),
+        Err(PropertyError::Malformed(_))
+    ));
 }
 
 #[test]
@@ -127,8 +140,14 @@ fn unknown_fields_are_refused_at_every_object_boundary_including_absent_acl() {
             .as_object_mut()
             .unwrap()
             .insert("unreviewed".to_owned(), json!(true));
-        assert!(matches!(parse_value(&document), Err(PropertyError::Malformed(_))), "{pointer}");
-        assert!(contracts::validate(Contract::ExecutionMacosCopyProperties, &document).is_err(), "{pointer}");
+        assert!(
+            matches!(parse_value(&document), Err(PropertyError::Malformed(_))),
+            "{pointer}"
+        );
+        assert!(
+            contracts::validate(Contract::ExecutionMacosCopyProperties, &document).is_err(),
+            "{pointer}"
+        );
     }
     for acl in [
         json!({"state": "absent", "flags": 0}),
@@ -138,7 +157,10 @@ fn unknown_fields_are_refused_at_every_object_boundary_including_absent_acl() {
     ] {
         let mut document = value();
         document["acl"] = acl;
-        assert!(matches!(parse_value(&document), Err(PropertyError::Malformed(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::Malformed(_))
+        ));
         assert!(contracts::validate(Contract::ExecutionMacosCopyProperties, &document).is_err());
     }
 }
@@ -147,12 +169,15 @@ fn unknown_fields_are_refused_at_every_object_boundary_including_absent_acl() {
 fn positional_sequences_cannot_bypass_object_only_schema_boundaries() {
     let principal = "0123456789abcdef0123456789abcdef";
     for (pointer, replacement) in [
-        ("", json!([
-            SCHEMA, PROFILE, 501, 20, 0o100640,
-            {"seconds": -1, "nanoseconds": 999_999_999},
-            {"seconds": -2, "nanoseconds": 123},
-            0, [], {"state": "absent"}
-        ])),
+        (
+            "",
+            json!([
+                SCHEMA, PROFILE, 501, 20, 0o100640,
+                {"seconds": -1, "nanoseconds": 999_999_999},
+                {"seconds": -2, "nanoseconds": 123},
+                0, [], {"state": "absent"}
+            ]),
+        ),
         ("/mtime", json!([-1, 999_999_999])),
         ("/birthtime", json!([-2, 123])),
         ("/xattrs/0", json!(["61", "a5"])),
@@ -181,20 +206,28 @@ fn shape_inspection_does_not_erase_duplicate_fields_before_typed_decoding() {
     for (needle, replacement) in [
         ("\"uid\":501", "\"uid\":0,\"uid\":501"),
         ("\"seconds\":-1", "\"seconds\":0,\"seconds\":-1"),
-        ("\"state\":\"present\"", "\"state\":\"absent\",\"state\":\"present\""),
+        (
+            "\"state\":\"present\"",
+            "\"state\":\"absent\",\"state\":\"present\"",
+        ),
         ("\"permissions\":2", "\"permissions\":0,\"permissions\":2"),
-        ("\"value_hex\":\"a5a5\"", "\"value_hex\":\"\",\"value_hex\":\"a5a5\""),
+        (
+            "\"value_hex\":\"a5a5\"",
+            "\"value_hex\":\"\",\"value_hex\":\"a5a5\"",
+        ),
     ] {
         assert!(document.contains(needle), "fixture must exercise {needle}");
         let duplicated = document.replacen(needle, replacement, 1);
-        assert!(matches!(parse(duplicated.as_bytes()), Err(PropertyError::Malformed(_))));
+        assert!(matches!(
+            parse(duplicated.as_bytes()),
+            Err(PropertyError::Malformed(_))
+        ));
     }
-    let duplicate_acl = document.replacen(
-        "\"acl\":",
-        "\"acl\":{\"state\":\"absent\"},\"acl\":",
-        1,
-    );
-    assert!(matches!(parse(duplicate_acl.as_bytes()), Err(PropertyError::Malformed(_))));
+    let duplicate_acl = document.replacen("\"acl\":", "\"acl\":{\"state\":\"absent\"},\"acl\":", 1);
+    assert!(matches!(
+        parse(duplicate_acl.as_bytes()),
+        Err(PropertyError::Malformed(_))
+    ));
 }
 
 #[test]
@@ -206,7 +239,10 @@ fn hex_patterns_and_the_parser_reject_trailing_newlines_and_unicode() {
     ] {
         for suffix in ["\n", "\r\n", "\u{2028}", "é"] {
             let mut document = value();
-            let encoded = format!("{}{suffix}", document.pointer(pointer).unwrap().as_str().unwrap());
+            let encoded = format!(
+                "{}{suffix}",
+                document.pointer(pointer).unwrap().as_str().unwrap()
+            );
             *document.pointer_mut(pointer).unwrap() = json!(encoded);
             assert!(parse_value(&document).is_err(), "{pointer}");
             assert!(
@@ -254,7 +290,11 @@ fn acl_entry_order_and_duplicates_are_retained_and_change_the_fingerprint() {
         let original = serde_json::to_value(&input).unwrap();
         let reviewed = review(input).unwrap();
         assert_eq!(serde_json::to_value(reviewed.snapshot()).unwrap(), original);
-        assert!(!fingerprints.iter().any(|previous| previous == reviewed.fingerprint()));
+        assert!(
+            !fingerprints
+                .iter()
+                .any(|previous| previous == reviewed.fingerprint())
+        );
         fingerprints.push(reviewed.fingerprint().to_owned());
     }
 }
@@ -285,11 +325,17 @@ fn opaque_acl_principals_are_preserved_without_name_or_identity_resolution() {
     ] {
         let mut document = value();
         document["acl"]["entries"][0]["principal_hex"] = json!(principal);
-        assert!(matches!(parse_value(&document), Err(PropertyError::NonCanonical(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::NonCanonical(_))
+        ));
     }
     let mut named = value();
     named["acl"]["entries"][0]["principal_name"] = json!("local-user");
-    assert!(matches!(parse_value(&named), Err(PropertyError::Malformed(_))));
+    assert!(matches!(
+        parse_value(&named),
+        Err(PropertyError::Malformed(_))
+    ));
 }
 
 #[test]
@@ -325,7 +371,10 @@ fn unsupported_bsd_acl_and_ace_bits_are_not_silently_masked() {
     ] {
         let mut document = value();
         *document.pointer_mut(pointer).unwrap() = json!(bits);
-        assert!(matches!(parse_value(&document), Err(PropertyError::Unsupported(_))), "{pointer}={bits:#x}");
+        assert!(
+            matches!(parse_value(&document), Err(PropertyError::Unsupported(_))),
+            "{pointer}={bits:#x}"
+        );
     }
 }
 
@@ -344,9 +393,15 @@ fn negative_epochs_are_exact_but_nanoseconds_and_file_modes_are_constrained() {
     for field in ["mtime", "birthtime"] {
         let mut document = value();
         document[field]["nanoseconds"] = json!(1_000_000_000);
-        assert!(matches!(parse_value(&document), Err(PropertyError::NonCanonical(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::NonCanonical(_))
+        ));
         document[field]["nanoseconds"] = json!(-1);
-        assert!(matches!(parse_value(&document), Err(PropertyError::Malformed(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::Malformed(_))
+        ));
     }
     for mode in [0o644, 0o040755, 0o077777, 0o110000, 0o120777] {
         let mut input = snapshot();
@@ -360,14 +415,20 @@ fn xattrs_must_arrive_sorted_and_unique_and_are_never_reordered_or_merged() {
     let mut input = snapshot();
     input.xattrs = vec![attribute(0, 0), attribute(1, 3)];
     let original = serde_json::to_value(&input).unwrap();
-    assert_eq!(serde_json::to_value(review(input.clone()).unwrap().snapshot()).unwrap(), original);
+    assert_eq!(
+        serde_json::to_value(review(input.clone()).unwrap().snapshot()).unwrap(),
+        original
+    );
     input.xattrs.reverse();
     assert!(matches!(review(input), Err(PropertyError::NonCanonical(_))));
     let mut duplicate = snapshot();
     duplicate.xattrs = vec![attribute(0, 0), attribute(0, 3)];
     // Structural validation cannot establish byte ordering or uniqueness by name.
     contracts::validate(Contract::ExecutionMacosCopyProperties, &duplicate).unwrap();
-    assert!(matches!(review(duplicate), Err(PropertyError::NonCanonical(_))));
+    assert!(matches!(
+        review(duplicate),
+        Err(PropertyError::NonCanonical(_))
+    ));
 }
 
 #[test]
@@ -375,7 +436,10 @@ fn xattr_names_require_lowercase_even_nul_free_hex_with_a_decoded_length_bound()
     for name in ["", "00", "610062", "a", "GG", "AB"] {
         let mut document = value();
         document["xattrs"][0]["name_hex"] = json!(name);
-        assert!(matches!(parse_value(&document), Err(PropertyError::NonCanonical(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::NonCanonical(_))
+        ));
     }
     let mut input = snapshot();
     input.xattrs[0].name_hex = "ff".repeat(255);
@@ -395,7 +459,10 @@ fn xattr_values_are_raw_bytes_in_canonical_hex_and_can_be_empty() {
     for encoded in ["0", "FF", "0g", "a a"] {
         let mut document = value();
         document["xattrs"][0]["value_hex"] = json!(encoded);
-        assert!(matches!(parse_value(&document), Err(PropertyError::NonCanonical(_))));
+        assert!(matches!(
+            parse_value(&document),
+            Err(PropertyError::NonCanonical(_))
+        ));
     }
 }
 
@@ -434,14 +501,21 @@ fn every_preserved_metadata_component_participates_in_the_fingerprint() {
         ("/xattrs/0/name_hex", json!(hex(b"user.other"))),
         ("/xattrs/0/value_hex", json!("a5a4")),
         ("/acl/flags", json!(0x0002_0000)),
-        ("/acl/entries/0/principal_hex", json!("ffffffffffffffffffffffffffffffff")),
+        (
+            "/acl/entries/0/principal_hex",
+            json!("ffffffffffffffffffffffffffffffff"),
+        ),
         ("/acl/entries/0/kind", json!("deny")),
         ("/acl/entries/0/flags", json!(0x10)),
         ("/acl/entries/0/permissions", json!(4)),
     ] {
         let mut document = value();
         *document.pointer_mut(pointer).unwrap() = replacement;
-        assert_ne!(parse_value(&document).unwrap().fingerprint(), original, "{pointer}");
+        assert_ne!(
+            parse_value(&document).unwrap().fingerprint(),
+            original,
+            "{pointer}"
+        );
     }
 }
 
@@ -481,7 +555,10 @@ fn raw_document_limit_is_checked_before_json_deserialization() {
     at_limit.push(b' ');
     assert!(matches!(parse(&at_limit), Err(PropertyError::Bounds(_))));
     let oversized_invalid = vec![b'!'; 3 * 1024 * 1024 + 1];
-    assert!(matches!(parse(&oversized_invalid), Err(PropertyError::Bounds(_))));
+    assert!(matches!(
+        parse(&oversized_invalid),
+        Err(PropertyError::Bounds(_))
+    ));
     assert!(matches!(parse(b"!"), Err(PropertyError::Malformed(_))));
 }
 
@@ -489,17 +566,29 @@ fn raw_document_limit_is_checked_before_json_deserialization() {
 fn typed_review_cannot_bypass_semantic_refusals_to_obtain_a_fingerprint() {
     let mut wrong_profile = snapshot();
     wrong_profile.profile = "macos-apfs/v1".to_owned();
-    assert!(matches!(review(wrong_profile), Err(PropertyError::Unsupported(_))));
+    assert!(matches!(
+        review(wrong_profile),
+        Err(PropertyError::Unsupported(_))
+    ));
     let mut bad_time = snapshot();
     bad_time.mtime.nanoseconds = 1_000_000_000;
-    assert!(matches!(review(bad_time), Err(PropertyError::NonCanonical(_))));
+    assert!(matches!(
+        review(bad_time),
+        Err(PropertyError::NonCanonical(_))
+    ));
     let mut bad_hex = snapshot();
     bad_hex.xattrs[0].value_hex = "FF".to_owned();
-    assert!(matches!(review(bad_hex), Err(PropertyError::NonCanonical(_))));
+    assert!(matches!(
+        review(bad_hex),
+        Err(PropertyError::NonCanonical(_))
+    ));
     let mut deferred_acl = snapshot();
     deferred_acl.acl = AclSnapshot::Present {
         flags: 0x0001_0000,
         entries: vec![],
     };
-    assert!(matches!(review(deferred_acl), Err(PropertyError::Unsupported(_))));
+    assert!(matches!(
+        review(deferred_acl),
+        Err(PropertyError::Unsupported(_))
+    ));
 }

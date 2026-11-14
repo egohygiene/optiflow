@@ -1,16 +1,198 @@
 use super::*;
-fn request()->Request {Request {schema:"optiflow.png-folder-request.v1".into(),source_root:"/media".into(),oxipng:"/tools/oxipng".into(),state_directory:"/state".into(),retention_directory:"/retained".into(),artifact_root:"/candidates".into(),run_directory:"/run".into(),policy_fingerprint:"a".repeat(64),original_disposition:OriginalDisposition::RetainForRestore,recursive:true,include_hidden:false,per_file:Limits {maximum_file_bytes:1024,free_space_reserve_bytes:1024,journal_budget_bytes:65536},batch:FolderBounds {maximum_entries:16,maximum_files:8,maximum_actions:2,maximum_depth:3,maximum_total_input_bytes:8192,elapsed_ms:1000}}}
-fn inventory(r:&Request)->Inventory {let source_root=DirectoryBinding {path:NativePath::from_path(&r.source_root),identity:crate::filesystem::identity::FilesystemIdentity {platform:"linux".into(),filesystem_id:"1".into(),file_id:"1".into(),link_count:None},mode:0o40700,uid:1000,gid:1000};let mut i=Inventory {schema:"optiflow.png-folder-inventory.v1".into(),request_fingerprint:hash(r).unwrap(),fingerprint:String::new(),source_root,entries_seen:0,files_seen:0,observed_input_bytes:0,entries:vec![],one_file_in_flight:true,physical_space_reclaimed:false};i.fingerprint=hash(&i).unwrap();i}
-#[test] fn default_retention_approval_never_silently_becomes_discard(){let r=request();let i=inventory(&r);let a=approve(&r,&i,"operator".into()).unwrap();let mut changed=r.clone();changed.original_disposition=OriginalDisposition::DiscardAfterDurableReplacement;assert!(a.validate(&changed,&i).is_err());}
-#[test] fn explicit_discard_is_bound_to_inventory_and_action_ceiling(){let mut r=request();r.original_disposition=OriginalDisposition::DiscardAfterDurableReplacement;let i=inventory(&r);let a=approve(&r,&i,"operator".into()).unwrap();let mut changed=i.clone();changed.files_seen=1;changed.fingerprint.clear();changed.fingerprint=hash(&changed).unwrap();assert!(a.validate(&r,&changed).is_err());let mut excessive=a;excessive.maximum_actions=3;excessive.authorization_id.clear();excessive.authorization_id=hash(&excessive).unwrap();assert!(excessive.validate(&r,&i).is_err());}
-#[test] fn folder_discovery_cannot_claim_physical_reclamation(){let r=request();let mut i=inventory(&r);i.physical_space_reclaimed=true;i.fingerprint.clear();i.fingerprint=hash(&i).unwrap();assert!(i.validate(&r).is_err());}
-#[test] fn escaped_or_duplicate_inventory_paths_refuse(){let r=request();let mut i=inventory(&r);i.entries.push(Entry {path:NativePath::from_path(Path::new("/outside/a.png")),disposition:"unsupported".into(),reason:"outside".into(),source:None});i.fingerprint.clear();i.fingerprint=hash(&i).unwrap();assert!(i.validate(&r).is_err());}
-#[test] fn batch_bounds_and_blank_operator_are_not_inferred(){let r=request();let i=inventory(&r);assert!(approve(&r,&i," ".into()).is_err());let mut b=r.batch.clone();b.maximum_actions=9;assert!(b.validate().is_err());}
-#[test] fn low_space_run_refuses_before_opening_provider_or_mutation_state(){let r=request();let i=inventory(&r);let a=approve(&r,&i,"operator".into()).unwrap();assert!(coordinator::run(&r,&i,&a,false,&SignalState::default()).unwrap_err().to_string().contains("qualification"));}
-#[test] fn low_space_cli_has_no_unqualified_or_implicit_discard_switch(){use clap::Parser;assert!(crate::cli::Cli::try_parse_from(["optiflow","optimize","run","--request","/records/r.json","--inventory","/records/i.json","--approval","/records/a.json","--discard-originals"]).is_err());}
-#[test] fn renamed_request_invalidates_existing_batch_authority(){let r=request();let i=inventory(&r);let a=approve(&r,&i,"operator".into()).unwrap();let mut changed=r.clone();changed.artifact_root="/another-store".into();assert!(a.validate(&changed,&i).is_err());}
-#[test] fn aggregate_folder_bounds_do_not_expand_the_png_file_profile(){let mut r=request();r.per_file.maximum_file_bytes=134_217_728;let i=inventory(&r);assert!(approve(&r,&i,"operator".into()).is_err());}
+fn request() -> Request {
+    Request {
+        schema: "optiflow.png-folder-request.v1".into(),
+        source_root: "/media".into(),
+        oxipng: "/tools/oxipng".into(),
+        state_directory: "/state".into(),
+        retention_directory: "/retained".into(),
+        artifact_root: "/candidates".into(),
+        run_directory: "/run".into(),
+        policy_fingerprint: "a".repeat(64),
+        original_disposition: OriginalDisposition::RetainForRestore,
+        recursive: true,
+        include_hidden: false,
+        per_file: Limits {
+            maximum_file_bytes: 1024,
+            free_space_reserve_bytes: 1024,
+            journal_budget_bytes: 65536,
+        },
+        batch: FolderBounds {
+            maximum_entries: 16,
+            maximum_files: 8,
+            maximum_actions: 2,
+            maximum_depth: 3,
+            maximum_total_input_bytes: 8192,
+            elapsed_ms: 1000,
+        },
+    }
+}
+fn inventory(r: &Request) -> Inventory {
+    let source_root = DirectoryBinding {
+        path: NativePath::from_path(&r.source_root),
+        identity: crate::filesystem::identity::FilesystemIdentity {
+            platform: "linux".into(),
+            filesystem_id: "1".into(),
+            file_id: "1".into(),
+            link_count: None,
+        },
+        mode: 0o40700,
+        uid: 1000,
+        gid: 1000,
+    };
+    let mut i = Inventory {
+        schema: "optiflow.png-folder-inventory.v1".into(),
+        request_fingerprint: hash(r).unwrap(),
+        fingerprint: String::new(),
+        source_root,
+        entries_seen: 0,
+        files_seen: 0,
+        observed_input_bytes: 0,
+        entries: vec![],
+        one_file_in_flight: true,
+        physical_space_reclaimed: false,
+    };
+    i.fingerprint = hash(&i).unwrap();
+    i
+}
+#[test]
+fn default_retention_approval_never_silently_becomes_discard() {
+    let r = request();
+    let i = inventory(&r);
+    let a = approve(&r, &i, "operator".into()).unwrap();
+    let mut changed = r.clone();
+    changed.original_disposition = OriginalDisposition::DiscardAfterDurableReplacement;
+    assert!(a.validate(&changed, &i).is_err());
+}
+#[test]
+fn explicit_discard_is_bound_to_inventory_and_action_ceiling() {
+    let mut r = request();
+    r.original_disposition = OriginalDisposition::DiscardAfterDurableReplacement;
+    let i = inventory(&r);
+    let a = approve(&r, &i, "operator".into()).unwrap();
+    let mut changed = i.clone();
+    changed.files_seen = 1;
+    changed.fingerprint.clear();
+    changed.fingerprint = hash(&changed).unwrap();
+    assert!(a.validate(&r, &changed).is_err());
+    let mut excessive = a;
+    excessive.maximum_actions = 3;
+    excessive.authorization_id.clear();
+    excessive.authorization_id = hash(&excessive).unwrap();
+    assert!(excessive.validate(&r, &i).is_err());
+}
+#[test]
+fn folder_discovery_cannot_claim_physical_reclamation() {
+    let r = request();
+    let mut i = inventory(&r);
+    i.physical_space_reclaimed = true;
+    i.fingerprint.clear();
+    i.fingerprint = hash(&i).unwrap();
+    assert!(i.validate(&r).is_err());
+}
+#[test]
+fn escaped_or_duplicate_inventory_paths_refuse() {
+    let r = request();
+    let mut i = inventory(&r);
+    i.entries.push(Entry {
+        path: NativePath::from_path(Path::new("/outside/a.png")),
+        disposition: "unsupported".into(),
+        reason: "outside".into(),
+        source: None,
+    });
+    i.fingerprint.clear();
+    i.fingerprint = hash(&i).unwrap();
+    assert!(i.validate(&r).is_err());
+}
+#[test]
+fn batch_bounds_and_blank_operator_are_not_inferred() {
+    let r = request();
+    let i = inventory(&r);
+    assert!(approve(&r, &i, " ".into()).is_err());
+    let mut b = r.batch.clone();
+    b.maximum_actions = 9;
+    assert!(b.validate().is_err());
+}
+#[test]
+fn low_space_run_refuses_before_opening_provider_or_mutation_state() {
+    let r = request();
+    let i = inventory(&r);
+    let a = approve(&r, &i, "operator".into()).unwrap();
+    assert!(
+        coordinator::run(&r, &i, &a, false, &SignalState::default())
+            .unwrap_err()
+            .to_string()
+            .contains("qualification")
+    );
+}
+#[test]
+fn low_space_cli_has_no_unqualified_or_implicit_discard_switch() {
+    use clap::Parser;
+    assert!(
+        crate::cli::Cli::try_parse_from([
+            "optiflow",
+            "optimize",
+            "run",
+            "--request",
+            "/records/r.json",
+            "--inventory",
+            "/records/i.json",
+            "--approval",
+            "/records/a.json",
+            "--discard-originals"
+        ])
+        .is_err()
+    );
+}
+#[test]
+fn renamed_request_invalidates_existing_batch_authority() {
+    let r = request();
+    let i = inventory(&r);
+    let a = approve(&r, &i, "operator".into()).unwrap();
+    let mut changed = r.clone();
+    changed.artifact_root = "/another-store".into();
+    assert!(a.validate(&changed, &i).is_err());
+}
+#[test]
+fn aggregate_folder_bounds_do_not_expand_the_png_file_profile() {
+    let mut r = request();
+    r.per_file.maximum_file_bytes = 134_217_728;
+    let i = inventory(&r);
+    assert!(approve(&r, &i, "operator".into()).is_err());
+}
 #[cfg(unix)]
-#[test] fn empty_saved_folder_status_refuses_an_unknown_journal_member(){use std::os::unix::fs::PermissionsExt;let temp=tempfile::tempdir().unwrap();std::fs::set_permissions(temp.path(),std::fs::Permissions::from_mode(0o700)).unwrap();let mut r=request();r.run_directory=temp.path().to_path_buf();let i=inventory(&r);let a=approve(&r,&i,"operator".into()).unwrap();for (name,value) in [("request.json",serde_json::to_value(&r).unwrap()),("inventory.json",serde_json::to_value(&i).unwrap()),("approval.json",serde_json::to_value(&a).unwrap())]{std::fs::write(temp.path().join(name),serde_json::to_vec(&value).unwrap()).unwrap();}std::fs::write(temp.path().join("unknown.json"),b"{}").unwrap();assert!(coordinator::status(&r,&i,&a).unwrap_err().to_string().contains("unknown"));}
+#[test]
+fn empty_saved_folder_status_refuses_an_unknown_journal_member() {
+    use std::os::unix::fs::PermissionsExt;
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let mut r = request();
+    r.run_directory = temp.path().to_path_buf();
+    let i = inventory(&r);
+    let a = approve(&r, &i, "operator".into()).unwrap();
+    for (name, value) in [
+        ("request.json", serde_json::to_value(&r).unwrap()),
+        ("inventory.json", serde_json::to_value(&i).unwrap()),
+        ("approval.json", serde_json::to_value(&a).unwrap()),
+    ] {
+        std::fs::write(temp.path().join(name), serde_json::to_vec(&value).unwrap()).unwrap();
+    }
+    std::fs::write(temp.path().join("unknown.json"), b"{}").unwrap();
+    assert!(
+        coordinator::status(&r, &i, &a)
+            .unwrap_err()
+            .to_string()
+            .contains("unknown")
+    );
+}
 #[cfg(unix)]
-#[test] fn record_output_preflight_never_replaces_an_existing_record(){use std::os::unix::fs::PermissionsExt;let temp=tempfile::tempdir().unwrap();std::fs::set_permissions(temp.path(),std::fs::Permissions::from_mode(0o700)).unwrap();let target=temp.path().join("record.json");std::fs::write(&target,b"original").unwrap();assert!(crate::record_io::preflight_new(&target).is_err());assert_eq!(std::fs::read(target).unwrap(),b"original");}
+#[test]
+fn record_output_preflight_never_replaces_an_existing_record() {
+    use std::os::unix::fs::PermissionsExt;
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    let target = temp.path().join("record.json");
+    std::fs::write(&target, b"original").unwrap();
+    assert!(crate::record_io::preflight_new(&target).is_err());
+    assert_eq!(std::fs::read(target).unwrap(), b"original");
+}

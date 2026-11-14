@@ -7,10 +7,10 @@ use rusqlite::{OptionalExtension, params};
 use super::filesystem as fs;
 use super::finalization::FinalizationEvent;
 use super::model::*;
-use super::replacement::transaction::ReplacementEvent;
-use super::sqlite_integer::{read_nonnegative, write_nonnegative};
 use super::mutation::{MutationRun, MutationStatus};
 use super::recovery::RecoveryEvent;
+use super::replacement::transaction::ReplacementEvent;
+use super::sqlite_integer::{read_nonnegative, write_nonnegative};
 use super::{Result, failure};
 use crate::contracts::{self, Contract};
 use crate::outcome::DiagnosticCode as Code;
@@ -135,7 +135,8 @@ impl Journal {
             .map_err(state_error)?;
         #[cfg(target_os = "macos")]
         if mutation {
-            let mode: String = store.connection
+            let mode: String = store
+                .connection
                 .pragma_query_value(None, "journal_mode", |row| row.get(0))
                 .map_err(state_error)?;
             if mode != "delete" {
@@ -144,9 +145,12 @@ impl Journal {
                     "macOS mutation requires SQLite DELETE journal mode",
                 ));
             }
-            store.connection.pragma_update(None, "synchronous", "EXTRA")
+            store
+                .connection
+                .pragma_update(None, "synchronous", "EXTRA")
                 .map_err(state_error)?;
-            let synchronous: i64 = store.connection
+            let synchronous: i64 = store
+                .connection
                 .pragma_query_value(None, "synchronous", |row| row.get(0))
                 .map_err(state_error)?;
             if synchronous != 3 {
@@ -159,8 +163,12 @@ impl Journal {
             // WAL checkpoints; synchronous=FULL alone only requests fsync.
             // This is isolated from the existing read-only dry-run path.
             for name in ["fullfsync", "checkpoint_fullfsync"] {
-                store.connection.pragma_update(None, name, true).map_err(state_error)?;
-                let enabled: i64 = store.connection
+                store
+                    .connection
+                    .pragma_update(None, name, true)
+                    .map_err(state_error)?;
+                let enabled: i64 = store
+                    .connection
                     .pragma_query_value(None, name, |row| row.get(0))
                     .map_err(state_error)?;
                 if enabled != 1 {
@@ -211,29 +219,40 @@ impl Journal {
         let (count,total):(u64,u64)=self.store.connection.query_row(
             "SELECT COUNT(*),COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
             [fingerprint],|r|Ok((read_nonnegative(r,0)?,read_nonnegative(r,1)?))).map_err(state_error)?;
-        if count>32||total>16_777_216 {return Err(state_error("replacement journal exceeds bounds"));}
+        if count > 32 || total > 16_777_216 {
+            return Err(state_error("replacement journal exceeds bounds"));
+        }
         let documents: Vec<String> = self.store.connection.prepare(
             "SELECT document_json FROM execution_replacement_events WHERE plan_fingerprint=?1 ORDER BY sequence"
         ).map_err(state_error)?.query_map([fingerprint], |r|r.get(0)).map_err(state_error)?
             .collect::<std::result::Result<_,_>>().map_err(state_error)?;
-        let mut out=Vec::new();
+        let mut out = Vec::new();
         for s in documents {
-            let event=ReplacementEvent::from_json_slice(s.as_bytes()).map_err(state_error)?;
+            let event = ReplacementEvent::from_json_slice(s.as_bytes()).map_err(state_error)?;
             event.validate_after(&out).map_err(state_error)?;
-            if event.plan_fingerprint!=fingerprint {return Err(state_error("replacement journal plan differs"));}
+            if event.plan_fingerprint != fingerprint {
+                return Err(state_error("replacement journal plan differs"));
+            }
             out.push(event);
         }
         Ok(out)
     }
-    pub(super) fn append_replacement(&mut self, event: &ReplacementEvent, budget: u64) -> Result<()> {
-        let prior=self.replacement_events(&event.plan_fingerprint)?;
+    pub(super) fn append_replacement(
+        &mut self,
+        event: &ReplacementEvent,
+        budget: u64,
+    ) -> Result<()> {
+        let prior = self.replacement_events(&event.plan_fingerprint)?;
         event.validate_after(&prior).map_err(state_error)?;
-        let encoded=serde_json::to_string(event).map_err(state_error)?;
+        let encoded = serde_json::to_string(event).map_err(state_error)?;
         ReplacementEvent::from_json_slice(encoded.as_bytes()).map_err(state_error)?;
         let used:u64=self.store.connection.query_row(
             "SELECT COALESCE(SUM(length(CAST(document_json AS BLOB))),0) FROM execution_replacement_events WHERE plan_fingerprint=?1",
             [&event.plan_fingerprint],|r|read_nonnegative(r,0)).map_err(state_error)?;
-        if used.checked_add(encoded.len() as u64).is_none_or(|v|v>budget) {
+        if used
+            .checked_add(encoded.len() as u64)
+            .is_none_or(|v| v > budget)
+        {
             return Err(state_error("replacement journal budget exceeded"));
         }
         let sequence = write_nonnegative(event.sequence).map_err(state_error)?;

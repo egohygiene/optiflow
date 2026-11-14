@@ -1,6 +1,6 @@
 //! Compiled interface description only. It does not open state, probe tools,
 //! qualify mutation, contact a registry or establish publication.
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub fn describe() -> Value {
     json!({"schema_version":"optiflow.release-contract/v1","tool":"optiflow",

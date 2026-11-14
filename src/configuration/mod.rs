@@ -1,11 +1,11 @@
 mod document;
+pub mod mp4;
 mod policy;
 mod resolver;
-pub mod mp4;
 
 pub use document::{CONFIG_SCHEMA, ConfigDocumentV1};
 pub use policy::{
     ConfigurationSourceRecord, ConfigurationSourceStatus, EffectivePolicyV1, PolicyDigest,
-    PolicySourceKind, PolicyProvenance, RuntimePolicy, ShadowedValue, validate_fingerprints,
+    PolicyProvenance, PolicySourceKind, RuntimePolicy, ShadowedValue, validate_fingerprints,
 };
 pub use resolver::{ConfigurationResolution, SettingExplanation, resolve};

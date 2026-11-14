@@ -10,8 +10,8 @@ use serde::Serialize;
 
 use crate::adapters::video::{CaptureLimits, InvocationEvidence, VideoProviders};
 use crate::domain::{EvidenceDigest, MediaProviderEvidence, NativePath};
-use crate::video_candidate::VideoOperation;
 use crate::video_budget::OperationBudget;
+use crate::video_candidate::VideoOperation;
 use crate::video_io::BoundedFileObservation;
 use crate::video_probe::{VideoProbeObservation, parse_ffv1_observation};
 
@@ -54,16 +54,17 @@ pub fn observe_video_source(
     is_cancelled: impl Fn() -> bool,
 ) -> Result<VideoSourceObservation> {
     limits.check()?;
-    ensure!(crate::subprocess::bounded_pipe_capture_supported(),
-        "bounded video observation requires Linux or macOS");
+    ensure!(
+        crate::subprocess::bounded_pipe_capture_supported(),
+        "bounded video observation requires Linux or macOS"
+    );
     let budget = OperationBudget::new(limits.elapsed_ms)?;
     let guard = || budget.check(&is_cancelled);
     guard()?;
     let source = BoundedFileObservation::open_guarded(source_path, SOURCE_MAX, &guard)?;
     let bytes = source.read_bytes_guarded(&guard)?;
-    let providers = VideoProviders::lock_with_budget(
-        ffmpeg, ffprobe, workdir, limits, budget, &is_cancelled,
-    )?;
+    let providers =
+        VideoProviders::lock_with_budget(ffmpeg, ffprobe, workdir, limits, budget, &is_cancelled)?;
     let capture = providers.probe_untrusted(&bytes, &is_cancelled)?;
     ensure!(
         &capture.evidence.input_digest == source.digest(),
@@ -76,7 +77,8 @@ pub fn observe_video_source(
         probe.raw_report_digest == capture.evidence.stdout_digest,
         "parsed report is not bound to the captured provider output"
     );
-    let producer = providers.producer_evidence(VideoOperation::StreamCopy, &probe.media.disposition)?;
+    let producer =
+        providers.producer_evidence(VideoOperation::StreamCopy, &probe.media.disposition)?;
     source.verify_current_guarded(&guard)?;
     providers.verify_current_with_cancel(&is_cancelled)?;
     source.verify_current_guarded(&guard)?;

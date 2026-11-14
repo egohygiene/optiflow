@@ -1,0 +1,38 @@
+{
+  "schema_version": "egohygiene.ci-source-format-observation/v1",
+  "observations": [
+    {
+      "owner": "optiflow",
+      "toolchain": "1.85.0",
+      "command": [
+        "+1.85.0",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit": 0,
+      "scope": "source layout and parse only; no product type-check, Clippy, build scripts, compilation or tests",
+      "formatter_version": "rustfmt 1.8.0-stable (4d91de4e48 2025-02-17)"
+    },
+    {
+      "owner": "optiflow-fuzz",
+      "toolchain": "1.85.0",
+      "command": [
+        "+1.85.0",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit": 0,
+      "scope": "source layout and parse only; no product type-check, Clippy, build scripts, compilation or tests",
+      "formatter_version": "rustfmt 1.8.0-stable (4d91de4e48 2025-02-17)"
+    }
+  ],
+  "product_typecheck_run": false,
+  "clippy_run": false,
+  "tests_run": false,
+  "builds_run": false,
+  "native_or_hosted_execution": false
+}

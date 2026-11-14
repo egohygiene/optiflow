@@ -1,13 +1,13 @@
 //! Bounded exact-duplicate execution, recovery, and explicit finalization.
+pub mod descriptor_properties;
 mod filesystem;
 pub mod finalization;
 mod journal;
-mod sqlite_integer;
 pub mod model;
-pub mod property_evidence;
-pub mod descriptor_properties;
 mod mutation;
+pub mod property_evidence;
 mod recovery;
+mod sqlite_integer;
 mod validation;
 
 pub use journal::load_execution;
