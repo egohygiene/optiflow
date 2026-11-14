@@ -1,0 +1,39 @@
+{
+  "schema_version": "egohygiene.ci-lock-metadata-observation/v1",
+  "observations": [
+    {
+      "owner": "optiflow",
+      "toolchain": "1.85.0",
+      "command": [
+        "+1.85.0",
+        "update",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit": 0,
+      "lock_sha256": "268f92574d8b244da608ccc980fa7b5a529af40bd7d5e125c2146fc0178b10c5",
+      "lock_unchanged": true,
+      "scope": "dependency metadata resolution only; no build scripts, compiler, linter or tests"
+    },
+    {
+      "owner": "optiflow-fuzz",
+      "toolchain": "1.85.0",
+      "command": [
+        "+1.85.0",
+        "update",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit": 0,
+      "lock_sha256": "97df320802d11d0831dc1315c4b0812ef40a2c2ccd52fdfba77549bbd60d8078",
+      "lock_unchanged": true,
+      "scope": "dependency metadata resolution only; no build scripts, compiler, linter or tests"
+    }
+  ],
+  "builds_run": false,
+  "tests_run": false,
+  "clippy_run": false,
+  "hosted_ci_dispatched": false
+}

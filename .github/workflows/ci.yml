@@ -33,6 +33,11 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
 
+      - name: Check locked dependency metadata
+        run: |
+          cargo update --workspace --locked
+          cargo update --manifest-path fuzz/Cargo.toml --workspace --locked
+
       - name: Check every target at the minimum supported Rust version
         run: cargo check --all-targets --all-features --locked
 
@@ -59,6 +64,11 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
+
+      - name: Check locked dependency metadata
+        run: |
+          cargo update --workspace --locked
+          cargo update --manifest-path fuzz/Cargo.toml --workspace --locked
 
       - name: Install optional media tooling on Linux
         if: runner.os == 'Linux'
