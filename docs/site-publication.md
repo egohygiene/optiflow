@@ -15,6 +15,7 @@ optiflow.egohygiene.io/
 ├── /docs/             Zensical documentation
 ├── /api/              Curated rustdoc reference
 ├── /schemas/          Versioned machine contracts
+├── /examples/         Explicitly reviewed public source/request downloads
 ├── /intelligence/     Repository evidence dashboard
 └── /releases/         Install and verification guidance
 ```
@@ -28,6 +29,7 @@ optiflow.egohygiene.io/
 | `/docs/` | `docs/` + `zensical.toml` | Tutorials, concepts, operational guidance, architecture, and contract explanations |
 | `/api/` | `cargo doc` | Curated Rust API only after the library stability decision is explicit |
 | `/schemas/` | `schemas/` | Downloadable canonical JSON Schemas and representative examples |
+| `/examples/` | explicit `PUBLIC_EXAMPLES` in `scripts/site/stage_examples.py` | Only the seven public request/source downloads linked by the documentation |
 | `/intelligence/` | generated evidence | CI, dependency, security, contract, and release health |
 | `/releases/` | release metadata | Supported targets, checksums, provenance, SBOMs, and verification commands |
 
@@ -43,6 +45,7 @@ architecture generation --> staging/architecture/
 Zensical build -----------> staging/docs/
 rustdoc build ------------> staging/api/
 schema publication -------> staging/schemas/
+public example allowlist --> staging/examples/
 intelligence generation --> staging/intelligence/
 release projection -------> staging/releases/
                                   |
@@ -56,9 +59,21 @@ architecture portal from the 18 canonical root documents and repository-owned
 presentation configuration, builds Zensical into `.site/staging/docs/`, copies each static
 source into an isolated stage, accepts Relay's public-only dashboard bundle
 from `.site/producers/intelligence/`, rejects pre-existing `architecture/`,
-`docs/`, `intelligence/`, or `schemas/` mounts in the landing source, and only
+`docs/`, `intelligence/`, `schemas/`, or `examples/` mounts in the landing source, and only
 then replaces `dist/` with the verified composition. A failed build never
 publishes a partially composed tree.
+
+The `/examples/` producer stages seven explicitly named repository files, not
+the entire source directory. Each source must be a singly linked regular file
+with stable observed identity, at most 256 KiB; the complete set is at most
+1 MiB. Symlinked source/staging paths, unknown public files, and landing mount
+collisions are refused. The composed verifier requires the exact allowlist and
+continues to check every local link. Adding another example download requires a
+reviewed allowlist change. Untracked examples, private media, user configurations
+and generated run artifacts never become eligible through recursive copying.
+These files are source/request examples, not processed or qualified media.
+Their nonexistent example locators and placeholder pins do not grant execution
+or publication authority.
 
 Build and preview the checked-in surfaces locally:
 
