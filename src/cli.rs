@@ -57,6 +57,7 @@ impl Cli {
     pub fn command_name(&self) -> &'static str {
         match &self.command {
             Command::ReleaseContract => "release-contract",
+            Command::Diagnostics(a)=>match &a.command{DiagnosticsCommand::Preview{..}=>"diagnostics preview",DiagnosticsCommand::Bundle{..}=>"diagnostics bundle",DiagnosticsCommand::Inspect{..}=>"diagnostics inspect",DiagnosticsCommand::Doctor=>"diagnostics doctor"},
             Command::Mp4Delivery(a) => a.command.name(),
             Command::Doctor => "doctor",
             Command::Explain(a) => match &a.command {ExplainCommand::SetupLocal(_)=>"explain setup-local",ExplainCommand::SetupStatus(_)=>"explain setup-status",ExplainCommand::Invoke(_)=>"explain invoke",ExplainCommand::Prepare(_)=>"explain prepare",ExplainCommand::Accept(_)=>"explain accept",ExplainCommand::Inspect(_)=>"explain inspect"},
@@ -114,6 +115,8 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Explicit local metadata support; never scans media or uploads a bundle.
+    Diagnostics(DiagnosticsArgs),
     /// Describe compiled release interfaces without state or tool observation.
     ReleaseContract,
     /// Explicit lossy H264/AAC candidates; originals remain untouched.
@@ -155,6 +158,16 @@ pub enum Command {
 
     /// Inspect explicitly selected, operator-locked extension providers.
     Extensions(ExtensionsArgs),
+}
+
+#[derive(Debug,Args)]
+pub struct DiagnosticsArgs{#[command(subcommand)]pub command:DiagnosticsCommand}
+#[derive(Debug,Subcommand)]
+pub enum DiagnosticsCommand{
+    Preview{#[arg(long)]request:PathBuf},
+    Bundle{#[arg(long)]request:PathBuf,#[arg(long)]output:PathBuf},
+    Inspect{#[arg(long)]bundle:PathBuf},
+    Doctor,
 }
 
 #[derive(Debug, Args)]
