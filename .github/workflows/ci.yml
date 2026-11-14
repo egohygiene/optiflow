@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   msrv:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Minimum supported Rust (1.85)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -42,6 +44,8 @@ jobs:
         run: cargo check --all-targets --all-features --locked
 
   validate:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Validate (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -118,6 +122,8 @@ jobs:
         run: ./scripts/smoke-test.sh
 
   performance:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Read-only performance budgets
     runs-on: ubuntu-latest
     timeout-minutes: 15

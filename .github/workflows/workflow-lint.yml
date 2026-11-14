@@ -3,18 +3,8 @@ name: Workflow expressions
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/**'
-      - 'scripts/check-workflows.py'
-      - 'tests/workflows/**'
-      - 'Taskfile.yml'
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/**'
-      - 'scripts/check-workflows.py'
-      - 'tests/workflows/**'
-      - 'Taskfile.yml'
   workflow_dispatch:
 
 permissions:
@@ -49,3 +39,16 @@ jobs:
           tar --extract --gzip --file "$workflow_lint_dir/actionlint.tar.gz" \
             --directory "$workflow_lint_dir" actionlint
           python3 -B scripts/check-workflows.py --actionlint "$workflow_lint_dir/actionlint"
+
+      - name: Test bounded workflow budget source rules
+        run: python3 -B -m unittest discover --start-directory tests/ci_budget --pattern 'test_*.py'
+      - name: Describe budget policy without claiming product execution
+        env:
+          CI_BUDGET_EVENT: '${{ github.event_name }}'
+          CI_BUDGET_HOSTED: "${{ vars.FLOW_SUITE_HOSTED_CI == 'enabled' }}"
+          CI_BUDGET_SCHEDULED: "${{ vars.FLOW_SUITE_SCHEDULED_CI == 'enabled' }}"
+        run: >-
+          python3 -B scripts/ci_budget.py
+          --event "$CI_BUDGET_EVENT"
+          --hosted-enabled "$CI_BUDGET_HOSTED"
+          --scheduled-enabled "$CI_BUDGET_SCHEDULED"
