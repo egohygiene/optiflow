@@ -1,0 +1,24 @@
+name: Local optiflow workflow-budget validation
+
+# Explicit act target only: outside .github/workflows, never scheduled by GitHub.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  budget-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Copy reviewed working tree through act checkout emulation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; act working-tree-copy emulation only.
+        with:
+          persist-credentials: false
+      - name: Run the canonical synthetic workflow-budget regressions
+        run: python3 -B -m unittest discover --start-directory tests/ci_budget --pattern 'test_*.py'
+      - name: Inspect the canonical bounded source plan
+        run: python3 -B scripts/ci_budget.py --event pull_request

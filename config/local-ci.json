@@ -1,0 +1,97 @@
+{
+  "schema_version": "realm.local-ci/v1",
+  "checks": [
+    {
+      "id": "declared-compiler-library",
+      "kind": "direct",
+      "required": true,
+      "timeout_seconds": 1200,
+      "command": [
+        "cargo",
+        "+1.89.0",
+        "check",
+        "--lib",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "2"
+      ]
+    },
+    {
+      "id": "workflow-budget-regressions",
+      "kind": "direct",
+      "required": true,
+      "timeout_seconds": 120,
+      "command": [
+        "python3",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "--start-directory",
+        "tests/ci_budget",
+        "--pattern",
+        "test_*.py"
+      ]
+    },
+    {
+      "id": "workflow-budget-source-plan",
+      "kind": "direct",
+      "required": true,
+      "timeout_seconds": 60,
+      "command": [
+        "python3",
+        "-B",
+        "scripts/ci_budget.py",
+        "--event",
+        "pull_request"
+      ]
+    },
+    {
+      "id": "workflow-budget-act",
+      "kind": "act",
+      "required": true,
+      "timeout_seconds": 600,
+      "workflow": ".github/act/local-validation.yml",
+      "job": "budget-source",
+      "event": "workflow_dispatch",
+      "matrix": [],
+      "inputs": {},
+      "platforms": {
+        "ubuntu-24.04": "ghcr.io/catthehacker/ubuntu:act-24.04@sha256:19619a010b204f44c5340bff7d39b68551109fe6a56a53f75201ea91e05d4270"
+      },
+      "required_secrets": [],
+      "docker_socket": false
+    },
+    {
+      "id": "full-rust-matrix",
+      "kind": "unsupported",
+      "required": false,
+      "reason": "This selection checks only the declared-compiler library target. All-target/all-feature compilation, Rust tests, Clippy, moving toolchains, fuzz and performance workloads require their own exact-source results; library-check success does not qualify them."
+    },
+    {
+      "id": "native-host-and-provider-matrix",
+      "kind": "unsupported",
+      "required": false,
+      "reason": "Linux container/direct checks do not qualify native macOS, Windows, Apple Silicon/ARM64, APFS or removable-volume behavior. Real media-tool/model availability, versions and supported processing profiles retain their owner qualification gates; no models or private media are selected."
+    },
+    {
+      "id": "hosted-workflow-services",
+      "kind": "unsupported",
+      "required": false,
+      "reason": "The local act fixture uses checkout working-tree-copy emulation and executes the same bounded budget Python commands as the source gate. Remote Action bootstrap, hosted contexts/permissions, OIDC, artifact/cache/service backends, environments and cancellation/concurrency semantics are not established by this fixture."
+    },
+    {
+      "id": "publication-and-distribution",
+      "kind": "unsupported",
+      "required": false,
+      "reason": "Release/deployment/signing/attestation, live evidence admission, package publication and native installer/Snap/store qualification remain outside this local validation selection. No publishing workflow or credential is selected."
+    },
+    {
+      "id": "dependency-policy-security",
+      "kind": "unsupported",
+      "required": false,
+      "reason": "Rust 1.89 and the patched bundled SQLite graph are source selections. This library check does not execute cargo-deny advisories/bans/licenses/sources, qualify native database behavior or grant transaction/PNG replacement authority under #93/#95/#111."
+    }
+  ]
+}

@@ -2,6 +2,37 @@
 version: "3"
 
 tasks:
+  ci:local:plan:
+    desc: Plan the reviewed local selection without executing checks (requires Realm checkout)
+    requires:
+      vars: [REALM_DIRECTORY]
+    env:
+      REALM_LOCAL_CI_CHECKOUT: '{{.REALM_DIRECTORY}}'
+    cmds:
+      - python3 -B "$REALM_LOCAL_CI_CHECKOUT/tools/realm_local_ci.py" plan --repository .
+
+  ci:local:
+    desc: Run the selected local checks through Realm; no hosted dispatch or publication
+    requires:
+      vars: [REALM_DIRECTORY, ACT, OUTPUT]
+    env:
+      REALM_LOCAL_CI_CHECKOUT: '{{.REALM_DIRECTORY}}'
+      REALM_LOCAL_CI_ACT: '{{.ACT}}'
+      REALM_LOCAL_CI_OUTPUT: '{{.OUTPUT}}'
+    cmds:
+      - python3 -B "$REALM_LOCAL_CI_CHECKOUT/tools/realm_local_ci.py" run --repository . --act "$REALM_LOCAL_CI_ACT" --output "$REALM_LOCAL_CI_OUTPUT"
+
+  ci:local:cloud:
+    desc: Explicitly opt selected local checks into the managed Docker proxy/CA adapter
+    requires:
+      vars: [REALM_DIRECTORY, ACT, OUTPUT]
+    env:
+      REALM_LOCAL_CI_CHECKOUT: '{{.REALM_DIRECTORY}}'
+      REALM_LOCAL_CI_ACT: '{{.ACT}}'
+      REALM_LOCAL_CI_OUTPUT: '{{.OUTPUT}}'
+    cmds:
+      - python3 -B "$REALM_LOCAL_CI_CHECKOUT/tools/realm_local_ci.py" run --repository . --act "$REALM_LOCAL_CI_ACT" --output "$REALM_LOCAL_CI_OUTPUT" --cloud-network
+
   ci:budget:
     desc: Inspect workflow budget sources; qualification remains deferred or unobserved
     cmds:
