@@ -2,7 +2,7 @@
 name = "optiflow"
 version = "0.1.1"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.89"
 description = "A local-first, evidence-driven media inventory and exact-deduplication planner"
 license = "MIT"
 repository = "https://github.com/egohygiene/optiflow"
@@ -21,7 +21,7 @@ flate2 = "1.1"
 infer = "0.22"
 jsonschema = { version = "0.60", default-features = false }
 png = "=0.18.1"
-rusqlite = { version = "0.40", features = ["bundled"] }
+rusqlite = { version = "=0.41.1", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 signal-hook = "0.4"

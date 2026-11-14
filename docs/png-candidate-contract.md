@@ -156,7 +156,7 @@ files, invokes no provider, and creates no output. Its opaque
 the contract example cannot be converted into observed byte evidence.
 
 It uses the pinned [`png` 0.18.1 decoder](https://docs.rs/png/0.18.1/png/struct.Decoder.html)
-(declared MSRV 1.73, below OptiFlow's 1.85), with identity transformations and
+(declared MSRV 1.73, below OptiFlow's Rust 1.89 minimum), with identity transformations and
 checksum checking explicitly enabled. A separate chunk scanner verifies all
 CRCs, framing, ordering, and supported metadata before decoding. A bounded
 `flate2` zlib pass requires the complete stream, correct Adler-32, exact

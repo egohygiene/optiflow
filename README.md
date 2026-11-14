@@ -1,5 +1,9 @@
 # optiflow
 
+Build minimum: Rust 1.89. Canonical formatting remains Rustfmt 1.85.0.
+See the [SQLite source-adoption record](docs/work/137/215-sqlite-adoption.md)
+for the compatibility change and pending qualification.
+
 > Observe first. Prove relationships. Plan safely.
 
 `optiflow` is a local-first Rust CLI for inventorying messy media collections,

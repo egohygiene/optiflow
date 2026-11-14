@@ -66,7 +66,7 @@ jobs:
     env:
       # Override rust-toolchain.toml so every release command uses the same
       # toolchain that receives the matrix target below.
-      RUSTUP_TOOLCHAIN: "1.85.0"
+      RUSTUP_TOOLCHAIN: "1.89.0"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -89,7 +89,7 @@ jobs:
         # dtolnay/rust-toolchain v1
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
-          toolchain: "1.85.0"
+          toolchain: "1.89.0"
           targets: "${{ matrix.target }}"
 
       - name: Install Python for qualification
@@ -156,7 +156,7 @@ jobs:
     env:
       # Keep SBOM generation aligned with the minimum supported toolchain used
       # to compile the release artifacts.
-      RUSTUP_TOOLCHAIN: "1.85.0"
+      RUSTUP_TOOLCHAIN: "1.89.0"
     permissions:
       contents: read
       id-token: write
@@ -172,7 +172,7 @@ jobs:
         # dtolnay/rust-toolchain v1
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
-          toolchain: "1.85.0"
+          toolchain: "1.89.0"
 
       - name: Install Python for release evidence
         # actions/setup-python v6

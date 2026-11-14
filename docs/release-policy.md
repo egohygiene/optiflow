@@ -78,7 +78,7 @@ weekly schedule, and manual dispatch.
 | Vulnerabilities | RustSec advisories and yanked versions fail `cargo-deny` |
 | Secrets | TruffleHog scans changed Git history and fails for verified or unknown findings |
 | Supply chain | GitHub dependency review blocks high-severity additions; Cargo sources and release evidence are checked separately |
-| Release evidence | Deterministic archive, SPDX SBOM, SLSA provenance, checksum, and tamper tests run at Rust 1.85 |
+| Release evidence | Deterministic archive, SPDX SBOM, SLSA provenance, checksum, and tamper tests require Rust 1.89; current-source release qualification remains pending |
 
 New release workflow actions are pinned to full commit SHAs. Updates must retain
 the adjacent human-readable version comment and review the upstream change.

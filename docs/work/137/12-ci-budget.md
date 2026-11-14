@@ -1,3 +1,11 @@
+## Source adoption continuation — November 13, 2026
+
+After the checkpoint 12 source stack, #215 selects Rust 1.89 and the patched
+bundled SQLite dependency graph. Earlier primary-Rust-1.85 statements below
+describe the preceding checkpoint. The [adoption record](215-sqlite-adoption.md)
+preserves the compatibility consequences and still-pending qualification.
+Hosted budget gates and honest deferred/unobserved states remain unchanged.
+
 # Flow #137 checkpoint 12 — November 13, 2026
 
 The existing `Workflow expressions` workflow is the single path-independent
