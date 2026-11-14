@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/flow/schemas/support-request-v1.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "egohygiene.diagnostics-request/v1"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "build",
+          "platform",
+          "contracts",
+          "health"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "categories"
+  ],
+  "additionalProperties": false
+}

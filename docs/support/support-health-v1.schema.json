@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/egohygiene/flow/schemas/support-health-v1.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "egohygiene.observability-health/v1"
+    },
+    "producer": {
+      "type": "object",
+      "properties": {
+        "tool": {
+          "enum": [
+            "flow",
+            "aniflow",
+            "optiflow",
+            "renderflow"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9][A-Za-z0-9.+_-]*$"
+        }
+      },
+      "required": [
+        "tool",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "logging_compiled": {
+      "type": "boolean"
+    },
+    "logging_runtime_observed": {
+      "const": false
+    },
+    "subscriber_initialized_by_diagnostics": {
+      "const": false
+    },
+    "exporters_compiled": {
+      "const": false
+    },
+    "collector_state": {
+      "const": "not_applicable_no_exporter"
+    },
+    "queue_records": {
+      "const": null
+    },
+    "dropped_records": {
+      "const": null
+    },
+    "flush_state": {
+      "const": "not_applicable_no_exporter"
+    },
+    "file_identity_supported": {
+      "type": "boolean"
+    },
+    "network_contacted": {
+      "const": false
+    },
+    "domain_evidence": {
+      "const": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "producer",
+    "logging_compiled",
+    "logging_runtime_observed",
+    "subscriber_initialized_by_diagnostics",
+    "exporters_compiled",
+    "collector_state",
+    "queue_records",
+    "dropped_records",
+    "flush_state",
+    "file_identity_supported",
+    "network_contacted",
+    "domain_evidence"
+  ],
+  "additionalProperties": false
+}

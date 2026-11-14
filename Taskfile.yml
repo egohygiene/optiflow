@@ -2,6 +2,39 @@
 version: "3"
 
 tasks:
+  diagnostics:preview:
+    desc: Preview generated support categories without creating a bundle
+    requires:
+      vars: [REQUEST]
+    env:
+      OPTIFLOW_SUPPORT_REQUEST: '{{.REQUEST}}'
+    cmds:
+      - optiflow --json diagnostics preview --request "$OPTIFLOW_SUPPORT_REQUEST"
+
+  diagnostics:bundle:
+    desc: Explicitly create a fresh private metadata-only support bundle
+    requires:
+      vars: [REQUEST, OUTPUT]
+    env:
+      OPTIFLOW_SUPPORT_REQUEST: '{{.REQUEST}}'
+      OPTIFLOW_SUPPORT_OUTPUT: '{{.OUTPUT}}'
+    cmds:
+      - optiflow --json diagnostics bundle --request "$OPTIFLOW_SUPPORT_REQUEST" --output "$OPTIFLOW_SUPPORT_OUTPUT"
+
+  diagnostics:inspect:
+    desc: Inspect support structure and digest without extracting or trusting content
+    requires:
+      vars: [BUNDLE]
+    env:
+      OPTIFLOW_SUPPORT_BUNDLE: '{{.BUNDLE}}'
+    cmds:
+      - optiflow --json diagnostics inspect --bundle "$OPTIFLOW_SUPPORT_BUNDLE"
+
+  diagnostics:doctor:
+    desc: Describe compiled observability capabilities without discovery or network
+    cmds:
+      - optiflow --json diagnostics doctor
+
   mp4:resolve:
     desc: Show effective MP4 settings and provenance without media/tool observation
     requires:
