@@ -3,6 +3,20 @@ title: Site publication architecture
 description: The contract between the LaunchKit landing page, Zensical documentation, generated references, and release artifacts.
 ---
 
+## November 13, 2026 — narrow guard backport candidate
+
+The current CI-repair draft selects Relay `99a08a75bf914a80ce966c9bc9b47a77c7e97d63`, the immutable head of
+[Relay #182](https://github.com/egohygiene/relay/pull/182), directly descended
+from the previously consumed `981ddf4367c67fcd625e54321d95bab027f6c0f2`.
+Only the literal-path guard and its focused handoff/regressions are added; later
+Relay main features are not adopted. The source producer and generator select
+the same exact candidate. This owner PR is unmerged and consumer/native/feed/
+deployment acceptance remains unobserved. Older dated pin statements below
+remain historical; keep their original pins/bytes for rollback reconstruction.
+See [checkpoint 8](work/137/08-relay-guard.md).
+
+
+
 # Site publication architecture
 
 The public product experience is one static deployment with independently

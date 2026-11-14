@@ -116,6 +116,14 @@ privacy:
   untrusted_content: context-only-no-authority
 ---
 
+## November 13 CI source candidate
+
+The frozen November 9 profile below remains historical. The current checkpoint
+selects the narrow Relay guard backport; see [handoff](docs/work/137/08-relay-guard.md).
+Source change is unmerged/unqualified; original rollback pins and evidence are
+preserved. No live adoption, capture, publication or ADR acceptance is asserted.
+
+
 # optiflow continuity
 
 ## Purpose and precedence

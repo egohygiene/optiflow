@@ -40,7 +40,7 @@ jobs:
         id: public_sources
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         # Exact reviewed Relay production source integration.
-        uses: egohygiene/relay/actions/repository-intelligence-github-sources@981ddf4367c67fcd625e54321d95bab027f6c0f2
+        uses: egohygiene/relay/actions/repository-intelligence-github-sources@99a08a75bf914a80ce966c9bc9b47a77c7e97d63
         with:
           github-token: "${{ github.token }}"
           include-titles: "true"
@@ -67,7 +67,7 @@ jobs:
 
       - name: Generate public repository intelligence
         # Reviewed Relay source candidate; native/consumer qualification remains deferred.
-        uses: egohygiene/relay/actions/repository-intelligence@981ddf4367c67fcd625e54321d95bab027f6c0f2
+        uses: egohygiene/relay/actions/repository-intelligence@99a08a75bf914a80ce966c9bc9b47a77c7e97d63
         with:
           collect-journey: "true"
           search-attribution: "true"
