@@ -38,3 +38,10 @@ pub fn inspect(pin:&Pin)->Result<Inspection>{
     ensure!(crate::candidate_artifact::read_member(&root,"mp4-artifact.json",16384)?==raw&&crate::candidate_artifact::read_member(&root,"evidence.json",METADATA_BYTES)?==body,"MP4 record changed during inspection");
     Ok(Inspection {schema:"optiflow.mp4-delivery-artifact-inspection.v1".into(),artifact:pin.clone(),candidate:parsed.summary,source_digest:e.plan.payload.source.content_digest.clone(),source_bytes:e.plan.payload.source.snapshot.logical_bytes,request_digest:digest(&e.plan.payload.request)?,tools:e.plan.payload.tools,evidence_scope:"current_candidate_bytes_structure_and_retained_validation_records; original_tools_native_decode_and_release_not_reobserved".into(),current_native_decode:false,native_qualified:false,quality_review:m.quality_review,replacement_authority:false,upload_authority:false})
 }
+/// Join a current pinned candidate to an exact prepared plan without reopening
+/// original/tool paths or claiming a fresh native decode or upstream provenance.
+pub fn inspect_for_plan(pin:&Pin,expected:&Plan)->Result<Inspection>{
+    planning::retained(expected)?;let inspection=inspect(pin)?;
+    let root=crate::candidate_artifact::open_directory(&pin.directory)?;let body=crate::candidate_artifact::read_member(&root,"evidence.json",METADATA_BYTES)?;ensure!(hash(&body)==pin.evidence_digest,"candidate evidence pin differs");
+    let evidence:validation::Evidence=serde_json::from_slice(&body)?;ensure!(evidence.plan.plan_digest==expected.plan_digest,"candidate belongs to a different prepared source/tool/policy plan");same(&pin.directory,&root)?;Ok(inspection)
+}

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-input-reference-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "path",
+    "content_digest",
+    "byte_count",
+    "origin"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-input-reference.v1"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "content_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    },
+    "byte_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 536870912
+    },
+    "origin": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "selected_file"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "tool",
+            "contract",
+            "artifact_id",
+            "manifest_digest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "external_artifact"
+            },
+            "tool": {
+              "enum": [
+                "aniflow",
+                "renderflow",
+                "optiflow"
+              ]
+            },
+            "contract": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "artifact_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "manifest_digest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "enum": [
+                    "blake3-256",
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

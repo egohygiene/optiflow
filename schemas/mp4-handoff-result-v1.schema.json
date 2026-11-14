@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-handoff-result-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "handoff",
+    "handoff_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-handoff-result.v1"
+    },
+    "handoff": {
+      "$ref": "mp4-delivery-handoff-v1.schema.json"
+    },
+    "handoff_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    }
+  }
+}

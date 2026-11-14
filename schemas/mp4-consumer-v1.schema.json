@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-consumer-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "maximum_bytes",
+    "accept_lossy_video"
+  ],
+  "properties": {
+    "profile": {
+      "const": "optiflow.mp4-h264-aac-delivery.v1"
+    },
+    "maximum_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 268435456
+    },
+    "accept_lossy_video": {
+      "const": true
+    }
+  }
+}

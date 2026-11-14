@@ -21,6 +21,25 @@ pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&Configuratio
         if let Mp4DeliveryCommand::Plan(a)|Mp4DeliveryCommand::Resolve(a)|Mp4DeliveryCommand::Preflight(a)|Mp4DeliveryCommand::FolderPreview(a)|Mp4DeliveryCommand::FolderResolve(a)=command {ensure!(a.event_log.is_none()&&a.maximum_events.is_none()&&a.maximum_event_bytes.is_none(),"progress logging is only available for explicit run/folder-run/folder-resume");}
         match command {
             Mp4DeliveryCommand::Profiles=>Ok(mp4::profiles()),
+            Mp4DeliveryCommand::Capabilities=>Ok(serde_json::to_value(mp4::handoff::capabilities())?),
+            Mp4DeliveryCommand::InputReference(a)=>Ok(serde_json::to_value(mp4::handoff::observe_input(&a.source,a.maximum_input_bytes,mp4::handoff::Origin::SelectedFile,cancel)?)?),
+            Mp4DeliveryCommand::PrepareHandoff(a)=>{
+                ensure!(a.selection.event_log.is_none()&&a.selection.maximum_events.is_none()&&a.selection.maximum_event_bytes.is_none(),"preparation cannot create an execution progress log");
+                let request=resolve(&a.selection,configuration,signals)?.request;
+                let input:mp4::handoff::InputReference=serde_json::from_slice(&crate::record_io::read(&a.input_reference,131_072,signals)?)?;
+                let consumer:mp4::handoff::Consumer=serde_json::from_slice(&crate::record_io::read(&a.consumer,131_072,signals)?)?;
+                let unchanged=match a.unchanged_policy.as_str(){"refuse"=>mp4::handoff::UnchangedPolicy::Refuse,"keep_original"=>mp4::handoff::UnchangedPolicy::KeepOriginal,_=>anyhow::bail!("explicit unchanged policy required")};
+                Ok(serde_json::to_value(mp4::handoff::prepare(&request,input,consumer,unchanged,cancel)?)?)
+            },
+            Mp4DeliveryCommand::RunHandoff(a)=>{
+                ensure!(a.settings.is_none(),"a frozen handoff cannot accept settings overrides");
+                let prepared=mp4::handoff::Prepared::from_json_slice(&crate::record_io::read(&a.request,mp4::METADATA_BYTES as u64,signals)?)?;
+                let forbidden=forbidden(&prepared.plan.payload.request,None);let (value,health)=progress::execute(a,&forbidden,|observer|mp4::handoff::produce(&prepared,cancel,observer))?;progress_health=Some(health);Ok(serde_json::to_value(value?)?)
+            },
+            Mp4DeliveryCommand::HandoffStatus(a)=>{
+                let handoff:mp4::handoff::Handoff=serde_json::from_slice(&crate::record_io::read(&a.handoff,mp4::METADATA_BYTES as u64,signals)?)?;
+                let digest=crate::domain::EvidenceDigest {algorithm:"blake3-256".into(),value:a.handoff_blake3.clone()};Ok(serde_json::to_value(mp4::handoff::inspect(&handoff,&digest)?)?)
+            },
             Mp4DeliveryCommand::Inspect(a)=>Ok(serde_json::to_value(mp4::inspect(&a.source,a.maximum_input_bytes,cancel)?)?),
             Mp4DeliveryCommand::Resolve(a)=>Ok(serde_json::to_value(resolve(a,configuration,signals)?)?),
             Mp4DeliveryCommand::Preflight(a)=>Ok(serde_json::to_value(mp4::preflight::observe(&resolve(a,configuration,signals)?.request,cancel)?)?),

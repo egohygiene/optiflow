@@ -569,6 +569,16 @@ pub struct Mp4DeliveryArgs {#[command(subcommand)] pub command:Mp4DeliveryComman
 pub enum Mp4DeliveryCommand {
     /// Describe the compiled, unqualified source profile without tool observation.
     Profiles,
+    /// Describe typed MP4 input/output and preservation constraints without I/O.
+    Capabilities,
+    /// Observe an explicit selected MP4 input reference without native tools.
+    InputReference(Mp4InspectArgs),
+    /// Bind input, resolved plan and explicit consumer/unchanged policies.
+    PrepareHandoff(Mp4PrepareHandoffArgs),
+    /// Run a frozen prepared handoff from --request; settings overrides refuse.
+    RunHandoff(Mp4RequestArgs),
+    /// Reobserve a handoff using an externally retained semantic digest.
+    HandoffStatus(Mp4HandoffStatusArgs),
     /// Independently inspect one bounded MP4 without native tools.
     Inspect(Mp4InspectArgs),
     /// Bind a closed request, source and tools without invoking providers.
@@ -595,11 +605,12 @@ pub enum Mp4DeliveryCommand {
     FolderSummary(VideoFolderStatusArgs),
 }
 impl Mp4DeliveryCommand {pub fn name(&self)->&'static str {match self {
+    Self::Capabilities=>"mp4-delivery capabilities",Self::InputReference(_)=>"mp4-delivery input-reference",Self::PrepareHandoff(_)=>"mp4-delivery prepare-handoff",Self::RunHandoff(_)=>"mp4-delivery run-handoff",Self::HandoffStatus(_)=>"mp4-delivery handoff-status",
     Self::FolderSummary(_)=>"mp4-delivery folder-summary",
     Self::Preflight(_)=>"mp4-delivery preflight",
     Self::Profiles=>"mp4-delivery profiles",Self::Inspect(_)=>"mp4-delivery inspect",Self::Plan(_)=>"mp4-delivery plan",Self::Run(_)=>"mp4-delivery run",Self::Resolve(_)=>"mp4-delivery resolve",Self::Status(_)=>"mp4-delivery status",Self::FolderPreview(_)=>"mp4-delivery folder-preview",Self::FolderRun(_)=>"mp4-delivery folder-run",Self::FolderResume(_)=>"mp4-delivery folder-resume",Self::FolderResolve(_)=>"mp4-delivery folder-resolve",Self::FolderStatus(_)=>"mp4-delivery folder-status",
 }}}
-impl Mp4DeliveryCommand {pub fn uses_configuration(&self)->bool {matches!(self,Self::Plan(_)|Self::Run(_)|Self::Resolve(_)|Self::Preflight(_)|Self::FolderPreview(_)|Self::FolderRun(_)|Self::FolderResume(_)|Self::FolderResolve(_))}}
+impl Mp4DeliveryCommand {pub fn uses_configuration(&self)->bool {matches!(self,Self::Plan(_)|Self::Run(_)|Self::Resolve(_)|Self::Preflight(_)|Self::FolderPreview(_)|Self::FolderRun(_)|Self::FolderResume(_)|Self::FolderResolve(_)|Self::PrepareHandoff(_))}}
 #[derive(Debug,Args)]
 pub struct Mp4RequestArgs {
     #[arg(long)] pub request:PathBuf,
@@ -614,6 +625,15 @@ pub struct Mp4RequestArgs {
 pub struct Mp4InspectArgs {#[arg(long)] pub source:PathBuf,#[arg(long)] pub maximum_input_bytes:u64}
 #[derive(Debug,Args)]
 pub struct Mp4PinArgs {#[arg(long)] pub pin:PathBuf}
+#[derive(Debug,Args)]
+pub struct Mp4PrepareHandoffArgs {
+    #[command(flatten)] pub selection:Mp4RequestArgs,
+    #[arg(long)] pub input_reference:PathBuf,
+    #[arg(long)] pub consumer:PathBuf,
+    #[arg(long,value_parser=["refuse","keep_original"])] pub unchanged_policy:String,
+}
+#[derive(Debug,Args)]
+pub struct Mp4HandoffStatusArgs {#[arg(long)] pub handoff:PathBuf,#[arg(long)] pub handoff_blake3:String}
 #[derive(Debug,Args)]
 pub struct VideoFolderArgs {#[command(subcommand)] pub command:VideoFolderCommand}
 #[derive(Debug,Subcommand)]
