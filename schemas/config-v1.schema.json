@@ -3,32 +3,158 @@
   "$id": "https://github.com/egohygiene/optiflow/schemas/config-v1.schema.json",
   "title": "optiflow configuration v1",
   "type": "object",
-  "required": ["schema"],
+  "required": [
+    "schema"
+  ],
   "properties": {
-    "schema": { "const": "optiflow.config.v1" },
+    "schema": {
+      "const": "optiflow.config.v1"
+    },
     "output": {
       "type": "object",
       "properties": {
-        "format": { "enum": ["human", "json"] }
+        "format": {
+          "enum": [
+            "human",
+            "json"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "state": {
       "type": "object",
       "properties": {
-        "directory": { "type": "string", "minLength": 1 }
+        "directory": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false
     },
     "scan": {
       "type": "object",
       "properties": {
-        "follow_symlinks": { "type": "boolean" },
-        "include_hidden": { "type": "boolean" },
-        "cross_filesystems": { "type": "boolean" },
-        "probe_media": { "type": "boolean" }
+        "follow_symlinks": {
+          "type": "boolean"
+        },
+        "include_hidden": {
+          "type": "boolean"
+        },
+        "cross_filesystems": {
+          "type": "boolean"
+        },
+        "probe_media": {
+          "type": "boolean"
+        }
       },
       "additionalProperties": false
+    },
+    "mp4_delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "control": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "crf",
+                "preset"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "quality"
+                },
+                "crf": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 51
+                },
+                "preset": {
+                  "enum": [
+                    "fast",
+                    "medium",
+                    "slow",
+                    "very_slow"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "maximum_bytes",
+                "mux_reserve_bytes",
+                "preset"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "target_size"
+                },
+                "maximum_bytes": {
+                  "type": "integer",
+                  "minimum": 1048576,
+                  "maximum": 268435456
+                },
+                "mux_reserve_bytes": {
+                  "type": "integer",
+                  "minimum": 1048576,
+                  "maximum": 268435455
+                },
+                "preset": {
+                  "enum": [
+                    "fast",
+                    "medium",
+                    "slow",
+                    "very_slow"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 536870912
+            },
+            "candidate_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 268435456
+            },
+            "elapsed_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7200000
+            },
+            "memory_admission_bytes": {
+              "type": "integer",
+              "minimum": 134217728,
+              "maximum": 8589934592
+            },
+            "working_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967296
+            },
+            "minimum_free_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1099511627776
+            }
+          }
+        }
+      }
     }
   },
   "additionalProperties": false

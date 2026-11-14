@@ -8,12 +8,15 @@ use std::path::{Path, PathBuf};
 pub mod artifact;
 pub mod container;
 pub mod folder;
+pub mod handoff;
 pub mod planning;
+pub mod preflight;
+pub mod progress;
 pub mod runtime;
 pub mod validation;
 mod worker;
 pub use planning::{Limits, Plan, Preset, RateControl, Request, plan};
-pub use validation::{Outcome, produce};
+pub use validation::{Outcome, produce, produce_with_progress};
 pub use worker::internal_worker;
 
 pub const PROFILE: &str = "optiflow.mp4-h264-aac-delivery.v1";

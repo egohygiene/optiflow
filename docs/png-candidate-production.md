@@ -37,8 +37,7 @@ The adapter requires **OxiPNG v10.2.1**, separately installed by the operator.
 The [upstream project](https://github.com/oxipng/oxipng/tree/v10.2.1) uses the
 MIT license; this repository does not bundle or redistribute its executable.
 Building this OxiPNG version from source requires Rust 1.88; OptiFlow's
-separate minimum is proposed to become Rust 1.89 only on this optional
-compatibility candidate; it has not been adopted.
+separate minimum is Rust 1.89.
 OptiFlow observes the complete executable bytes with BLAKE3-256, checks its
 version, binds the canonical path and an invocation fingerprint, and rechecks
 the file around invocation and before candidate publication. A path swap

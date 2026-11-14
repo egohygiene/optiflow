@@ -9,6 +9,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+from stage_examples import MAX_TOTAL_BYTES, PUBLIC_EXAMPLES, regular_bytes
+
 
 REQUIRED_PATHS = (
     "index.html",
@@ -283,6 +285,27 @@ def verify_public_entrypoint(
     return errors
 
 
+def verify_examples(site_root: Path) -> list[str]:
+    """Keep the download mount limited to the explicit reviewed public files."""
+    root = site_root / "examples"
+    if root.is_symlink() or not root.is_dir():
+        return ["missing or aliased public examples mount: examples/"]
+    expected = set(PUBLIC_EXAMPLES)
+    actual = {path.name for path in root.iterdir()}
+    errors = []
+    if actual != expected:
+        errors.append("public examples mount differs from its explicit allowlist")
+    total_bytes = 0
+    for name in sorted(actual & expected):
+        try:
+            total_bytes += len(regular_bytes(root / name))
+        except (OSError, ValueError):
+            errors.append(f"unsafe public example asset: examples/{name}")
+    if total_bytes > MAX_TOTAL_BYTES:
+        errors.append("public examples mount exceeds its byte limit")
+    return errors
+
+
 def verify(site_root: Path, *, allow_missing_intelligence: bool = False) -> list[str]:
     errors: list[str] = []
     resolved_root = site_root.resolve()
@@ -333,6 +356,7 @@ def verify(site_root: Path, *, allow_missing_intelligence: bool = False) -> list
             errors.append(f"{relative_path}: missing reduced-motion override")
 
     errors.extend(verify_architecture(site_root))
+    errors.extend(verify_examples(site_root))
 
     identifier_cache: dict[Path, set[str]] = {}
 

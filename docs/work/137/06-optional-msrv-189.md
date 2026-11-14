@@ -1,3 +1,10 @@
+## Adoption continuation — November 13, 2026
+
+The maintainer's merge-all instruction selected this source option in #215.
+See the [current adoption record](215-sqlite-adoption.md). The original proposal
+below and its adjoining JSON remain the dated pre-adoption evidence packet;
+their old not-adopted fields are historical, not the current source selection.
+
 OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
 
 # Concrete Rust 1.89 / patched SQLite compatibility candidate

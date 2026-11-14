@@ -2,6 +2,7 @@
 use super::*;
 use anyhow::Context;
 use container::{Summary, Time, TrackSummary};
+use progress::{Observer, Phase, Transition};
 use std::{
     fs::File,
     time::{Duration, Instant},
@@ -430,14 +431,55 @@ fn store_trace(directory: &File, name: &str, bytes: &[u8]) -> Result<()> {
     runtime::write_member(directory, name, bytes)
 }
 pub fn produce(request: &Request, cancel: impl Fn() -> bool) -> Result<Outcome> {
-    produce_bound(request, None, None, cancel)
+    produce_with_progress(request, cancel, &Observer::silent())
+}
+pub fn produce_with_progress(
+    request: &Request,
+    cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+) -> Result<Outcome> {
+    produce_bound(request, None, None, None, cancel, observer, None)
 }
 pub(crate) fn produce_bound(
     request: &Request,
     expected: Option<&crate::video_folder::SourceBinding>,
     tools: Option<&[planning::Tool]>,
+    expected_plan: Option<&EvidenceDigest>,
     cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+    entry: Option<usize>,
 ) -> Result<Outcome> {
+    observer.phase(Phase::Operation, Transition::Started, entry);
+    let result = produce_inner(
+        request,
+        expected,
+        tools,
+        expected_plan,
+        cancel,
+        observer,
+        entry,
+    );
+    observer.phase(
+        Phase::Operation,
+        if result.is_ok() {
+            Transition::Finished
+        } else {
+            Transition::Failed
+        },
+        entry,
+    );
+    result
+}
+fn produce_inner(
+    request: &Request,
+    expected: Option<&crate::video_folder::SourceBinding>,
+    tools: Option<&[planning::Tool]>,
+    expected_plan: Option<&EvidenceDigest>,
+    cancel: impl Fn() -> bool,
+    observer: &Observer<'_>,
+    entry: Option<usize>,
+) -> Result<Outcome> {
+    observer.phase(Phase::Planning, Transition::Started, entry);
     let started = Instant::now();
     let stop = || cancel() || started.elapsed() >= Duration::from_millis(request.limits.elapsed_ms);
     let planned = planning::plan(request, &stop)?;
@@ -454,6 +496,13 @@ pub(crate) fn produce_bound(
             "MP4 tools differ from frozen folder baseline"
         );
     }
+    if let Some(expected) = expected_plan {
+        ensure!(
+            planned.plan_digest == *expected,
+            "MP4 current source/tool/policy plan differs from prepared binding"
+        );
+    }
+    observer.phase(Phase::Planning, Transition::Finished, entry);
     if matches!(&request.control,RateControl::TargetSize {maximum_bytes,..} if planned.payload.source.snapshot.logical_bytes<=*maximum_bytes)
     {
         return Ok(Outcome::Unchanged {
@@ -464,6 +513,7 @@ pub(crate) fn produce_bound(
             attempt_directory: None,
         });
     }
+    observer.phase(Phase::RuntimePreparation, Transition::Started, entry);
     let (attempt, directory) = runtime::fresh_directory(&request.private_workdir, "mp4-attempt")?;
     runtime::write_member(&directory, "intent.json", &serde_json::to_vec(&planned)?)?;
     let mut session = runtime::Session::new_at(request, &cancel, started)
@@ -472,6 +522,8 @@ pub(crate) fn produce_bound(
         session.plan.plan_digest == planned.plan_digest,
         "MP4 input/tool/settings changed before execution"
     );
+    observer.phase(Phase::RuntimePreparation, Transition::Finished, entry);
+    observer.phase(Phase::SourceDecode, Transition::Started, entry);
     let source = session.source_bytes()?;
     let source_media = planned.payload.source.media.clone();
     let source_probe = session.call(Operation::Probe, &source, &source_media)?;
@@ -482,8 +534,12 @@ pub(crate) fn produce_bound(
     let source_audio = trace(&sa, &source_media.audio)?;
     store_trace(&directory, "source-video.framehash", &sv)?;
     store_trace(&directory, "source-audio.framehash", &sa)?;
+    observer.phase(Phase::SourceDecode, Transition::Finished, entry);
+    observer.phase(Phase::Encoding, Transition::Started, entry);
     let candidate = session.call(Operation::Encode, &source, &source_media)?;
     runtime::write_member(&directory, "candidate.mp4", &candidate)?;
+    observer.phase(Phase::Encoding, Transition::Finished, entry);
+    observer.phase(Phase::CandidateValidation, Transition::Started, entry);
     let candidate_file = BoundedFileObservation::open_mp4(
         &attempt.join("candidate.mp4"),
         planned.payload.allocation.maximum_candidate_bytes,
@@ -505,6 +561,7 @@ pub(crate) fn produce_bound(
     );
     candidate_file.verify_current_guarded(&|| session.check())?;
     session.recheck()?;
+    observer.phase(Phase::CandidateValidation, Transition::Finished, entry);
     if candidate.len() as u64 >= planned.payload.source.snapshot.logical_bytes {
         return Ok(Outcome::Unchanged {
             reason: "validated lossy candidate is not strictly smaller; original retained".into(),
@@ -539,10 +596,12 @@ pub(crate) fn produce_bound(
     };
     retained(&e, &e.candidate, e.candidate_bytes, &e.candidate_digest)?;
     runtime::write_member(&directory, "validation.json", &serde_json::to_vec(&e)?)?;
+    observer.phase(Phase::ArtifactCommit, Transition::Started, entry);
     let artifact = artifact::publish(&request.artifact_root, &candidate, &e, || {
         session.recheck()?;
         candidate_file.verify_current_guarded(&|| session.check())
     })?;
+    observer.phase(Phase::ArtifactCommit, Transition::Finished, entry);
     Ok(Outcome::Accepted {
         artifact,
         source_bytes: planned.payload.source.snapshot.logical_bytes,

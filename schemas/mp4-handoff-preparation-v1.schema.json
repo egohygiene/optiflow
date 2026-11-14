@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mp4-handoff-preparation-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "plan",
+    "input",
+    "consumer",
+    "unchanged_policy",
+    "binding_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mp4-handoff-preparation.v1"
+    },
+    "plan": {
+      "$ref": "mp4-delivery-plan-v1.schema.json"
+    },
+    "input": {
+      "$ref": "mp4-input-reference-v1.schema.json"
+    },
+    "consumer": {
+      "$ref": "mp4-consumer-v1.schema.json"
+    },
+    "unchanged_policy": {
+      "enum": [
+        "refuse",
+        "keep_original"
+      ]
+    },
+    "binding_digest": {
+      "$ref": "mp4-delivery-request-v1.schema.json#/$defs/digest"
+    }
+  }
+}

@@ -12,6 +12,7 @@ ARCHITECTURE_STAGE="$STAGING_ROOT/architecture"
 DOCS_STAGE="$STAGING_ROOT/docs"
 INTELLIGENCE_STAGE="$STAGING_ROOT/intelligence"
 SCHEMAS_STAGE="$STAGING_ROOT/schemas"
+EXAMPLES_STAGE="$STAGING_ROOT/examples"
 COMPOSE_STAGE="$REPOSITORY_ROOT/.site/compose"
 DIST_DIR="$REPOSITORY_ROOT/dist"
 INTELLIGENCE_SOURCE="${INTELLIGENCE_SOURCE:-}"
@@ -32,7 +33,7 @@ assert_managed_path() {
   esac
 }
 
-for managed_path in "$STAGING_ROOT" "$LANDING_STAGE" "$ARCHITECTURE_STAGE" "$DOCS_STAGE" "$INTELLIGENCE_STAGE" "$SCHEMAS_STAGE" "$COMPOSE_STAGE" "$DIST_DIR"; do
+for managed_path in "$STAGING_ROOT" "$LANDING_STAGE" "$ARCHITECTURE_STAGE" "$DOCS_STAGE" "$INTELLIGENCE_STAGE" "$SCHEMAS_STAGE" "$EXAMPLES_STAGE" "$COMPOSE_STAGE" "$DIST_DIR"; do
   assert_managed_path "$managed_path"
 done
 
@@ -70,18 +71,20 @@ if [[ ! -f "$ARCHITECTURE_SOURCE/architecture.config.json" ]]; then
   exit 1
 fi
 
-rm -rf "$LANDING_STAGE" "$ARCHITECTURE_STAGE" "$DOCS_STAGE" "$INTELLIGENCE_STAGE" "$SCHEMAS_STAGE" "$COMPOSE_STAGE"
+rm -rf "$LANDING_STAGE" "$ARCHITECTURE_STAGE" "$DOCS_STAGE" "$INTELLIGENCE_STAGE" "$SCHEMAS_STAGE" "$EXAMPLES_STAGE" "$COMPOSE_STAGE"
 mkdir -p "$LANDING_STAGE" "$ARCHITECTURE_STAGE/assets" "$SCHEMAS_STAGE" "$STAGING_ROOT"
 cp -R "$LANDING_SOURCE"/. "$LANDING_STAGE"/
 cp -R "$ARCHITECTURE_SOURCE/assets"/. "$ARCHITECTURE_STAGE/assets"/
 cp -R "$REPOSITORY_ROOT/schemas"/. "$SCHEMAS_STAGE"/
+python3 -B "$SCRIPT_DIR/stage_examples.py" \
+  --repository-root "$REPOSITORY_ROOT" --output "$EXAMPLES_STAGE"
 
 if [[ -n "$INTELLIGENCE_SOURCE" ]]; then
   mkdir -p "$INTELLIGENCE_STAGE"
   cp -R "$INTELLIGENCE_SOURCE"/. "$INTELLIGENCE_STAGE"/
 fi
 
-for reserved_mount in architecture docs intelligence schemas; do
+for reserved_mount in architecture docs intelligence schemas examples; do
   if [[ -e "$LANDING_STAGE/$reserved_mount" ]]; then
     echo "landing source collides with the reserved /$reserved_mount/ mount" >&2
     exit 1
@@ -117,6 +120,8 @@ if [[ -n "$INTELLIGENCE_SOURCE" ]]; then
 fi
 mkdir -p "$COMPOSE_STAGE/schemas"
 cp -R "$SCHEMAS_STAGE"/. "$COMPOSE_STAGE/schemas"/
+mkdir -p "$COMPOSE_STAGE/examples"
+cp -R "$EXAMPLES_STAGE"/. "$COMPOSE_STAGE/examples"/
 : > "$COMPOSE_STAGE/.nojekyll"
 
 verify_arguments=("$COMPOSE_STAGE")

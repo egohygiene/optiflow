@@ -1,4 +1,3 @@
-# OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
 [package]
 name = "optiflow-fuzz"
 version = "0.0.0"

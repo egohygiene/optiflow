@@ -123,6 +123,7 @@ pub enum DiagnosticImpact {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DiagnosticCode {
+    Mp4ProgressDegraded,
     CandidateInputInvalid,
     CandidateUnsupportedPng,
     CandidateInvalidPng,

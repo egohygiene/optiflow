@@ -1,11 +1,8 @@
-OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
-
-This isolated compatibility candidate proposes Rust 1.89 and a patched bundled
-SQLite graph. It is outside the primary Rust 1.85 repair stack. No build, test,
-security-policy or release qualification is claimed. See the
-[decision packet](docs/work/137/06-optional-msrv-189.md).
-
 # optiflow
+
+Build minimum: Rust 1.89. Canonical formatting remains Rustfmt 1.85.0.
+See the [SQLite source-adoption record](docs/work/137/215-sqlite-adoption.md)
+for the compatibility change and pending qualification.
 
 > Observe first. Prove relationships. Plan safely.
 

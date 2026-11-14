@@ -365,4 +365,6 @@ pub fn preserve_on_copy(
 #[cfg(all(test, target_os = "linux"))]
 mod tests;
 
+#[cfg(target_os = "macos")]
+pub mod darwin;
 pub mod transfer;

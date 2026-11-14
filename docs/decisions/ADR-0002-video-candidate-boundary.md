@@ -37,6 +37,49 @@ mutable application state. They grant no native, replay, candidate, mutation or
 physical-reclamation authority. No new codec or implicit profile upgrade is added.
 
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
+
+November 12 product-source extension: typed source references, explicit consumer
+size/lossy/unchanged policy and a digest-bound preparation compose the same MP4
+producer. Current plan/source/tool bindings must match before native work; final
+pinned artifacts must join the same prepared plan. Unchanged-original selection
+requires explicit policy and fresh exact bytes. Handoff readback requires an
+externally retained semantic digest. Upstream origin remains caller-declared,
+and native/quality/release approval is never inferred. Pure machine capability
+metadata prepares Flow's public boundary without enabling an unreleased route,
+importing sibling source or adding an execution engine.
+
+November 12 product-source extension: reconciled folder comparison is a separate
+read-only view with outcome counts and accepted-subset logical byte differences.
+New report v2 wraps the original validated prefix/accounting record with actual
+bounded-window stop cause/elapsed observation. Legacy v1 reports remain readable
+with unknown cause; no original history is relabelled. Cumulative budgets and
+unresolved work remain explicit continuation barriers. Comparison grants neither
+whole-collection/physical savings nor unchanged-original fallback or human review.
+
+November 12 product-source extension: caller-owned bounded progress observers
+and an explicitly selected private CLI JSONL sink project existing phases and
+entry counters. Indeterminate work receives no estimated percent. Events stay
+non-authoritative and exclude source content/paths, argv and native captures;
+they do not enter semantic identity, checkpoints or acceptance. Event loss/sink
+errors produce optional operational diagnostics without rewriting work outcomes.
+No observer, exporter, network service or background task is enabled by default.
+
+November 12 product-source extension: read-only preflight reuses the same
+source/tool observation and plan/resource arithmetic, reports individual missing
+prerequisites, and does not start or contact a provider/service. Observed sockets,
+private roots and available bytes do not prove delegation, resource reservation,
+actual confinement, codec/version behavior or supported-host qualification. The
+existing producer must still recheck and enforce its actual execution guard.
+
+November 12 product-source extension: MP4 settings resolution belongs to the
+existing configuration owner. Distinct partial-selection documents inherit
+only explicit quality/control and resource values. Full v1 requests retain all
+explicit values; a separately selected CLI settings patch has final precedence.
+Sources/tool pins, output locations, preservation and safety permissions cannot
+come from settings patches. Resolution exposes provenance and produces the same
+closed producer request. Existing plan identity records the complete effective
+request; presentation/provenance metadata is not native acceptance. No lossy or
+resource defaults, provider execution, mutable state or ADR ratification follows.
 - **Date:** 2026-11-06
 - **Issue:** #146
 

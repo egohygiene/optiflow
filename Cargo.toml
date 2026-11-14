@@ -1,4 +1,3 @@
-# OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
 [package]
 name = "optiflow"
 version = "0.1.1"

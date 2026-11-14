@@ -4,6 +4,8 @@ name: Documentation
 on:
   pull_request:
     paths:
+      - "examples/**"
+      - "tests/test_site_examples.py"
       - ".github/workflows/docs.yml"
       - "*.md"
       - "docs/**"
@@ -18,6 +20,8 @@ on:
     branches:
       - main
     paths:
+      - "examples/**"
+      - "tests/test_site_examples.py"
       - ".github/workflows/docs.yml"
       - "*.md"
       - "docs/**"
@@ -39,6 +43,8 @@ concurrency:
 
 jobs:
   validate:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Build static site
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -58,6 +64,9 @@ jobs:
 
       - name: Synchronize documentation dependencies
         run: uv sync --frozen --only-group docs
+
+      - name: Test public example composition regressions
+        run: python3 -B -m unittest discover --start-directory tests --pattern test_site_examples.py
 
       - name: Compose and verify static site
         run: ./scripts/site/build.sh

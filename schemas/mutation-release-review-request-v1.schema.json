@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egohygiene.github.io/optiflow/schemas/mutation-release-review-request-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "release_version",
+    "source_revision",
+    "maximum_input_bytes",
+    "targets"
+  ],
+  "properties": {
+    "schema": {
+      "const": "optiflow.mutation-release-review-request.v1"
+    },
+    "release_version": {
+      "const": "v0.2.0"
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "maximum_input_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1073741824
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "archive",
+          "qualification"
+        ],
+        "properties": {
+          "target": {
+            "enum": [
+              "x86_64-unknown-linux-gnu",
+              "x86_64-apple-darwin",
+              "aarch64-apple-darwin"
+            ]
+          },
+          "archive": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256",
+              "byte_count"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "command-result.schema.json#/$defs/serialized_path"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "byte_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 536870912
+              }
+            }
+          },
+          "qualification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256",
+              "byte_count"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "command-result.schema.json#/$defs/serialized_path"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "byte_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 536870912
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "file_pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "byte_count"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "command-result.schema.json#/$defs/serialized_path"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 536870912
+        }
+      }
+    }
+  }
+}

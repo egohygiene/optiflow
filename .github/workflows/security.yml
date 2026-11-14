@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   dependency-policy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Licenses, advisories, bans, and sources (${{ matrix.manifest }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -38,7 +40,7 @@ jobs:
         # EmbarkStudios/cargo-deny-action v2.1.1
         uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
         env:
-          # OPTIONAL candidate: the action input installs Rust 1.89.0. The
+          # The action input installs Rust 1.89.0. The
           # matching override then selects it instead of the checkout's
           # floating `stable` channel. The base image alone contains 1.85.0.
           RUSTUP_TOOLCHAIN: "1.89.0"
@@ -50,7 +52,8 @@ jobs:
 
   dependency-review:
     name: Pull-request supply-chain review
-    if: github.event_name == 'pull_request'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled') && (github.event_name == 'pull_request')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -63,6 +66,8 @@ jobs:
           fail-on-scopes: runtime,development
 
   secret-scan:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Verified and unknown secret scan
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -82,6 +87,8 @@ jobs:
           extra_args: "--results=verified,unknown"
 
   release-evidence-contract:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Reproducible release evidence contract
     runs-on: ubuntu-24.04
     timeout-minutes: 15

@@ -3,6 +3,20 @@ title: Site publication architecture
 description: The contract between the LaunchKit landing page, Zensical documentation, generated references, and release artifacts.
 ---
 
+## November 13, 2026 — narrow guard backport candidate
+
+The current CI-repair draft selects Relay `99a08a75bf914a80ce966c9bc9b47a77c7e97d63`, the immutable head of
+[Relay #182](https://github.com/egohygiene/relay/pull/182), directly descended
+from the previously consumed `981ddf4367c67fcd625e54321d95bab027f6c0f2`.
+Only the literal-path guard and its focused handoff/regressions are added; later
+Relay main features are not adopted. The source producer and generator select
+the same exact candidate. This owner PR is unmerged and consumer/native/feed/
+deployment acceptance remains unobserved. Older dated pin statements below
+remain historical; keep their original pins/bytes for rollback reconstruction.
+See [checkpoint 8](work/137/08-relay-guard.md).
+
+
+
 # Site publication architecture
 
 The public product experience is one static deployment with independently
@@ -15,6 +29,7 @@ optiflow.egohygiene.io/
 ├── /docs/             Zensical documentation
 ├── /api/              Curated rustdoc reference
 ├── /schemas/          Versioned machine contracts
+├── /examples/         Explicitly reviewed public source/request downloads
 ├── /intelligence/     Repository evidence dashboard
 └── /releases/         Install and verification guidance
 ```
@@ -28,6 +43,7 @@ optiflow.egohygiene.io/
 | `/docs/` | `docs/` + `zensical.toml` | Tutorials, concepts, operational guidance, architecture, and contract explanations |
 | `/api/` | `cargo doc` | Curated Rust API only after the library stability decision is explicit |
 | `/schemas/` | `schemas/` | Downloadable canonical JSON Schemas and representative examples |
+| `/examples/` | explicit `PUBLIC_EXAMPLES` in `scripts/site/stage_examples.py` | Only the seven public request/source downloads linked by the documentation |
 | `/intelligence/` | generated evidence | CI, dependency, security, contract, and release health |
 | `/releases/` | release metadata | Supported targets, checksums, provenance, SBOMs, and verification commands |
 
@@ -43,6 +59,7 @@ architecture generation --> staging/architecture/
 Zensical build -----------> staging/docs/
 rustdoc build ------------> staging/api/
 schema publication -------> staging/schemas/
+public example allowlist --> staging/examples/
 intelligence generation --> staging/intelligence/
 release projection -------> staging/releases/
                                   |
@@ -56,9 +73,21 @@ architecture portal from the 18 canonical root documents and repository-owned
 presentation configuration, builds Zensical into `.site/staging/docs/`, copies each static
 source into an isolated stage, accepts Relay's public-only dashboard bundle
 from `.site/producers/intelligence/`, rejects pre-existing `architecture/`,
-`docs/`, `intelligence/`, or `schemas/` mounts in the landing source, and only
+`docs/`, `intelligence/`, `schemas/`, or `examples/` mounts in the landing source, and only
 then replaces `dist/` with the verified composition. A failed build never
 publishes a partially composed tree.
+
+The `/examples/` producer stages seven explicitly named repository files, not
+the entire source directory. Each source must be a singly linked regular file
+with stable observed identity, at most 256 KiB; the complete set is at most
+1 MiB. Symlinked source/staging paths, unknown public files, and landing mount
+collisions are refused. The composed verifier requires the exact allowlist and
+continues to check every local link. Adding another example download requires a
+reviewed allowlist change. Untracked examples, private media, user configurations
+and generated run artifacts never become eligible through recursive copying.
+These files are source/request examples, not processed or qualified media.
+Their nonexistent example locators and placeholder pins do not grant execution
+or publication authority.
 
 Build and preview the checked-in surfaces locally:
 

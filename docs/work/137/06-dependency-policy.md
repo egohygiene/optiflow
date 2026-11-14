@@ -1,8 +1,10 @@
-OPTIONAL PROPOSAL — requires maintainer compatibility decision, not adopted
+## Source adoption continuation — November 13, 2026
 
-The primary Rust1.85 repair record below is retained as baseline history. This
-isolated branch proposes an alternative in [the optional compatibility packet](06-optional-msrv-189.md);
-the primary repair and its unresolved-advisory status are unchanged.
+The maintainer's merge-all instruction includes #215. The selected source now
+requires Rust 1.89 and bundled rusqlite 0.41.1 / libsqlite3-sys 0.39.1. See the
+[adoption record](215-sqlite-adoption.md). Actual policy/compiler/platform checks
+remain pending; no green dependency-policy result is claimed. The original
+Rust 1.85 repair and blocked-advisory record below are preserved as history.
 
 # Flow #137 checkpoint 6 — November 13, 2026
 

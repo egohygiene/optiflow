@@ -310,6 +310,107 @@ fn moved_matches(actual: &FileBinding, expected: &FileBinding) -> Result<()> {
     Ok(())
 }
 #[cfg(target_os = "linux")]
+fn preserved_properties(
+    expected: &super::super::mutation::Properties,
+    actual: &super::super::mutation::Properties,
+) -> Result<()> {
+    // Reads may advance atime, and rename changes ctime. Neither can stand for
+    // byte/property equality; ctime is independently checked by each binding.
+    ensure!(
+        expected.uid == actual.uid
+            && expected.gid == actual.gid
+            && expected.mode == actual.mode
+            && expected.mtime == actual.mtime
+            && expected.xattrs == actual.xattrs,
+        "held replacement properties changed; retain evidence and stop"
+    );
+    Ok(())
+}
+#[cfg(target_os = "linux")]
+fn check_held_subject(
+    file: &mut File,
+    binding: &FileBinding,
+    properties: &super::super::mutation::Properties,
+    maximum: u64,
+    signals: &SignalState,
+) -> Result<()> {
+    ensure!(
+        binding.size_bytes > 0 && binding.size_bytes <= maximum && !signals.is_cancelled(),
+        "replacement bound exceeded or cancelled; no namespace transition"
+    );
+    diag(fs::check_file(file, binding))?;
+    let current = diag(fs::hash_bound(file, binding.size_bytes, signals))?;
+    ensure!(
+        current == binding.blake3,
+        "held replacement bytes changed; retain evidence and stop"
+    );
+    preserved_properties(properties, &diag(super::super::mutation::properties(file))?)?;
+    diag(fs::check_file(file, binding))?;
+    ensure!(
+        !signals.is_cancelled(),
+        "replacement cancelled; no namespace transition"
+    );
+    Ok(())
+}
+#[cfg(target_os = "linux")]
+fn check_directory_handle(file: &File, binding: &DirectoryBinding) -> Result<()> {
+    use std::os::unix::fs::MetadataExt;
+    diag(fs::check_directory(binding))?;
+    let m = diag(fs::metadata(file))?;
+    ensure!(
+        m.is_dir()
+            && binding.identity.platform == "linux"
+            && m.dev().to_string() == binding.identity.filesystem_id
+            && m.ino().to_string() == binding.identity.file_id
+            && m.mode() == binding.mode
+            && m.uid() == binding.uid
+            && m.gid() == binding.gid,
+        "held replacement directory differs from its current path"
+    );
+    diag(fs::writable_directory(file))?;
+    Ok(())
+}
+/// Reuse the bounded execution hasher and property observer, without reopening
+/// a subject for its bytes. These are observations, not an atomic snapshot or
+/// permission to replay an intent when a check/rename/synchronization fails.
+#[cfg(target_os = "linux")]
+fn check_transition_subjects(
+    body: &TransactionBody,
+    parent: &File,
+    namespace: &File,
+    namespace_binding: &DirectoryBinding,
+    first: (&mut File, &FileBinding, &super::super::mutation::Properties),
+    second: (&mut File, &FileBinding, &super::super::mutation::Properties),
+    signals: &SignalState,
+) -> Result<()> {
+    check_held_subject(
+        first.0,
+        first.1,
+        first.2,
+        body.limits.maximum_file_bytes,
+        signals,
+    )?;
+    check_held_subject(
+        second.0,
+        second.1,
+        second.2,
+        body.limits.maximum_file_bytes,
+        signals,
+    )?;
+    diag(fs::check_directory(&body.retention))?;
+    check_directory_handle(parent, &body.source.directory)?;
+    check_directory_handle(namespace, namespace_binding)?;
+    artifact::require_private_root(namespace)?;
+    // A second full read can be long: recheck the first subject's metadata too.
+    diag(fs::check_file(first.0, first.1))?;
+    diag(fs::check_file(second.0, second.1))?;
+    ensure!(
+        !signals.is_cancelled(),
+        "replacement cancelled; inspect pending journal, never replay"
+    );
+    Ok(())
+}
+#[cfg(target_os = "linux")]
 fn apply_linux_source(
     plan: &ReplacementPlan,
     approval: &Approval,
@@ -362,7 +463,9 @@ pub(in crate::execution) fn apply_shared(
     let namespace_path = diag(fs::native_path(&b.retention.path))?.join(&view.fingerprint);
     let namespace = artifact::open_directory(&namespace_path)?;
     artifact::require_private_root(&namespace)?;
-    let source = diag(fs::open_bound(&b.source))?;
+    let namespace_binding = diag(fs::directory(&namespace_path))?;
+    check_directory_handle(&namespace, &namespace_binding)?;
+    let mut source = diag(fs::open_bound(&b.source))?;
     let properties = diag(super::super::mutation::properties(&source))?;
     let candidate_bytes = bytes(
         &diag(fs::native_path(&b.candidate.path))?,
@@ -382,14 +485,7 @@ pub(in crate::execution) fn apply_shared(
     staged.write_all(&candidate_bytes)?;
     diag(super::super::mutation::set_properties(&staged, &properties))?;
     let after = diag(super::super::mutation::properties(&staged))?;
-    ensure!(
-        properties.uid == after.uid
-            && properties.gid == after.gid
-            && properties.mode == after.mode
-            && properties.mtime == after.mtime
-            && properties.xattrs == after.xattrs,
-        "replacement properties did not preserve exactly"
-    );
+    preserved_properties(&properties, &after)?;
     diag(fs::sync_file(&staged))?;
     diag(fs::sync_directory(&namespace))?;
     let staged_binding = diag(fs::snapshot(
@@ -410,7 +506,15 @@ pub(in crate::execution) fn apply_shared(
     append(&mut journal, view, &record)?;
     let original_path = diag(fs::native_path(&b.source.path))?;
     let name = original_path.file_name().context("original leaf absent")?;
-    diag(fs::check_file(&source, &b.source))?;
+    check_transition_subjects(
+        b,
+        &parent,
+        &namespace,
+        &namespace_binding,
+        (&mut source, &b.source, &properties),
+        (&mut staged, &staged_binding, &properties),
+        signals,
+    )?;
     renameat_with(
         &parent,
         name,
@@ -428,7 +532,7 @@ pub(in crate::execution) fn apply_shared(
     moved_matches(&original, &b.source)?;
     record.sequence += 1;
     record.phase = "retained".into();
-    record.retained = Some(original);
+    record.retained = Some(original.clone());
     append(&mut journal, view, &record)?;
     ensure!(
         !signals.is_cancelled(),
@@ -437,6 +541,15 @@ pub(in crate::execution) fn apply_shared(
     record.sequence += 1;
     record.phase = "publish_pending".into();
     append(&mut journal, view, &record)?;
+    check_transition_subjects(
+        b,
+        &parent,
+        &namespace,
+        &namespace_binding,
+        (&mut source, &original, &properties),
+        (&mut staged, &staged_binding, &properties),
+        signals,
+    )?;
     renameat_with(
         &namespace,
         "replacement",
@@ -452,6 +565,15 @@ pub(in crate::execution) fn apply_shared(
         b.limits.maximum_file_bytes,
     ))?;
     moved_matches(&published, &staged_binding)?;
+    check_transition_subjects(
+        b,
+        &parent,
+        &namespace,
+        &namespace_binding,
+        (&mut source, &original, &properties),
+        (&mut staged, &published, &properties),
+        signals,
+    )?;
     record.sequence += 1;
     record.phase = "committed".into();
     record.published = Some(published);
@@ -571,8 +693,13 @@ pub(in crate::execution) fn restore_shared(
         .published
         .clone()
         .context("published binding absent")?;
-    let _original = diag(fs::open_bound(&retained))?;
-    let _replacement = diag(fs::open_bound(&published))?;
+    moved_matches(&retained, &b.source)?;
+    moved_matches(
+        &published,
+        record.staged.as_ref().context("staged binding absent")?,
+    )?;
+    let mut original = diag(fs::open_bound(&retained))?;
+    let mut replacement = diag(fs::open_bound(&published))?;
     same_binding(
         &retained,
         &diag(fs::snapshot(
@@ -593,12 +720,31 @@ pub(in crate::execution) fn restore_shared(
     let root = diag(fs::native_path(&b.retention.path))?.join(&view.fingerprint);
     let namespace = artifact::open_directory(&root)?;
     artifact::require_private_root(&namespace)?;
+    let namespace_binding = diag(fs::directory(&root))?;
+    ensure!(
+        retained.path == NativePath::from_path(&root.join("original"))
+            && retained.directory == namespace_binding
+            && published.path == b.source.path
+            && published.directory == b.source.directory,
+        "recorded restore subjects are outside the exact source/retention namespace"
+    );
+    let original_properties = diag(super::super::mutation::properties(&original))?;
+    let replacement_properties = diag(super::super::mutation::properties(&replacement))?;
+    preserved_properties(&original_properties, &replacement_properties)?;
     let source_path = diag(fs::native_path(&b.source.path))?;
     let leaf = source_path.file_name().context("source leaf missing")?;
     record.sequence += 1;
     record.phase = "restore_pending".into();
     append(&mut journal, view, &record)?;
-    ensure!(!signals.is_cancelled(), "restore cancelled; no replay");
+    check_transition_subjects(
+        b,
+        &parent,
+        &namespace,
+        &namespace_binding,
+        (&mut original, &retained, &original_properties),
+        (&mut replacement, &published, &replacement_properties),
+        signals,
+    )?;
     renameat_with(
         &parent,
         leaf,
@@ -608,6 +754,21 @@ pub(in crate::execution) fn restore_shared(
     )?;
     diag(fs::sync_directory(&parent))?;
     diag(fs::sync_directory(&namespace))?;
+    let optimized = diag(fs::snapshot(
+        &root.join("optimized-after-restore"),
+        signals,
+        b.limits.maximum_file_bytes,
+    ))?;
+    moved_matches(&optimized, &published)?;
+    check_transition_subjects(
+        b,
+        &parent,
+        &namespace,
+        &namespace_binding,
+        (&mut original, &retained, &original_properties),
+        (&mut replacement, &optimized, &replacement_properties),
+        signals,
+    )?;
     renameat_with(
         &namespace,
         "original",
@@ -617,16 +778,27 @@ pub(in crate::execution) fn restore_shared(
     )?;
     diag(fs::sync_directory(&parent))?;
     diag(fs::sync_directory(&namespace))?;
-    moved_matches(
-        &diag(fs::snapshot(
-            &source_path,
-            signals,
-            b.limits.maximum_file_bytes,
-        ))?,
-        &retained,
+    let restored = diag(fs::snapshot(
+        &source_path,
+        signals,
+        b.limits.maximum_file_bytes,
+    ))?;
+    moved_matches(&restored, &retained)?;
+    check_transition_subjects(
+        b,
+        &parent,
+        &namespace,
+        &namespace_binding,
+        (&mut original, &restored, &original_properties),
+        (&mut replacement, &optimized, &replacement_properties),
+        signals,
     )?;
     record.sequence += 1;
     record.phase = "restored".into();
     append(&mut journal, view, &record)?;
     Ok(())
 }
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "integrity_tests.rs"]
+mod integrity_tests;

@@ -1,5 +1,9 @@
 # Owner release reports
 
+The separate [native mutation review](native-mutation-review.md) mode supports
+#93 preparation from already captured evidence. Its unsigned review format is
+not a qualified owner report and cannot activate runtime/publication gates.
+
 `scripts/owner_reports.py` assembles unsigned, source-bound report candidates from
 explicit existing files. It is an offline adapter owned by this repository; it
 does not import Flow or another sibling, invoke a binary, create a native gate,

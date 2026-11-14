@@ -265,3 +265,56 @@ fn supplied_receipt_flags_cannot_gain_removal_or_namespace_authority() {
         );
     }
 }
+#[test]
+fn staging_copy_preserves_source_and_refuses_nonempty_destinations() {
+    let (_r, a, b) = fixture();
+    let backend = Backend::new();
+    let token = observe(&a, &backend, 1024, &|| false).unwrap();
+    assert!(
+        transfer::copy_to_staging(
+            &a,
+            &b,
+            &backend,
+            &token,
+            transfer::Direction::RestoreCopy,
+            1024,
+            &|| false
+        )
+        .is_err()
+    );
+    b.set_len(0).unwrap();
+    let record = transfer::copy_to_staging(
+        &a,
+        &b,
+        &backend,
+        &token,
+        transfer::Direction::RestoreCopy,
+        1024,
+        &|| false,
+    )
+    .unwrap();
+    transfer::inspect_retained_pair(&a, &b, &backend, &record, 1024, &|| false).unwrap();
+    assert_eq!(a.metadata().unwrap().len(), 20);
+    assert!(!record.source_removal_authority && !record.namespace_commit_observed);
+}
+#[test]
+fn cancelled_staging_copy_does_not_write_or_install() {
+    let (_r, a, b) = fixture();
+    b.set_len(0).unwrap();
+    let backend = Backend::new();
+    let token = observe(&a, &backend, 1024, &|| false).unwrap();
+    assert!(
+        transfer::copy_to_staging(
+            &a,
+            &b,
+            &backend,
+            &token,
+            transfer::Direction::QuarantineCopy,
+            1024,
+            &|| true
+        )
+        .is_err()
+    );
+    assert_eq!(b.metadata().unwrap().len(), 0);
+    assert_eq!(backend.writes.get(), 0);
+}
