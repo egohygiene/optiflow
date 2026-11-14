@@ -38,6 +38,14 @@ physical-reclamation authority. No new codec or implicit profile upgrade is adde
 
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
 
+November 12 product-source extension: reconciled folder comparison is a separate
+read-only view with outcome counts and accepted-subset logical byte differences.
+New report v2 wraps the original validated prefix/accounting record with actual
+bounded-window stop cause/elapsed observation. Legacy v1 reports remain readable
+with unknown cause; no original history is relabelled. Cumulative budgets and
+unresolved work remain explicit continuation barriers. Comparison grants neither
+whole-collection/physical savings nor unchanged-original fallback or human review.
+
 November 12 product-source extension: caller-owned bounded progress observers
 and an explicitly selected private CLI JSONL sink project existing phases and
 entry counters. Indeterminate work receives no estimated percent. Events stay

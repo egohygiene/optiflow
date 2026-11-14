@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.18
+version: 0.1.19
 status: draft
 owners:
   - egohygiene
@@ -31,6 +31,17 @@ uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
 output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
+
+## MP4 folder comparisons and stopping reasons
+
+A separate read-only comparison view derives counts, per-entry outcomes and
+accepted-subset encoded-byte reduction from reconciled inventory/results and
+pinned artifacts. It never infers whole-collection or physical-space savings,
+selects an unchanged original for downstream use, or refreshes native/human
+qualification. New versioned folder reports record actual bounded-window stop
+causes with validated result-prefix/accounting witnesses; legacy reports retain
+their original meaning and an unknown stop cause. Cumulative budget exhaustion,
+uncertain work and report-history limits remain distinct continuation barriers.
 
 ## MP4 operational progress
 

@@ -591,8 +591,11 @@ pub enum Mp4DeliveryCommand {
     FolderResolve(Mp4RequestArgs),
     /// Read retained folder results without replay or original/tool observation.
     FolderStatus(VideoFolderStatusArgs),
+    /// Compare reconciled retained outcomes and explain continuation barriers.
+    FolderSummary(VideoFolderStatusArgs),
 }
 impl Mp4DeliveryCommand {pub fn name(&self)->&'static str {match self {
+    Self::FolderSummary(_)=>"mp4-delivery folder-summary",
     Self::Preflight(_)=>"mp4-delivery preflight",
     Self::Profiles=>"mp4-delivery profiles",Self::Inspect(_)=>"mp4-delivery inspect",Self::Plan(_)=>"mp4-delivery plan",Self::Run(_)=>"mp4-delivery run",Self::Resolve(_)=>"mp4-delivery resolve",Self::Status(_)=>"mp4-delivery status",Self::FolderPreview(_)=>"mp4-delivery folder-preview",Self::FolderRun(_)=>"mp4-delivery folder-run",Self::FolderResume(_)=>"mp4-delivery folder-resume",Self::FolderResolve(_)=>"mp4-delivery folder-resolve",Self::FolderStatus(_)=>"mp4-delivery folder-status",
 }}}

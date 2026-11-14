@@ -35,6 +35,15 @@ tasks:
     cmds:
       - optiflow --json diagnostics doctor
 
+  mp4:folder:summary:
+    desc: Compare retained MP4 outcomes and explain continuation barriers
+    requires:
+      vars: [RUN_DIRECTORY]
+    env:
+      OPTIFLOW_MP4_RUN: '{{.RUN_DIRECTORY}}'
+    cmds:
+      - optiflow --json mp4-delivery folder-summary --run-directory "$OPTIFLOW_MP4_RUN"
+
   mp4:run:events:
     desc: Run an explicit MP4 request with a new private operational event log
     requires:
