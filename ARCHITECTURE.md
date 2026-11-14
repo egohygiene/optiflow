@@ -3,7 +3,7 @@ schema: aether.architecture-document/v1
 id: optiflow-architecture
 title: OptiFlow Architecture
 kind: architecture-document
-version: 0.1.16
+version: 0.1.17
 status: draft
 owners:
   - egohygiene
@@ -31,6 +31,18 @@ uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
 output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
+
+## MP4 configuration resolution
+
+The existing configuration owner resolves optional MP4 settings from its current
+user/project or explicitly selected TOML source. A distinct selection request
+may inherit control and limits; a complete v1 request keeps every value explicit.
+An explicitly selected CLI settings document has final precedence. No lossy
+control, provider, source, path, permission or resource policy is guessed.
+Resolution exposes effective values/provenance and yields the same closed v1
+producer request, whose full effective policy remains bound into existing plans.
+Pure descriptions/readback bypass configuration and mutable state. Configuration
+resolution grants no execution, human approval, mutation or release authority.
 
 ## MP4 CLI and serial folder continuation
 

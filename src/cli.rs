@@ -572,23 +572,34 @@ pub enum Mp4DeliveryCommand {
     /// Independently inspect one bounded MP4 without native tools.
     Inspect(Mp4InspectArgs),
     /// Bind a closed request, source and tools without invoking providers.
-    Plan(VideoRequestArgs),
+    Plan(Mp4RequestArgs),
     /// Produce a private technically validated candidate; quality review is separate.
-    Run(VideoRequestArgs),
+    Run(Mp4RequestArgs),
+    /// Resolve configuration/request/CLI settings without media or tool observation.
+    Resolve(Mp4RequestArgs),
     /// Reobserve a private artifact using an externally retained pin JSON file.
     Status(Mp4PinArgs),
     /// Discover bounded MP4 folder inputs without creating workspaces or running tools.
-    FolderPreview(VideoRequestArgs),
+    FolderPreview(Mp4RequestArgs),
     /// Start a fresh serial folder journal and dedicated artifact store.
-    FolderRun(VideoRequestArgs),
+    FolderRun(Mp4RequestArgs),
     /// Reconcile current inputs/tools and continue only never-started folder work.
-    FolderResume(VideoRequestArgs),
+    FolderResume(Mp4RequestArgs),
+    /// Resolve a folder template without discovery or provider execution.
+    FolderResolve(Mp4RequestArgs),
     /// Read retained folder results without replay or original/tool observation.
     FolderStatus(VideoFolderStatusArgs),
 }
 impl Mp4DeliveryCommand {pub fn name(&self)->&'static str {match self {
-    Self::Profiles=>"mp4-delivery profiles",Self::Inspect(_)=>"mp4-delivery inspect",Self::Plan(_)=>"mp4-delivery plan",Self::Run(_)=>"mp4-delivery run",Self::Status(_)=>"mp4-delivery status",Self::FolderPreview(_)=>"mp4-delivery folder-preview",Self::FolderRun(_)=>"mp4-delivery folder-run",Self::FolderResume(_)=>"mp4-delivery folder-resume",Self::FolderStatus(_)=>"mp4-delivery folder-status",
+    Self::Profiles=>"mp4-delivery profiles",Self::Inspect(_)=>"mp4-delivery inspect",Self::Plan(_)=>"mp4-delivery plan",Self::Run(_)=>"mp4-delivery run",Self::Resolve(_)=>"mp4-delivery resolve",Self::Status(_)=>"mp4-delivery status",Self::FolderPreview(_)=>"mp4-delivery folder-preview",Self::FolderRun(_)=>"mp4-delivery folder-run",Self::FolderResume(_)=>"mp4-delivery folder-resume",Self::FolderResolve(_)=>"mp4-delivery folder-resolve",Self::FolderStatus(_)=>"mp4-delivery folder-status",
 }}}
+impl Mp4DeliveryCommand {pub fn uses_configuration(&self)->bool {matches!(self,Self::Plan(_)|Self::Run(_)|Self::Resolve(_)|Self::FolderPreview(_)|Self::FolderRun(_)|Self::FolderResume(_)|Self::FolderResolve(_))}}
+#[derive(Debug,Args)]
+pub struct Mp4RequestArgs {
+    #[arg(long)] pub request:PathBuf,
+    /// Explicit versioned JSON settings patch with final precedence.
+    #[arg(long)] pub settings:Option<PathBuf>,
+}
 #[derive(Debug,Args)]
 pub struct Mp4InspectArgs {#[arg(long)] pub source:PathBuf,#[arg(long)] pub maximum_input_bytes:u64}
 #[derive(Debug,Args)]

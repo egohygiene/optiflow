@@ -7,6 +7,10 @@ up to 256 MiB of candidate bytes, progressive SDR AVC video with a constant
 bounded to 4096×2160, video samples to 36,000, audio packets to 50,000 and
 selected media edits to fifteen minutes. Requested limits may be smaller.
 
+[Configuration resolution](mp4-configuration.md) supports explicit TOML layers,
+partial selections and final CLI settings patches through the existing owner.
+Complete producer request semantics and original byte preservation remain intact.
+
 The public `mp4_delivery::inspect` API hashes the entire no-follow, singly-linked
 source and reads only bounded container/sample ranges. It independently maps
 finite unfragmented MP4 sample sizes/chunks/timestamps, supported leading/media

@@ -1,18 +1,27 @@
-//! Thin explicit-request routing; no mutable configuration/state initialization.
-use anyhow::Result;
+//! Thin routing through the existing configuration owner, without mutable state.
+use anyhow::{Context,Result};
 use super::Execution;
-use crate::{cli::Mp4DeliveryCommand,mp4_delivery as mp4,signals::SignalState};
+use crate::{cli::{Mp4DeliveryCommand,Mp4RequestArgs},configuration::{ConfigurationResolution,mp4 as settings},mp4_delivery as mp4,signals::SignalState};
 use crate::outcome::{Diagnostic,DiagnosticCode,DiagnosticSeverity,DiagnosticClassification,DiagnosticImpact};
 
-pub(super) fn run(command:&Mp4DeliveryCommand,signals:&SignalState)->Execution {
+fn overrides(a:&Mp4RequestArgs,signals:&SignalState)->Result<Option<settings::Settings>> {a.settings.as_ref().map(|path|settings::overrides(&crate::record_io::read(path,131_072,signals)?)).transpose()}
+fn resolve(a:&Mp4RequestArgs,configuration:Option<&ConfigurationResolution>,signals:&SignalState)->Result<settings::Resolution> {
+    let configured=&configuration.context("MP4 configuration resolution absent")?.mp4_delivery;
+    let bytes=crate::record_io::read(&a.request,131_072,signals)?;settings::resolve(&bytes,configured,overrides(a,signals)?.as_ref())
+}
+fn resolve_folder(a:&Mp4RequestArgs,configuration:Option<&ConfigurationResolution>,signals:&SignalState)->Result<settings::FolderResolution> {
+    let configured=&configuration.context("MP4 configuration resolution absent")?.mp4_delivery;
+    let bytes=crate::record_io::read(&a.request,131_072,signals)?;settings::resolve_folder(&bytes,configured,overrides(a,signals)?.as_ref())
+}
+pub(super) fn run(command:&Mp4DeliveryCommand,configuration:Option<&ConfigurationResolution>,signals:&SignalState)->Execution {
     let result=(||->Result<serde_json::Value>{
         let cancel=||signals.is_cancelled();
         match command {
             Mp4DeliveryCommand::Profiles=>Ok(mp4::profiles()),
             Mp4DeliveryCommand::Inspect(a)=>Ok(serde_json::to_value(mp4::inspect(&a.source,a.maximum_input_bytes,cancel)?)?),
+            Mp4DeliveryCommand::Resolve(a)=>Ok(serde_json::to_value(resolve(a,configuration,signals)?)?),
             Mp4DeliveryCommand::Plan(a)|Mp4DeliveryCommand::Run(a)=>{
-                let bytes=crate::record_io::read(&a.request,131_072,signals)?;
-                let request=mp4::Request::from_json_slice(&bytes)?;
+                let request=resolve(a,configuration,signals)?.request;
                 if matches!(command,Mp4DeliveryCommand::Plan(_)){Ok(serde_json::to_value(mp4::plan(&request,cancel)?)?)}else{Ok(serde_json::to_value(mp4::produce(&request,cancel)?)?)}
             },
             Mp4DeliveryCommand::Status(a)=>{
@@ -21,8 +30,7 @@ pub(super) fn run(command:&Mp4DeliveryCommand,signals:&SignalState)->Execution {
                 Ok(serde_json::to_value(mp4::artifact::inspect(&pin)?)?)
             },
             Mp4DeliveryCommand::FolderPreview(a)|Mp4DeliveryCommand::FolderRun(a)|Mp4DeliveryCommand::FolderResume(a)=>{
-                let bytes=crate::record_io::read(&a.request,131_072,signals)?;
-                let request=mp4::folder::Request::from_json_slice(&bytes)?;
+                let request=resolve_folder(a,configuration,signals)?.request;
                 match command {
                     Mp4DeliveryCommand::FolderPreview(_)=>Ok(serde_json::to_value(mp4::folder::preview(&request,cancel)?)?),
                     Mp4DeliveryCommand::FolderRun(_)=>Ok(serde_json::to_value(mp4::folder::run(&request,cancel)?)?),
@@ -30,6 +38,7 @@ pub(super) fn run(command:&Mp4DeliveryCommand,signals:&SignalState)->Execution {
                     _=>unreachable!(),
                 }
             },
+            Mp4DeliveryCommand::FolderResolve(a)=>Ok(serde_json::to_value(resolve_folder(a,configuration,signals)?)?),
             Mp4DeliveryCommand::FolderStatus(a)=>Ok(serde_json::to_value(mp4::folder::status(&a.run_directory)?)?),
         }
     })();

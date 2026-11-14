@@ -14,6 +14,8 @@ pub struct ConfigDocumentV1 {
     pub state: Option<StateConfigDocument>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scan: Option<ScanConfigDocument>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mp4_delivery: Option<super::mp4::Settings>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

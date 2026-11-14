@@ -13,7 +13,7 @@ pub struct Request {
 }
 impl Request {
     pub fn from_json_slice(bytes:&[u8])->Result<Self>{ensure!(bytes.len()<=131_072,"MP4 folder request exceeds bound");let r:Self=serde_json::from_slice(bytes)?;r.validate()?;Ok(r)}
-    fn validate(&self)->Result<()> {
+    pub(crate) fn validate(&self)->Result<()> {
         self.template.validate()?;normalized(&self.source_root)?;normalized(&self.run_directory)?;ensure!(self.run_directory.to_str().is_some_and(|s|s.len()<=4096&&!s.chars().any(char::is_control)),"bounded UTF8 journal path required");
         ensure!(self.schema=="optiflow.mp4-folder-request.v1"&&self.template.source==self.source_root&&self.scratch_cleanup=="remove_only_known_generated_candidate_after_durable_result","explicit MP4 root template and generated-only scratch cleanup policy required");
         let b=&self.batch;ensure!((1..=4096).contains(&b.maximum_entries)&&(1..=256).contains(&b.maximum_files)&&b.maximum_files<=b.maximum_entries&&(1..=32).contains(&b.maximum_actions)&&b.maximum_actions<=b.maximum_files&&(1..=32).contains(&b.maximum_depth)&&(1..=8_589_934_592).contains(&b.maximum_total_input_bytes)&&(1..=8_589_934_592).contains(&b.maximum_publication_bytes)&&(1..=86_400_000).contains(&b.elapsed_ms),"bounded explicit MP4 folder policy required");
