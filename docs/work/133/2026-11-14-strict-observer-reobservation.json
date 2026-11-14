@@ -1,0 +1,168 @@
+{
+  "schema": "optiflow.fake-explanation-capture-reobservation.v1",
+  "status": "passed",
+  "observed_at_utc": "2026-11-14T19:49:14Z",
+  "original_whole_run_reexecuted": false,
+  "cli_or_fixture_executed": false,
+  "original_receipt_sha256": "fbe4c129b3044a65f91df65f4705f9b7d2bc80f24552e1242cd65d0162868c5d",
+  "original_observer_source_sha256": "36bf3fe124ba8522fff20b468e27aa3d67878f7e87d2fbc2f3e700f0dd4129c6",
+  "strict_observer_source_sha256": "b81c81d63e33253feead41f23092436b4363c66fdd77674116c86cda4ba27d72",
+  "reobserver_source_sha256": "c7258f443f7345637f44649b8f96261b2a97649a826ee073c08b380a085e3e81",
+  "selected_fixture": {
+    "byte_count": 146646496,
+    "sha256": "3fd1e66d00b7af32edcbe055bbff4833aebfaaf38cee1330b3694d6836b64bdc"
+  },
+  "validated_refusal_count": 12,
+  "validated_interruption_count": 1,
+  "captures": [
+    {
+      "case": "unknown-citation",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "da254407ea0ec8471fea01a8b5aabfcfb6a4cb86d36c4edaaed40fd590bfa55b",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "identity-change",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "43ad3fa8ad3cd59558e8f790e8de654caac5af5cadab4a9e4eaf559b5efa7326",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "malformed",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "83b601387a46975382038c4d5a880a9fcb02ee0b21ce2d4a4316e45bbb09bce5",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "unavailable",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "f5d5e4c2087d0f449c82e7ddf0e3b4f157b01b080e91c1b08f6ee5897b51d3d8",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "oversize",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "0ec8fbca2d3890c8f98df08a99ae26ee760418317ccfca109132066b42f8e64f",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "timeout",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "4a24e88267805b5e848a91d5b5f71d1b177d87862f614750a40135897cd2149d",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "cancel",
+      "native_exit_from_original_receipt": 130,
+      "structured_outcome": {
+        "class": "interrupted",
+        "exit_code": 130
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "802956b037ab6987a5f0ce64b0bbbe0474f85fb4ab8f21470f5363d0abd7d59f",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "profile-backend",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "203ceeccdf372d12f730a193a00d72e77b4d0f85c2f0a0d9ff6d6b1d623c5028",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "profile-model_id",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "34b3e44a4be1e7dbf059e5223b702c696f14957ee8877334e52d8dba86b094c6",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "profile-api_key",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "4cf230a1fbd06fbcf427a461316e0a6470f9a1140187097d1caa73af71f93fa4",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "existing-output",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "e369e35e0339ad21586638e452715ce8976a44623bfa9af12215c6bb03fdb75a",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "stale-report",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "3453268cef806dd92b7755022a04a33e2716b5ec0d7b32b5ad76f37ef9b4393d",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "changed-sidecar",
+      "native_exit_from_original_receipt": 2,
+      "structured_outcome": {
+        "class": "invalid_input",
+        "exit_code": 2
+      },
+      "exact_closed_envelope_accepted": true,
+      "stdout_sha256_observed_now": "f6a5d28707d29467a89c1a70169c3d645e1ce5bfcae145b346d3bc7e38ba5240",
+      "stderr_sha256_observed_now": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "limits": [
+    "native exits come from the pinned original receipt, not a new process observation",
+    "capture hashes are bound at reobservation; original receipt recorded capture byte counts",
+    "eight successful CLI captures and whole-run filesystem checks were not reexecuted",
+    "original receipt/build source hashes remain historical bindings to checkpoint 795c96f"
+  ]
+}

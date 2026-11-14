@@ -187,6 +187,7 @@ pub(super) fn run(command: ExplainCommand, signals: &SignalState) -> Execution {
     })();
     match result {
         Ok(v) => Execution::success(&v),
+        Err(_) if signals.is_cancelled() => super::interruption_execution(signals.current(), None),
         Err(e) => Execution::failure(Diagnostic::new(
             DiagnosticCode::ExecutionPlanInvalid,
             DiagnosticSeverity::Error,

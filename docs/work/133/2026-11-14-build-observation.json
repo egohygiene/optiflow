@@ -1,0 +1,68 @@
+{
+  "schema": "optiflow.fake-explanation-build-observation.v1",
+  "observed_date_utc": "2026-11-14",
+  "source_base": "165d7f4b1e6f0750c6981032e44b4c63db3e0063",
+  "root_help_patch": "30d264bd3ba0d3ae370601295a89c6e57f7f63bd",
+  "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+  "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+  "python": "Python 3.12.14",
+  "build": {
+    "argv_with_symbolic_private_target": [
+      "cargo",
+      "+1.89.0",
+      "build",
+      "--locked",
+      "--bin",
+      "optiflow",
+      "--example",
+      "fake_explanation",
+      "--target-dir",
+      "TASK_PRIVATE_TARGET",
+      "--jobs",
+      "2"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 16.84,
+    "profile": "dev unoptimized + debuginfo",
+    "existing_library_warnings": 4
+  },
+  "source_sha256": {
+    "Cargo.toml": "684c9674208a387427a605454eba57625173af59d4c5cfd409140a0e7982dbbe",
+    "Cargo.lock": "a514fd4ef1f26c67ad62b6de8ce09b5165343f3d916b6bf9bd6589f0f2f3d509",
+    "src/main.rs": "5e8fcb3c5d282246401e0fec6255752bd11f47fca54b0119a824315454165123",
+    "src/app/explanation_commands.rs": "c2830ee99fbc97c09c3edc2ee493507a1ba1fe47c2c8ea9adf8e882c802fa27b",
+    "examples/fake_explanation.rs": "0d9baeb26b07841680cd266b5657d6afa03839c97fd5abb124e49e86c1557ddc",
+    "scripts/prove-fake-explanation.py": "36bf3fe124ba8522fff20b468e27aa3d67878f7e87d2fbc2f3e700f0dd4129c6",
+    "tests/fake_explanation/test_observers.py": "34cf10be8316382dec5b4b7ee58917b842c1a2da744bc55cba9993feb8cb2480"
+  },
+  "baseline_cancellation_failure": {
+    "accepted": false,
+    "cli_sha256": "419f0356b07efac1e8d646b0fc81388cb6ef17e8bff8b4bbd3913968eab2f0f2",
+    "native_exit": 2,
+    "structured_outcome": {
+      "class": "invalid_input",
+      "exit_code": 2
+    },
+    "diagnostic_codes": [
+      "execution_plan_invalid"
+    ],
+    "child_observed_before_sigint": true
+  },
+  "focused_checks": {
+    "observer_regressions": 9,
+    "observer_failures": 0,
+    "taskfile_unique_keys": true,
+    "task_count": 66,
+    "explanation_task_aliases": 3,
+    "diff_whitespace_errors": false
+  },
+  "passing_receipt_sha256": "fbe4c129b3044a65f91df65f4705f9b7d2bc80f24552e1242cd65d0162868c5d",
+  "qualification_limits": [
+    "synthetic fake SDK only",
+    "no model execution or semantic usefulness",
+    "no production runtime telemetry",
+    "no OS network isolation attestation",
+    "no full test suite or hosted CI",
+    "no release qualification or publication"
+  ]
+}

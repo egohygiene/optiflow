@@ -1,0 +1,316 @@
+{
+  "schema": "optiflow.fake-explanation-walkthrough.v1",
+  "status": "passed",
+  "observed_at_utc": "2026-11-14T19:41:28Z",
+  "cli": {
+    "byte_count": 183387304,
+    "sha256": "eceea98fa4a663a2d391a78db54a31bd30ef6cbca6222bbc0e5f80ad453b0918"
+  },
+  "fixture": {
+    "byte_count": 146646496,
+    "sha256": "3fd1e66d00b7af32edcbe055bbff4833aebfaaf38cee1330b3694d6836b64bdc"
+  },
+  "commands": [
+    {
+      "case": "scan",
+      "command": "scan",
+      "native_exit": 0,
+      "duration_ms": 100,
+      "stdout_bytes": 12959,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "plan",
+      "command": "plan",
+      "native_exit": 0,
+      "duration_ms": 55,
+      "stdout_bytes": 4660,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "prepare",
+      "command": "explain prepare",
+      "native_exit": 0,
+      "duration_ms": 62,
+      "stdout_bytes": 3157,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "valid",
+      "command": "explain invoke",
+      "native_exit": 0,
+      "duration_ms": 296,
+      "stdout_bytes": 540,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "accept",
+      "command": "explain accept",
+      "native_exit": 0,
+      "duration_ms": 82,
+      "stdout_bytes": 4028,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "inspect",
+      "command": "explain inspect",
+      "native_exit": 0,
+      "duration_ms": 60,
+      "stdout_bytes": 4029,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "disabled",
+      "command": "explain invoke",
+      "native_exit": 0,
+      "duration_ms": 101,
+      "stdout_bytes": 305,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    },
+    {
+      "case": "unknown-citation",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 537,
+      "stdout_bytes": 421,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "identity-change",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 266,
+      "stdout_bytes": 447,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "malformed",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 271,
+      "stdout_bytes": 516,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "unavailable",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 278,
+      "stdout_bytes": 422,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "oversize",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 247,
+      "stdout_bytes": 535,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "timeout",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 347,
+      "stdout_bytes": 496,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "cancel",
+      "command": "explain invoke",
+      "native_exit": 130,
+      "duration_ms": 246,
+      "stdout_bytes": 417,
+      "stderr_bytes": 0,
+      "fixture_child_observed_before_sigint": true,
+      "outcome_class": "interrupted"
+    },
+    {
+      "case": "profile-backend",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 26,
+      "stdout_bytes": 449,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "profile-model_id",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 26,
+      "stdout_bytes": 420,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "profile-api_key",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 25,
+      "stdout_bytes": 468,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "existing-output",
+      "command": "explain invoke",
+      "native_exit": 2,
+      "duration_ms": 23,
+      "stdout_bytes": 423,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "stale-report",
+      "command": "explain inspect",
+      "native_exit": 2,
+      "duration_ms": 35,
+      "stdout_bytes": 410,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "changed-sidecar",
+      "command": "explain inspect",
+      "native_exit": 2,
+      "duration_ms": 60,
+      "stdout_bytes": 431,
+      "stderr_bytes": 0,
+      "outcome_class": "invalid_input"
+    },
+    {
+      "case": "telemetry-health",
+      "command": "diagnostics doctor",
+      "native_exit": 0,
+      "duration_ms": 19,
+      "stdout_bytes": 749,
+      "stderr_bytes": 0,
+      "outcome_class": "success"
+    }
+  ],
+  "observer_source_sha256": "36bf3fe124ba8522fff20b468e27aa3d67878f7e87d2fbc2f3e700f0dd4129c6",
+  "claims": {
+    "synthetic_only": true,
+    "model_execution_qualified": false,
+    "semantic_usefulness_qualified": false,
+    "os_network_isolation_attested": false,
+    "production_runtime_telemetry_observed": false,
+    "human_review_completed": false,
+    "source_eligibility_established": false,
+    "physical_space_reclaimed": false,
+    "apply_authority": false,
+    "publication_performed": false
+  },
+  "source_file_count": 4,
+  "source_snapshot_sha256": "c5684e58184dd300be8957c60ebea34e789179b62e0c7244a76e927faf6bb84c",
+  "sources_unchanged": true,
+  "immutable_records_unchanged": true,
+  "sources": {
+    "report": {
+      "algorithm": "blake3-256",
+      "value": "827af3e3d9ae64004cbbc16b7ff5d20977188a94b754debcaffedc0762a09fe4"
+    },
+    "plan": {
+      "algorithm": "blake3-256",
+      "value": "31bdd1a40d74c4ecd7e743b6b9e587052408c1b3f1be3a29cba3289cd59346e1"
+    }
+  },
+  "packet_fingerprint": {
+    "algorithm": "blake3-256",
+    "value": "21154c4494f20de83813e77cb84bc6cd476ae3f43f0bf0abd293100f3a2ef788"
+  },
+  "candidate_fingerprint": {
+    "algorithm": "blake3-256",
+    "value": "0f23cf194f9794d9357d2e5776a1a05a460bbd67d220a023752ac291b6db6e8e"
+  },
+  "sidecar_fingerprint": {
+    "algorithm": "blake3-256",
+    "value": "5bf09f77d1556f851ed2865b6f64e8a4fd77d3feb310aa8acc3d02ab0a9a3740"
+  },
+  "declared_identity": {
+    "model_id": "fake-no-model",
+    "output_schema_digest": {
+      "algorithm": "blake3-256",
+      "value": "e01f000410120ee4ceddfc97366cbd4ad979a9485648efceb02fe45d287b0c1f"
+    },
+    "profile_fingerprint": {
+      "algorithm": "blake3-256",
+      "value": "4fd20bc48cf97bfab13704e79017695a80a70af6c4b42e4c2952c71d102a9330"
+    },
+    "provider_id": "example.hermetic-explanation",
+    "runtime_revision": "fixture-v1",
+    "template_fingerprint": {
+      "algorithm": "blake3-256",
+      "value": "6cb8fad99cc75ef0fa9096b12aed3c4278ceb57926df65913db29762ffd93451"
+    }
+  },
+  "correlation": {
+    "sdk_invocation_id": "01a1db94-4545-71bb-870d-90c17bfea1f3",
+    "scan_run_id": "01a1db94-439a-77dc-95d7-9ae44d34f651",
+    "provider_calls_on_success_path": 1,
+    "retries_or_cache_reuse_requested": false
+  },
+  "usage": {
+    "model_tokens": null,
+    "provider_cost": null,
+    "reason": "fake provider; model usage not measured"
+  },
+  "observability_health": {
+    "collector_state": "not_applicable_no_exporter",
+    "domain_evidence": false,
+    "dropped_records": null,
+    "exporters_compiled": false,
+    "file_identity_supported": true,
+    "flush_state": "not_applicable_no_exporter",
+    "logging_compiled": false,
+    "logging_runtime_observed": false,
+    "network_contacted": false,
+    "producer": {
+      "tool": "optiflow",
+      "version": "0.1.1"
+    },
+    "queue_records": null,
+    "schema_version": "egohygiene.observability-health/v1",
+    "subscriber_initialized_by_diagnostics": false
+  },
+  "retained_records": {
+    "report.json": {
+      "byte_count": 10755,
+      "sha256": "6402752ce1d977276f438a16622fe5836537b2a2535d9a3bdb76605d382fa3a0"
+    },
+    "plan.json": {
+      "byte_count": 3040,
+      "sha256": "7efe88bdb19f7bbe1b8a620d5b103662aca625a3d6b2790793b80b27d7eaca22"
+    },
+    "packet.json": {
+      "byte_count": 2746,
+      "sha256": "70089c5c2508f85319431f4c74556a4ae321acc29de0488f239bd5bf3ca480b9"
+    },
+    "valid/candidate.json": {
+      "byte_count": 1626,
+      "sha256": "7d0092db1d5627e7ccebd364569eb82b21c919643c8cddbda997985ccb8d11d5"
+    },
+    "valid/sdk-result.json": {
+      "byte_count": 4342,
+      "sha256": "c16dd7ef57a3ac7f9e53fbf7fe9777446190ca7add0e1dbf780fcdc14fd9db2a"
+    },
+    "sidecar.json": {
+      "byte_count": 3572,
+      "sha256": "d6f92a72452725c1c2c00b63cd5c9f14a16611830c9e04bd123dce7bc5d12831"
+    }
+  }
+}
