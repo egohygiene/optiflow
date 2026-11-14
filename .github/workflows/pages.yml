@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Compose Pages artifact
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -121,7 +123,8 @@ jobs:
 
   deploy:
     name: Deploy public site
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled') && (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10

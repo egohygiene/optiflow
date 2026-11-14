@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   dependency-policy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Licenses, advisories, bans, and sources (${{ matrix.manifest }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -50,7 +52,8 @@ jobs:
 
   dependency-review:
     name: Pull-request supply-chain review
-    if: github.event_name == 'pull_request'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled') && (github.event_name == 'pull_request')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -63,6 +66,8 @@ jobs:
           fail-on-scopes: runtime,development
 
   secret-scan:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Verified and unknown secret scan
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -82,6 +87,8 @@ jobs:
           extra_args: "--results=verified,unknown"
 
   release-evidence-contract:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled')
     name: Reproducible release evidence contract
     runs-on: ubuntu-24.04
     timeout-minutes: 15

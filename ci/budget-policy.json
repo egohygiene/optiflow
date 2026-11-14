@@ -1,0 +1,9 @@
+{
+  "schema_version": "egohygiene.ci-budget-policy/v1",
+  "cheap_workflow": "workflow-lint.yml",
+  "cheap_timeout_minutes": 5,
+  "default_heavy_timeout_minutes": 30,
+  "maximum_heavy_timeout_minutes": 70,
+  "manual_authority_workflows": ["release.yml", "release-candidate.yml"],
+  "retention_review_days": 14
+}

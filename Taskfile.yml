@@ -2,6 +2,16 @@
 version: "3"
 
 tasks:
+  ci:budget:
+    desc: Inspect workflow budget sources; qualification remains deferred or unobserved
+    cmds:
+      - python3 -B scripts/ci_budget.py --event pull_request
+
+  ci:budget:test:
+    desc: Run the bounded synthetic workflow-budget source regressions
+    cmds:
+      - python3 -B -m unittest discover --start-directory tests/ci_budget --pattern 'test_*.py'
+
   ci:lock:
     desc: Resolve owning dependency metadata without permitting lockfile changes
     cmds:

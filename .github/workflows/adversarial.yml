@@ -27,7 +27,8 @@ concurrency:
 
 jobs:
   properties-and-faults:
-    if: github.event_name != 'schedule' && inputs.corpus_tier != 'scheduled'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled') && (github.event_name != 'schedule' && inputs.corpus_tier != 'scheduled')
     name: Properties and faults (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -64,7 +65,8 @@ jobs:
           retention-days: 30
 
   fuzz:
-    if: github.event_name != 'schedule' && inputs.corpus_tier != 'scheduled'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled') && (github.event_name != 'schedule' && inputs.corpus_tier != 'scheduled')
     name: Bounded parser and reader fuzzing
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -102,7 +104,8 @@ jobs:
 
   filesystem-stress:
     name: Scheduled filesystem corpus (Linux)
-    if: github.event_name == 'schedule' || inputs.corpus_tier == 'scheduled'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || vars.FLOW_SUITE_HOSTED_CI == 'enabled') && (github.event_name != 'schedule' || vars.FLOW_SUITE_SCHEDULED_CI == 'enabled') && (github.event_name == 'schedule' || inputs.corpus_tier == 'scheduled')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
