@@ -23,6 +23,15 @@ supersedes: []
 
 # OptiFlow Architecture
 
+## Local support diagnostics
+
+An explicitly selected support command bypasses media configuration, persistent
+state and provider discovery. Its product-owned SDK generates bounded metadata,
+uses the existing BLAKE3 owner and guarded file reads, and preserves create-new
+output semantics. Health distinguishes unsupported exporters from unknown
+measurements. Support output cannot authorize mutation, validate user media or
+establish native qualification; it initializes no telemetry or network service.
+
 ## Held replacement subjects at namespace transitions (#95)
 
 The existing private Linux replacement engine rechecks full bounded bytes and

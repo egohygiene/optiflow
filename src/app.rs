@@ -14,6 +14,7 @@ use crate::signals::{Interruption, SignalState};
 use crate::state::StateStore;
 
 mod candidate_commands;
+mod diagnostics_commands;
 mod replacement_commands;
 mod optimize_commands;
 mod video_commands;
@@ -52,6 +53,7 @@ impl Execution {
 }
 
 pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
+    if let Command::Diagnostics(a)=&cli.command{let value=diagnostics_commands::run(&a.command,signals);return(CommandResult::resolve(cli.command_name(),value.coverage,value.artifacts,value.diagnostics,value.result),cli.selected_output_format());}
     if let Command::Mp4Delivery(a)=&cli.command {
         if matches!(&a.command,crate::cli::Mp4DeliveryCommand::RunHandoff(_))&&cli.config.is_some(){
             return (CommandResult::failure(cli.command_name(),Diagnostic::new(DiagnosticCode::ConfigurationSelectorConflict,DiagnosticSeverity::Error,DiagnosticClassification::Input,DiagnosticImpact::BlocksCommand,"run-handoff consumes a frozen request and cannot select a configuration override")),cli.selected_output_format());
@@ -94,6 +96,7 @@ pub fn run(cli: Cli, signals: &SignalState) -> (CommandResult, OutputFormat) {
         );
     }
     let execution = match cli.command {
+        Command::Diagnostics(a)=>diagnostics_commands::run(&a.command,signals),
         Command::ReleaseContract => Execution::success(&crate::release_contract::describe()),
         Command::Mp4Delivery(a) => mp4_commands::run(&a.command,Some(&resolution),signals),
         Command::Doctor => run_doctor(&state_directory),
