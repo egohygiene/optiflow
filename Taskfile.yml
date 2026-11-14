@@ -399,6 +399,27 @@ tasks:
     cmds:
       - cargo test --locked --examples
 
+  explain:fake:build:
+    desc: Build the hermetic explanation SDK fixture (no model)
+    cmds:
+      - cargo build --locked --example fake_explanation
+
+  explain:fake:observers:
+    desc: Check the synthetic explanation walkthrough's acceptance observers
+    cmds:
+      - python3 -B -m unittest discover --start-directory tests/fake_explanation --pattern 'test_*.py'
+
+  explain:fake:proof:
+    desc: Run the actual CLI walkthrough in a new private directory (no model or publication)
+    requires:
+      vars: [OPTIFLOW, FIXTURE, OUTPUT]
+    env:
+      EXPLANATION_CLI: '{{.OPTIFLOW}}'
+      EXPLANATION_FIXTURE: '{{.FIXTURE}}'
+      EXPLANATION_OUTPUT: '{{.OUTPUT}}'
+    cmds:
+      - python3 -B scripts/prove-fake-explanation.py --optiflow "$EXPLANATION_CLI" --fixture "$EXPLANATION_FIXTURE" --output "$EXPLANATION_OUTPUT"
+
   identity:v1:check:
     desc: Validate OptiFlow's pinned Identity v1 source contract.
     cmds:

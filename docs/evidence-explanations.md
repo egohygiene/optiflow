@@ -1,5 +1,8 @@
 # Optional immutable-evidence explanations (#133)
 
+For a repeatable actual CLI exercise with synthetic media and a hermetic fake SDK
+provider, see [the #133 walkthrough](work/133/fake-explanation-walkthrough.md).
+
 The first source checkpoint adds `explanation::prepare`, `validate_current` and a supplied fake candidate through existing SDK v1 `ReportProvider`. No runtime, model, Flow dependency, generic SDK/router or new configuration resolver is added. There is no new product CLI command in this checkpoint. Actual trusted local/remote profile, credential handoff, bounded provider invocation/usage reporting and model usefulness remain later #133 work.
 
 A caller passes immutable report v6 bytes and an independently expected complete BLAKE3 digest from its existing artifact boundary, optionally a pinned review-only plan v5 of the same run/artifact set. Each input is at most4MiB, with at most16384 observations and4096 plan actions. Disabled preparation returns no packet without decoding inputs. Enabled preparation validates existing schemas, exact byte pins and report/plan linkage, then projects count-only facts. It reads no source file, SQLite state, environment, endpoint or model. It does not install/download, retry or fall back remotely.
