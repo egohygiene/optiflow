@@ -38,6 +38,13 @@ physical-reclamation authority. No new codec or implicit profile upgrade is adde
 
 - **Status:** Proposed; source implementation/merge does not ratify or qualify it.
 
+November 12 product-source extension: read-only preflight reuses the same
+source/tool observation and plan/resource arithmetic, reports individual missing
+prerequisites, and does not start or contact a provider/service. Observed sockets,
+private roots and available bytes do not prove delegation, resource reservation,
+actual confinement, codec/version behavior or supported-host qualification. The
+existing producer must still recheck and enforce its actual execution guard.
+
 November 12 product-source extension: MP4 settings resolution belongs to the
 existing configuration owner. Distinct partial-selection documents inherit
 only explicit quality/control and resource values. Full v1 requests retain all

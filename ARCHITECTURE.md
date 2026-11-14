@@ -32,6 +32,15 @@ output semantics. Health distinguishes unsupported exporters from unknown
 measurements. Support output cannot authorize mutation, validate user media or
 establish native qualification; it initializes no telemetry or network service.
 
+## Read-only MP4 preflight
+
+The MP4 owner independently observes selected source/tool pins, private output
+roots, free-space admission and the explicit local user-manager socket without
+starting a process or connecting to a service. It reuses planning/resource
+arithmetic and reports each missing prerequisite. Host/space observations are
+not reservations, actual confinement, delegation or native qualification. The
+existing runtime rechecks all execution prerequisites and actual guard receipts.
+
 ## MP4 configuration resolution
 
 The existing configuration owner resolves optional MP4 settings from its current

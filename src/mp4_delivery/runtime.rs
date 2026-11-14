@@ -31,7 +31,7 @@ impl<'a,F:Fn()->bool> Session<'a,F> {
     }
     pub fn check(&self)->Result<()> {ensure!(!(self.cancel)()&&self.started.elapsed()<Duration::from_millis(self.request.limits.elapsed_ms),"MP4 session cancelled or deadline exhausted");Ok(())}
     pub fn recheck(&self)->Result<()> {self.check()?;let guard=||self.check();self.source.verify_current_guarded(&guard)?;for tool in &self.tools{tool.verify_current_guarded(&guard)?;}self.sandbox.verify(&guard)?;
-        let reserve=self.request.limits.minimum_free_bytes.max(self.request.sandbox.minimum_free_bytes).checked_add(self.plan.payload.allocation.maximum_candidate_bytes.checked_mul(2).context("MP4 host reserve overflow")?).and_then(|n|n.checked_add(134_217_728)).context("MP4 host reserve overflow")?;
+        let reserve=required_free(self.request)?;
         free(&self.request.artifact_root,reserve)?;free(&self.request.private_workdir,reserve)?;self.check()
     }
     fn raw(&self,tool:&Path,args:&[String],input:&[u8],maximum:usize)->Result<(Vec<u8>,SandboxReceipt,u64)>{
@@ -51,10 +51,12 @@ impl<'a,F:Fn()->bool> Session<'a,F> {
         self.invocations.push(Invocation {job_digest:digest(&job)?,operation:operation.name().into(),job:Some(serde_json::to_value(&job)?),version_text:None,report:Some(serde_json::to_value(report)?),resource:output.1,elapsed_ms:output.2,output_digest:hash(&bytes),output_bytes:bytes.len() as u64});Ok(bytes)
     }
 }
-pub(crate) fn free(root:&Path,required:u64)->Result<()> {
-    #[cfg(unix)]{let root=crate::candidate_artifact::open_directory(root)?;let volume=rustix::fs::fstatvfs(&root)?;ensure!(volume.f_frsize>0&&volume.f_bavail.checked_mul(volume.f_frsize).is_some_and(|n|n>=required),"MP4 observed free-space reserve unavailable");Ok(())}
-    #[cfg(not(unix))]{let _=(root,required);anyhow::bail!("MP4 storage admission unavailable")}
+pub(crate) fn required_free(request:&Request)->Result<u64>{request.limits.minimum_free_bytes.max(request.sandbox.minimum_free_bytes).checked_add(request.control.maximum(request.limits.candidate_bytes).checked_mul(2).context("MP4 host reserve overflow")?).and_then(|n|n.checked_add(134_217_728)).context("MP4 host reserve overflow")}
+pub(crate) fn available_free(root:&Path)->Result<u64> {
+    #[cfg(unix)]{let root=crate::candidate_artifact::open_directory(root)?;let volume=rustix::fs::fstatvfs(&root)?;ensure!(volume.f_frsize>0,"MP4 volume fragment size unavailable");volume.f_bavail.checked_mul(volume.f_frsize).context("MP4 free-space observation overflow")}
+    #[cfg(not(unix))]{let _=root;anyhow::bail!("MP4 storage admission unavailable")}
 }
+pub(crate) fn free(root:&Path,required:u64)->Result<()> {ensure!(available_free(root)?>=required,"MP4 observed free-space reserve unavailable");Ok(())}
 pub(crate) fn fresh_directory(root:&Path,label:&str)->Result<(PathBuf,File)>{
     crate::candidate_artifact::validate_private_root(root)?;ensure!(label.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-'),"fixed private namespace label required");let name=format!("{label}-{}",uuid::Uuid::now_v7());
     #[cfg(unix)]{use rustix::fs::{mkdirat,openat,Mode,OFlags};let parent=crate::candidate_artifact::open_directory(root)?;mkdirat(&parent,name.as_str(),Mode::RUSR|Mode::WUSR|Mode::XUSR)?;let child=File::from(openat(&parent,name.as_str(),OFlags::RDONLY|OFlags::DIRECTORY|OFlags::NOFOLLOW|OFlags::CLOEXEC,Mode::empty())?);child.sync_all()?;parent.sync_all()?;let path=root.join(&name);let observed=crate::candidate_artifact::open_directory(&path)?;let a=rustix::fs::fstat(&child)?;let b=rustix::fs::fstat(&observed)?;ensure!(a.st_dev==b.st_dev&&a.st_ino==b.st_ino,"private attempt namespace changed");Ok((path,child))}
