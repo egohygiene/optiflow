@@ -38,7 +38,7 @@ jobs:
 
       - name: Enforce Cargo dependency policy
         # EmbarkStudios/cargo-deny-action v2.1.1
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25
+        uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd
         env:
           # The action input installs Rust 1.89.0. The
           # matching override then selects it instead of the checkout's
